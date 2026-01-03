@@ -1,0 +1,709 @@
+From 95311853a76bf0e860569c1d79ad769656159d94 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 23 Dec 2025 18:42:39 +0000
+Subject: [PATCH 1/4] Add Supabase database schema for DivaForge
+
+Includes tables for profiles, user_characters, and transactions
+with RLS policies and helper functions for credit management
+and character purchases.
+---
+ divaforge/supabase-schema.sql | 206 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 206 insertions(+)
+ create mode 100644 divaforge/supabase-schema.sql
+
+diff --git a/divaforge/supabase-schema.sql b/divaforge/supabase-schema.sql
+new file mode 100644
+index 0000000..0ebc2aa
+--- /dev/null
++++ b/divaforge/supabase-schema.sql
+@@ -0,0 +1,206 @@
++-- DivaForge Database Schema
++-- Run this in Supabase SQL Editor
++
++-- 1. PROFILES TABLE (extends auth.users)
++create table public.profiles (
++  id uuid references auth.users on delete cascade primary key,
++  email text,
++  full_name text,
++  avatar_url text,
++  credits integer default 1250 not null,
++  plan text default 'free' check (plan in ('free', 'basic', 'pro', 'ultimate')),
++  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
++  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
++);
++
++-- 2. USER_CHARACTERS TABLE (owned AI characters)
++create table public.user_characters (
++  id uuid default gen_random_uuid() primary key,
++  user_id uuid references public.profiles(id) on delete cascade not null,
++  character_id text not null,
++  purchased_at timestamp with time zone default timezone('utc'::text, now()) not null,
++  unique(user_id, character_id)
++);
++
++-- 3. TRANSACTIONS TABLE (credit history)
++create table public.transactions (
++  id uuid default gen_random_uuid() primary key,
++  user_id uuid references public.profiles(id) on delete cascade not null,
++  type text not null check (type in ('credit', 'debit', 'purchase', 'subscription', 'refund')),
++  amount integer not null,
++  description text,
++  metadata jsonb default '{}'::jsonb,
++  created_at timestamp with time zone default timezone('utc'::text, now()) not null
++);
++
++-- 4. ENABLE ROW LEVEL SECURITY
++alter table public.profiles enable row level security;
++alter table public.user_characters enable row level security;
++alter table public.transactions enable row level security;
++
++-- 5. RLS POLICIES FOR PROFILES
++create policy "Users can view own profile"
++  on public.profiles for select
++  using (auth.uid() = id);
++
++create policy "Users can update own profile"
++  on public.profiles for update
++  using (auth.uid() = id);
++
++-- 6. RLS POLICIES FOR USER_CHARACTERS
++create policy "Users can view own characters"
++  on public.user_characters for select
++  using (auth.uid() = user_id);
++
++create policy "Users can insert own characters"
++  on public.user_characters for insert
++  with check (auth.uid() = user_id);
++
++-- 7. RLS POLICIES FOR TRANSACTIONS
++create policy "Users can view own transactions"
++  on public.transactions for select
++  using (auth.uid() = user_id);
++
++create policy "Users can insert own transactions"
++  on public.transactions for insert
++  with check (auth.uid() = user_id);
++
++-- 8. FUNCTION: Auto-create profile on signup
++create or replace function public.handle_new_user()
++returns trigger as $$
++begin
++  insert into public.profiles (id, email, full_name, avatar_url)
++  values (
++    new.id,
++    new.email,
++    new.raw_user_meta_data->>'full_name',
++    new.raw_user_meta_data->>'avatar_url'
++  );
++
++  -- Give new users the 3 free starter characters
++  insert into public.user_characters (user_id, character_id) values
++    (new.id, 'aika'),
++    (new.id, 'jessica'),
++    (new.id, 'alexis');
++
++  -- Log the signup bonus
++  insert into public.transactions (user_id, type, amount, description)
++  values (new.id, 'credit', 1250, 'Welcome bonus credits');
++
++  return new;
++end;
++$$ language plpgsql security definer;
++
++-- 9. TRIGGER: Run function on new user signup
++create trigger on_auth_user_created
++  after insert on auth.users
++  for each row execute procedure public.handle_new_user();
++
++-- 10. FUNCTION: Deduct credits (with validation)
++create or replace function public.deduct_credits(
++  p_user_id uuid,
++  p_amount integer,
++  p_description text
++)
++returns boolean as $$
++declare
++  v_current_credits integer;
++begin
++  -- Get current credits
++  select credits into v_current_credits
++  from public.profiles
++  where id = p_user_id;
++
++  -- Check if enough credits
++  if v_current_credits < p_amount then
++    return false;
++  end if;
++
++  -- Deduct credits
++  update public.profiles
++  set credits = credits - p_amount,
++      updated_at = now()
++  where id = p_user_id;
++
++  -- Log transaction
++  insert into public.transactions (user_id, type, amount, description)
++  values (p_user_id, 'debit', -p_amount, p_description);
++
++  return true;
++end;
++$$ language plpgsql security definer;
++
++-- 11. FUNCTION: Add credits
++create or replace function public.add_credits(
++  p_user_id uuid,
++  p_amount integer,
++  p_description text
++)
++returns void as $$
++begin
++  update public.profiles
++  set credits = credits + p_amount,
++      updated_at = now()
++  where id = p_user_id;
++
++  insert into public.transactions (user_id, type, amount, description)
++  values (p_user_id, 'credit', p_amount, p_description);
++end;
++$$ language plpgsql security definer;
++
++-- 12. FUNCTION: Purchase character
++create or replace function public.purchase_character(
++  p_user_id uuid,
++  p_character_id text,
++  p_price integer
++)
++returns boolean as $$
++declare
++  v_current_credits integer;
++  v_already_owned boolean;
++begin
++  -- Check if already owned
++  select exists(
++    select 1 from public.user_characters
++    where user_id = p_user_id and character_id = p_character_id
++  ) into v_already_owned;
++
++  if v_already_owned then
++    return false;
++  end if;
++
++  -- Get current credits
++  select credits into v_current_credits
++  from public.profiles
++  where id = p_user_id;
++
++  -- Check if enough credits
++  if v_current_credits < p_price then
++    return false;
++  end if;
++
++  -- Deduct credits
++  update public.profiles
++  set credits = credits - p_price,
++      updated_at = now()
++  where id = p_user_id;
++
++  -- Add character to user's collection
++  insert into public.user_characters (user_id, character_id)
++  values (p_user_id, p_character_id);
++
++  -- Log transaction
++  insert into public.transactions (user_id, type, amount, description, metadata)
++  values (
++    p_user_id,
++    'purchase',
++    -p_price,
++    'Character purchase: ' || p_character_id,
++    jsonb_build_object('character_id', p_character_id)
++  );
++
++  return true;
++end;
++$$ language plpgsql security definer;
++
++-- Done! Your DivaForge database is ready.
+-- 
+2.43.0
+
+
+From b1794565c980f0a516721ede19281df0ce696739 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 23 Dec 2025 18:47:46 +0000
+Subject: [PATCH 2/4] Integrate Supabase for authentication, credits, and
+ character purchases
+
+- Add Supabase client SDK and configuration
+- Replace mock login/logout with Supabase Auth (email/password)
+- Add automatic signup flow when login fails
+- Add auth state change listener for session persistence
+- Update deductCredits() to use Supabase RPC function
+- Update purchaseCharacter() to use Supabase RPC function
+- Add loadUserProfile() to fetch user data on login
+- Profile data includes credits, plan, and owned characters
+---
+ divaforge/simple-generator.html | 294 ++++++++++++++++++++++++++------
+ 1 file changed, 238 insertions(+), 56 deletions(-)
+
+diff --git a/divaforge/simple-generator.html b/divaforge/simple-generator.html
+index 409774f..09da722 100644
+--- a/divaforge/simple-generator.html
++++ b/divaforge/simple-generator.html
+@@ -1959,6 +1959,8 @@
+       }
+     }
+   </style>
++  <!-- Supabase Client -->
++  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+ </head>
+ <body>
+   <div class="container">
+@@ -2838,6 +2840,17 @@
+   </div>
+ 
+   <script>
++    // ===========================================
++    // SUPABASE CONFIGURATION
++    // ===========================================
++    const SUPABASE_URL = 'https://kdgjbyfqytjtywxlekpz.supabase.co';
++    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2pieWZxeXRqdHl3eGxla3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTQ5MTIsImV4cCI6MjA4MjA5MDkxMn0.2v2n2pBbKeFAzq6M6XkgTpSI4e5_ifeao7gRFQ5q6HA';
++
++    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
++
++    // Current user session
++    let currentUser = null;
++
+     const API_BASE_URL = 'http://localhost:3001';
+     let currentModel = 'nano-banana';
+     let generatedImages = [];
+@@ -4937,15 +4950,9 @@
+       return 0;
+     }
+ 
+-    // Deduct credits (will be replaced with Supabase call)
++    // Deduct credits using Supabase
+     async function deductCredits(amount, operation) {
+-      // TODO: Replace with Supabase call when ready
+-      // const { data, error } = await supabase
+-      //   .from('users')
+-      //   .update({ credits: userCredits - amount })
+-      //   .eq('id', userId)
+-
+-      if (!isUserLoggedIn) {
++      if (!isUserLoggedIn || !currentUser) {
+         console.warn('User not logged in, skipping credit deduction');
+         return true; // Allow operation in demo mode
+       }
+@@ -4954,11 +4961,35 @@
+         return false; // Not enough credits
+       }
+ 
+-      userCredits -= amount;
+-      updateCreditsDisplay();
++      try {
++        // Call the Supabase function to deduct credits
++        const { data, error } = await supabase.rpc('deduct_credits', {
++          p_user_id: currentUser.id,
++          p_amount: amount,
++          p_description: operation
++        });
++
++        if (error) {
++          console.error('Error deducting credits:', error);
++          return false;
++        }
++
++        if (data === false) {
++          console.warn('Insufficient credits (server-side check)');
++          return false;
++        }
++
++        // Update local state
++        userCredits -= amount;
++        updateCreditsDisplay();
++
++        console.log(`💳 Deducted ${amount} credits for ${operation}. Remaining: ${userCredits}`);
++        return true;
+ 
+-      console.log(`💳 Deducted ${amount} credits for ${operation}. Remaining: ${userCredits}`);
+-      return true;
++      } catch (err) {
++        console.error('Error deducting credits:', err);
++        return false;
++      }
+     }
+ 
+     // Update credits display in UI
+@@ -5094,48 +5125,175 @@
+       document.getElementById('loginModal').classList.remove('active');
+     }
+ 
+-    function handleLogin() {
+-      // Mockup login - just simulate successful login
++    async function handleLogin() {
+       const email = document.getElementById('loginEmail').value;
++      const password = document.getElementById('loginPassword').value;
+ 
+-      if (!email) {
+-        alert('Please enter an email');
++      if (!email || !password) {
++        alert('Please enter both email and password');
+         return;
+       }
+ 
+-      // Simulate login
+-      isUserLoggedIn = true;
++      // Show loading state
++      const loginBtn = document.querySelector('#loginModal button[onclick="handleLogin()"]');
++      const originalText = loginBtn.textContent;
++      loginBtn.textContent = 'Signing in...';
++      loginBtn.disabled = true;
++
++      try {
++        const { data, error } = await supabase.auth.signInWithPassword({
++          email,
++          password
++        });
+ 
+-      // Update UI
+-      document.getElementById('userName').textContent = email.split('@')[0];
+-      document.getElementById('userEmail').textContent = email;
+-      document.getElementById('userAvatar').classList.remove('logged-out');
+-      document.getElementById('userStatusDot').style.display = 'block';
+-      document.getElementById('userCreditsDisplay').textContent = `${userCredits}`;
++        if (error) {
++          // If user doesn't exist, try to sign up
++          if (error.message.includes('Invalid login credentials')) {
++            const signUp = confirm('Account not found. Would you like to create a new account with this email?');
++            if (signUp) {
++              await handleSignUp(email, password);
++            }
++          } else {
++            alert('Login error: ' + error.message);
++          }
++          return;
++        }
+ 
+-      // Close modal
+-      closeLoginModal();
++        // Login successful - session will be handled by onAuthStateChange
++        closeLoginModal();
++        console.log('✅ Logged in as:', email);
+ 
+-      console.log('✅ Logged in as:', email);
++      } catch (err) {
++        console.error('Login error:', err);
++        alert('An error occurred during login');
++      } finally {
++        loginBtn.textContent = originalText;
++        loginBtn.disabled = false;
++      }
+     }
+ 
+-    function handleLogout() {
+-      // Simulate logout
+-      isUserLoggedIn = false;
++    async function handleSignUp(email, password) {
++      try {
++        const { data, error } = await supabase.auth.signUp({
++          email,
++          password
++        });
+ 
+-      // Reset UI
+-      document.getElementById('userAvatar').classList.add('logged-out');
+-      document.getElementById('userStatusDot').style.display = 'none';
+-      document.getElementById('userCreditsDisplay').textContent = 'Login';
+-      document.getElementById('userMenu').classList.remove('active');
++        if (error) {
++          alert('Sign up error: ' + error.message);
++          return;
++        }
+ 
+-      // Clear login form
+-      document.getElementById('loginEmail').value = '';
+-      document.getElementById('loginPassword').value = '';
++        if (data.user && !data.session) {
++          alert('Please check your email to confirm your account!');
++        } else {
++          // Auto-confirmed (if email confirmation is disabled)
++          closeLoginModal();
++          console.log('✅ Account created and logged in as:', email);
++        }
++      } catch (err) {
++        console.error('Sign up error:', err);
++        alert('An error occurred during sign up');
++      }
++    }
+ 
+-      console.log('👋 Logged out');
++    async function handleLogout() {
++      try {
++        const { error } = await supabase.auth.signOut();
++        if (error) throw error;
++
++        // Reset state
++        isUserLoggedIn = false;
++        currentUser = null;
++        userCredits = 0;
++        ownedCharacters = ['aika', 'jessica', 'alexis']; // Reset to defaults
++
++        // Reset UI
++        document.getElementById('userAvatar').classList.add('logged-out');
++        document.getElementById('userStatusDot').style.display = 'none';
++        document.getElementById('userCreditsDisplay').textContent = 'Login';
++        document.getElementById('userMenu').classList.remove('active');
++
++        // Clear login form
++        document.getElementById('loginEmail').value = '';
++        document.getElementById('loginPassword').value = '';
++
++        // Update dropdowns
++        updateCharacterDropdowns();
++
++        console.log('👋 Logged out');
++      } catch (err) {
++        console.error('Logout error:', err);
++        alert('An error occurred during logout');
++      }
++    }
++
++    // Load user profile data from Supabase
++    async function loadUserProfile(userId) {
++      try {
++        // Get profile data
++        const { data: profile, error: profileError } = await supabase
++          .from('profiles')
++          .select('*')
++          .eq('id', userId)
++          .single();
++
++        if (profileError) throw profileError;
++
++        // Get owned characters
++        const { data: characters, error: charError } = await supabase
++          .from('user_characters')
++          .select('character_id')
++          .eq('user_id', userId);
++
++        if (charError) throw charError;
++
++        // Update state
++        userCredits = profile.credits;
++        userPlan = profile.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan' : 'Free Plan';
++        ownedCharacters = characters.map(c => c.character_id);
++
++        // Update UI
++        document.getElementById('userName').textContent = profile.full_name || profile.email?.split('@')[0] || 'User';
++        document.getElementById('userEmail').textContent = profile.email;
++        document.getElementById('userSubscription').textContent = userPlan;
++        updateCreditsDisplay();
++        updateCharacterDropdowns();
++        renderMarketplace();
++
++        console.log('📊 Profile loaded:', { credits: userCredits, plan: userPlan, characters: ownedCharacters });
++
++      } catch (err) {
++        console.error('Error loading profile:', err);
++      }
+     }
+ 
++    // Listen for auth state changes
++    supabase.auth.onAuthStateChange(async (event, session) => {
++      console.log('🔐 Auth state changed:', event);
++
++      if (session?.user) {
++        currentUser = session.user;
++        isUserLoggedIn = true;
++
++        // Update UI to logged in state
++        document.getElementById('userAvatar').classList.remove('logged-out');
++        document.getElementById('userStatusDot').style.display = 'block';
++
++        // Load user profile data
++        await loadUserProfile(session.user.id);
++      } else {
++        currentUser = null;
++        isUserLoggedIn = false;
++        userCredits = 0;
++
++        // Update UI to logged out state
++        document.getElementById('userAvatar').classList.add('logged-out');
++        document.getElementById('userStatusDot').style.display = 'none';
++        document.getElementById('userCreditsDisplay').textContent = 'Login';
++      }
++    });
++
+     // Open subscription page
+     function openSubscriptionPage() {
+       // Close user menu
+@@ -5444,20 +5602,20 @@
+       currentCharacterModal = null;
+     }
+ 
+-    function purchaseCharacter() {
++    async function purchaseCharacter() {
+       if (!currentCharacterModal) return;
+ 
+       const character = currentCharacterModal;
+ 
+       // Check if user is logged in
+-      if (!isUserLoggedIn) {
++      if (!isUserLoggedIn || !currentUser) {
+         alert('Please log in to purchase characters!');
+         closeCharacterModal();
+         openLoginModal();
+         return;
+       }
+ 
+-      // Mock purchase flow
++      // Calculate cost
+       const cost = Math.round(character.price * 100); // Convert price to credits (e.g., $14.99 = 1499 credits)
+ 
+       if (userCredits < cost) {
+@@ -5473,24 +5631,48 @@
+       const confirmed = confirm(`Purchase ${character.name} for $${character.price.toFixed(2)} (${cost} credits)?\n\nThis character will be immediately available in your Flux and Qwen character dropdowns.`);
+ 
+       if (confirmed) {
+-        // Deduct credits
+-        userCredits -= cost;
+-        updateCreditsDisplay();
++        try {
++          // Call Supabase function to purchase character
++          const { data, error } = await supabase.rpc('purchase_character', {
++            p_user_id: currentUser.id,
++            p_character_id: character.id,
++            p_price: cost
++          });
+ 
+-        // Add to owned characters
+-        if (!ownedCharacters.includes(character.id)) {
+-          ownedCharacters.push(character.id);
+-        }
++          if (error) {
++            console.error('Purchase error:', error);
++            alert('Purchase failed: ' + error.message);
++            return;
++          }
+ 
+-        // Show success message
+-        alert(`🎉 Success!\n\n${character.name} has been added to your account!\n\nYou can now select ${character.name} in the Flux and Qwen character dropdowns.`);
++          if (data === false) {
++            alert('Purchase failed. You may already own this character or have insufficient credits.');
++            return;
++          }
+ 
+-        // Re-render marketplace and close modal
+-        renderMarketplace();
+-        updateCharacterDropdowns();
+-        closeCharacterModal();
++          // Update local state
++          userCredits -= cost;
++          if (!ownedCharacters.includes(character.id)) {
++            ownedCharacters.push(character.id);
++          }
++
++          // Update UI
++          updateCreditsDisplay();
++
++          // Show success message
++          alert(`🎉 Success!\n\n${character.name} has been added to your account!\n\nYou can now select ${character.name} in the Flux and Qwen character dropdowns.`);
+ 
+-        console.log(`✅ Purchased ${character.name} for ${cost} credits. Remaining: ${userCredits} credits`);
++          // Re-render marketplace and close modal
++          renderMarketplace();
++          updateCharacterDropdowns();
++          closeCharacterModal();
++
++          console.log(`✅ Purchased ${character.name} for ${cost} credits. Remaining: ${userCredits} credits`);
++
++        } catch (err) {
++          console.error('Purchase error:', err);
++          alert('An error occurred during purchase');
++        }
+       }
+     }
+ 
+-- 
+2.43.0
+
+
+From 0ef21384729f0d5bc8589e8efd5edec12e37874f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 23 Dec 2025 19:03:16 +0000
+Subject: [PATCH 3/4] Add better error logging for Supabase auth debugging
+
+---
+ divaforge/simple-generator.html | 17 +++++++++++++++--
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/divaforge/simple-generator.html b/divaforge/simple-generator.html
+index 09da722..c460ad7 100644
+--- a/divaforge/simple-generator.html
++++ b/divaforge/simple-generator.html
+@@ -5141,14 +5141,27 @@
+       loginBtn.disabled = true;
+ 
+       try {
++        console.log('🔐 Attempting login for:', email);
++
+         const { data, error } = await supabase.auth.signInWithPassword({
+           email,
+           password
+         });
+ 
++        console.log('🔐 Login response:', { data, error });
++
+         if (error) {
+-          // If user doesn't exist, try to sign up
+-          if (error.message.includes('Invalid login credentials')) {
++          console.log('🔐 Login error:', error.message);
++
++          // If user doesn't exist, offer to sign up
++          // Check for various error message formats
++          const isInvalidCredentials =
++            error.message.includes('Invalid login credentials') ||
++            error.message.includes('invalid') ||
++            error.message.includes('not found') ||
++            error.message.includes('No user');
++
++          if (isInvalidCredentials) {
+             const signUp = confirm('Account not found. Would you like to create a new account with this email?');
+             if (signUp) {
+               await handleSignUp(email, password);
+-- 
+2.43.0
+
+
+From aba7be336ffdf6d01b12665059da2af50837467f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 23 Dec 2025 19:06:18 +0000
+Subject: [PATCH 4/4] Add Supabase initialization logging for debugging
+
+---
+ divaforge/simple-generator.html | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/divaforge/simple-generator.html b/divaforge/simple-generator.html
+index c460ad7..a468fe3 100644
+--- a/divaforge/simple-generator.html
++++ b/divaforge/simple-generator.html
+@@ -2846,7 +2846,15 @@
+     const SUPABASE_URL = 'https://kdgjbyfqytjtywxlekpz.supabase.co';
+     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2pieWZxeXRqdHl3eGxla3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTQ5MTIsImV4cCI6MjA4MjA5MDkxMn0.2v2n2pBbKeFAzq6M6XkgTpSI4e5_ifeao7gRFQ5q6HA';
+ 
++    // Check if Supabase loaded
++    if (typeof window.supabase === 'undefined') {
++      console.error('❌ SUPABASE NOT LOADED! Check your internet connection.');
++    } else {
++      console.log('✅ Supabase client library loaded');
++    }
++
+     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
++    console.log('✅ Supabase initialized for project:', SUPABASE_URL);
+ 
+     // Current user session
+     let currentUser = null;
+-- 
+2.43.0
+

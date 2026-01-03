@@ -1,0 +1,86 @@
+const express = require('express');
+const Replicate = require('replicate');
+
+const router = express.Router();
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_KEY,
+});
+
+const ERASER_MODEL = "bria/eraser";
+
+router.post('/erase', async (req, res) => {
+  try {
+    const {
+      image,
+      mask,
+      preserveAlpha = true,
+      contentModeration = false,
+      sync = true
+    } = req.body;
+
+    // Validation
+    if (!image) {
+      return res.status(400).json({ error: 'Image is required' });
+    }
+
+    if (!mask) {
+      return res.status(400).json({ error: 'Mask is required' });
+    }
+
+    // Build input for Eraser model
+    const input = {
+      image,
+      mask,
+      preserve_alpha: preserveAlpha,
+      content_moderation: contentModeration,
+      sync
+    };
+
+    console.log(`🎨 Erasing objects from image...`);
+    console.log(`   Preserve Alpha: ${preserveAlpha}`);
+    console.log(`   Content Moderation: ${contentModeration}`);
+
+    // Run the model
+    const output = await replicate.run(ERASER_MODEL, { input });
+
+    console.log(`✅ Object removal complete`);
+
+    // Return the edited image URL
+    res.json({
+      success: true,
+      model: 'bria-eraser',
+      imageUrl: output,
+      parameters: {
+        preserveAlpha,
+        contentModeration
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Object removal failed:', error.message);
+
+    // Handle specific error cases
+    if (error.message?.includes('Invalid input')) {
+      return res.status(400).json({
+        error: 'Invalid input parameters',
+        details: error.message
+      });
+    }
+
+    if (error.message?.includes('Rate limit')) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded. Please try again in a moment.'
+      });
+    }
+
+    // Generic error response
+    res.status(500).json({
+      error: 'Object removal failed',
+      message: error.message || 'Unknown error occurred'
+    });
+  }
+});
+
+module.exports = router;
