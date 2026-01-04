@@ -10067,7 +10067,7 @@
           .select('*')
           .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false })
-          .limit(50);
+          .limit(200); // Increased limit to show more history
 
         if (error) {
           console.error('Error loading video history:', error);
@@ -10089,13 +10089,38 @@
       if (videos.length === 0) return;
 
       const videoOutputGrid = document.getElementById('videoOutputGrid');
+      if (!videoOutputGrid) return;
 
-      // Clear existing content (placeholder or previous history) to avoid duplicates
-      videoOutputGrid.innerHTML = '';
-      generatedVideos.length = 0; // Clear the array too
+      // Get URLs of videos already in the grid (session videos)
+      const existingUrls = new Set();
+      videoOutputGrid.querySelectorAll('.output-item').forEach(item => {
+        const video = item.querySelector('video source');
+        if (video && video.src) {
+          existingUrls.add(video.src);
+        }
+        if (item.dataset.videoUrl) {
+          existingUrls.add(item.dataset.videoUrl);
+        }
+      });
+
+      // Only clear if this is initial load (no existing session videos)
+      if (existingUrls.size === 0) {
+        videoOutputGrid.innerHTML = '';
+        generatedVideos.length = 0;
+      }
+
+      // Filter out videos that are already displayed
+      const newHistoryVideos = videos.filter(v => !existingUrls.has(v.public_url));
+
+      console.log(`🎬 Adding ${newHistoryVideos.length} new videos from history (${existingUrls.size} already displayed)`);
 
       // Add videos from history to the grid
-      videos.forEach(video => {
+      newHistoryVideos.forEach(video => {
+        // Skip if already in generatedVideos array
+        if (generatedVideos.some(gv => gv.url === video.public_url || gv.id === video.id)) {
+          return;
+        }
+
         const isNsfw = video.is_nsfw || false;
         const videoItem = document.createElement('div');
         videoItem.className = 'output-item';
@@ -10163,7 +10188,7 @@
           .select('*')
           .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false })
-          .limit(50);
+          .limit(200); // Increased limit to show more history
 
         if (error) {
           console.error('Error loading image history:', error);
@@ -10187,15 +10212,40 @@
         return;
       }
 
-      // Clear existing content to avoid duplicates on multiple auth state changes
       const outputGrid = document.getElementById('outputGrid');
-      if (outputGrid) {
+      if (!outputGrid) return;
+
+      // Get URLs of images already in the grid (session images)
+      const existingUrls = new Set();
+      outputGrid.querySelectorAll('.output-item').forEach(item => {
+        const img = item.querySelector('img');
+        if (img && img.src) {
+          existingUrls.add(img.src);
+        }
+        // Also check data-image-url attribute
+        if (item.dataset.imageUrl) {
+          existingUrls.add(item.dataset.imageUrl);
+        }
+      });
+
+      // Only clear if this is initial load (no existing session images)
+      if (existingUrls.size === 0) {
         outputGrid.innerHTML = '';
-        generatedImages.length = 0; // Clear the array too
+        generatedImages.length = 0;
       }
 
+      // Filter out images that are already displayed
+      const newHistoryImages = history.filter(img => !existingUrls.has(img.public_url));
+
+      console.log(`📁 Adding ${newHistoryImages.length} new images from history (${existingUrls.size} already displayed)`);
+
       // Add history images to the grid (newest first, so we reverse)
-      history.reverse().forEach(img => {
+      newHistoryImages.reverse().forEach(img => {
+        // Skip if already in generatedImages array
+        if (generatedImages.some(gi => gi.url === img.public_url || gi.id === img.id)) {
+          return;
+        }
+
         const imageData = {
           url: img.public_url,
           prompt: img.prompt,
