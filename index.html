@@ -4416,82 +4416,86 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Inpaint Results - Right Panel (matches Image tab) */
     .inpaint-result-section {
-      width: 400px;
-      min-width: 300px;
-      background: #0a0a0a;
-      border-left: 1px solid #2a2a2a;
-      padding: 20px;
+      flex: 1;
+      background: var(--bg-primary);
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .inpaint-result-section.hidden {
-      display: none;
+      padding: 20px;
+      transition: background 0.3s;
     }
 
     .inpaint-result-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #2a2a2a;
+      margin-bottom: 20px;
     }
 
     .inpaint-result-header h3 {
       margin: 0;
-      color: #fff;
       font-size: 1.1rem;
-    }
-
-    .inpaint-result-actions {
-      display: flex;
-      gap: 10px;
-    }
-
-    .inpaint-result-image-container {
-      display: flex;
-      justify-content: center;
-    }
-
-    .inpaint-result-image-container img {
-      max-width: 100%;
-      max-height: 400px;
-      border-radius: 8px;
-      border: 1px solid #2a2a2a;
+      font-weight: 600;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .inpaint-results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .inpaint-result-placeholder {
+      grid-column: 1 / -1;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      flex: 1;
-      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      text-align: center;
+      color: #555;
+    }
+
+    .inpaint-result-placeholder-icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    .inpaint-result-placeholder-text {
+      font-size: 0.95rem;
+      line-height: 1.5;
     }
 
     .inpaint-result-item {
       position: relative;
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
-      border: 1px solid #2a2a2a;
-      background: #1a1a1a;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .inpaint-result-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     }
 
     .inpaint-result-item img {
       width: 100%;
-      max-height: 350px;
-      object-fit: contain;
+      aspect-ratio: 1;
+      object-fit: cover;
       display: block;
-      background: #0a0a0a;
+      cursor: pointer;
     }
 
     .inpaint-result-item-actions {
       display: flex;
       gap: 8px;
       padding: 12px;
-      background: #111;
+      background: rgba(0,0,0,0.5);
       justify-content: center;
     }
 
@@ -4499,16 +4503,15 @@
       padding: 8px 16px;
       font-size: 0.85rem;
       border-radius: 6px;
-      border: 1px solid #333;
-      background: #222;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.1);
       color: #fff;
       cursor: pointer;
       transition: all 0.2s;
     }
 
     .inpaint-result-item-actions button:hover {
-      background: #333;
-      border-color: #444;
+      background: rgba(255,255,255,0.2);
     }
 
     .inpaint-result-item-actions button.primary {
@@ -4518,28 +4521,6 @@
 
     .inpaint-result-item-actions button.primary:hover {
       opacity: 0.9;
-    }
-
-    .inpaint-result-placeholder {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #666;
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .inpaint-result-placeholder-icon {
-      font-size: 3rem;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-
-    .inpaint-result-placeholder-text {
-      font-size: 0.95rem;
-      line-height: 1.5;
     }
 
     .chat-typing {
@@ -13200,11 +13181,26 @@
 
           if (data.status === 'completed' || data.status === 'success') {
             // Job complete - extract image URL
-            const imageUrl = data.image || data.imageUrl || data.output || data.url || data.result ||
+            let imageUrl = data.image || data.imageUrl || data.url || data.result ||
                            (data.images && data.images[0]) || (data.outputs && data.outputs[0]) ||
                            (data.output && data.output.images && data.output.images[0]);
+
+            // Handle output.message format (raw base64 without data URI prefix)
+            if (!imageUrl && data.output) {
+              if (typeof data.output === 'string') {
+                imageUrl = data.output;
+              } else if (data.output.message) {
+                const base64Data = data.output.message;
+                if (base64Data.startsWith('data:')) {
+                  imageUrl = base64Data;
+                } else {
+                  imageUrl = `data:image/png;base64,${base64Data}`;
+                }
+              }
+            }
+
             if (imageUrl) {
-              console.log(`✅ Inpaint job completed, image URL:`, imageUrl);
+              console.log(`✅ Inpaint job completed, image URL:`, imageUrl.substring(0, 80) + '...');
               return imageUrl;
             } else {
               console.error('Job completed but no image URL found:', data);
