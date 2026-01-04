@@ -4069,7 +4069,10 @@
     .inpaint-header h2 {
       margin: 0;
       font-size: 1.5rem;
-      color: #fff;
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .inpaint-subtitle {
@@ -6188,7 +6191,10 @@
       font-size: 2rem;
       font-weight: 600;
       margin-bottom: 12px;
-      color: #fff;
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .caption-welcome-text {
@@ -8121,7 +8127,9 @@
       </div>
 
       <div class="right-panel">
-        <div class="output-header" style="background: linear-gradient(135deg, #ff2ebb, #00b2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Edited Images</div>
+        <div class="output-header-container">
+          <div class="output-header">Edited Images</div>
+        </div>
         <div class="output-grid" id="editOutputGrid">
           <div class="output-placeholder">
             <div class="output-placeholder-icon">✨</div>
@@ -8141,7 +8149,7 @@
         <!-- Main Canvas Area (Left) -->
         <div class="inpaint-canvas-area">
           <div class="inpaint-header">
-            <h2 style="background: linear-gradient(135deg, #ff2ebb, #00b2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Inpaint</h2>
+            <h2>Inpaint</h2>
             <p class="inpaint-subtitle">Paint over areas you want to replace, then describe what should appear</p>
           </div>
 
@@ -8265,7 +8273,7 @@
         <div class="caption-chat-area" id="captionChatArea">
           <div class="caption-welcome">
             <div class="caption-welcome-icon">💬</div>
-            <h2 class="caption-welcome-title" style="background: linear-gradient(135deg, #ff2ebb, #00b2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">AI Chat</h2>
+            <h2 class="caption-welcome-title">AI Chat</h2>
             <p class="caption-welcome-text">Ask me anything, with or without images</p>
           </div>
         </div>
@@ -8297,7 +8305,7 @@
     <div class="tab-section" id="marketplaceSection">
       <div class="marketplace-page">
         <div class="marketplace-header">
-          <div class="marketplace-title" style="background: linear-gradient(135deg, #ff2ebb, #00b2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">AI Character Marketplace</div>
+          <div class="marketplace-title">AI Character Marketplace</div>
           <div class="marketplace-subtitle">Discover premium AI influencers and characters for your creations</div>
         </div>
 
