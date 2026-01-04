@@ -87,11 +87,15 @@ router.post('/generate', async (req, res) => {
 
         console.log(`   Request messages:`, JSON.stringify(messages, null, 2).substring(0, 500));
 
-        // Make request to OpenRouter using SDK
+        // Make request to OpenRouter using SDK with image_config
         const result = await openrouter.chat.send({
           model: NANO_BANANA_MODEL,
           messages: messages,
-          modalities: ["image", "text"]
+          modalities: ["image", "text"],
+          // Image generation config for Gemini models
+          image_config: {
+            aspect_ratio: aspectRatio.replace(":", ":"), // e.g. "1:1", "16:9"
+          }
         });
 
         console.log(`   Response received, processing...`);
