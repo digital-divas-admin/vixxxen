@@ -7796,17 +7796,17 @@
                 NSFW
               </button>
             </div>
-            <span class="content-mode-info" id="videoContentModeInfo">All models available in NSFW mode</span>
+            <span class="content-mode-info" id="videoContentModeInfo">Kling & Veo available</span>
           </div>
 
           <div class="model-tabs" id="videoModelTabs">
-            <button class="model-tab active" onclick="selectVideoModel('kling')" id="klingVideoTab">
+            <button class="model-tab active" onclick="selectVideoModel('kling')" id="klingVideoTab" data-sfw="true">
               🎬 Kling 2.5
             </button>
-            <button class="model-tab" onclick="selectVideoModel('wan')" id="wanVideoTab" data-nsfw="true">
+            <button class="model-tab" onclick="selectVideoModel('wan')" id="wanVideoTab" data-nsfw="true" style="display: none;">
               🌊 Wan 2.2
             </button>
-            <button class="model-tab" onclick="selectVideoModel('veo')" id="veoVideoTab" data-nsfw="true">
+            <button class="model-tab" onclick="selectVideoModel('veo')" id="veoVideoTab" data-sfw="true">
               ⚡ Veo 3.1
             </button>
           </div>
@@ -10741,8 +10741,8 @@
 
       if (videoInfoText) {
         videoInfoText.textContent = contentMode === 'safe'
-          ? 'Limited models in Safe mode'
-          : 'All models available';
+          ? 'Kling & Veo available'
+          : 'Wan 2.2 only';
       }
     }
 
@@ -10759,15 +10759,32 @@
         });
       }
 
-      // Video models
+      // Video models - In NSFW mode, only Wan 2.2 is available
       const videoModelTabs = document.getElementById('videoModelTabs');
       if (videoModelTabs) {
         const tabs = videoModelTabs.querySelectorAll('.model-tab');
         tabs.forEach(tab => {
           if (tab.dataset.nsfw === 'true') {
+            // NSFW-only models (Wan) - show in NSFW, hide in safe
             tab.style.display = contentMode === 'nsfw' ? 'block' : 'none';
+          } else if (tab.dataset.sfw === 'true') {
+            // SFW-only models (Kling, Veo) - hide in NSFW, show in safe
+            tab.style.display = contentMode === 'nsfw' ? 'none' : 'block';
           }
         });
+
+        // Auto-select appropriate model when switching modes
+        if (contentMode === 'nsfw') {
+          // In NSFW mode, if current model is not Wan, switch to Wan
+          if (currentVideoModel !== 'wan') {
+            selectVideoModel('wan');
+          }
+        } else {
+          // In safe mode, if current model is Wan (not available), switch to Kling
+          if (currentVideoModel === 'wan') {
+            selectVideoModel('kling');
+          }
+        }
       }
     }
 
