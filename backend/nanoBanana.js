@@ -1,7 +1,10 @@
 const express = require('express');
-const { OpenRouter } = require('@openrouter/sdk');
+const fetch = require('node-fetch');
 
 const router = express.Router();
+
+// OpenRouter API endpoint
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Nano Banana Pro model (Gemini 3 Pro Image Preview via OpenRouter)
 const NANO_BANANA_MODEL = "google/gemini-3-pro-image-preview";
@@ -50,11 +53,6 @@ router.post('/generate', async (req, res) => {
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Model: ${NANO_BANANA_MODEL}`);
 
-    // Initialize OpenRouter client
-    const openrouter = new OpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY
-    });
-
     // Generate images sequentially
     const images = [];
     const warnings = [];
@@ -65,9 +63,6 @@ router.post('/generate', async (req, res) => {
       try {
         // Build the prompt
         let imagePrompt = prompt;
-        if (aspectRatio !== "1:1") {
-          imagePrompt = `${prompt} (aspect ratio: ${aspectRatio})`;
-        }
 
         // Build messages array
         let messages = [];
@@ -85,21 +80,39 @@ router.post('/generate', async (req, res) => {
           messages.push({ role: "user", content: imagePrompt });
         }
 
-        console.log(`   Request messages:`, JSON.stringify(messages, null, 2).substring(0, 500));
-
-        // Make request to OpenRouter using SDK with image_config
-        const result = await openrouter.chat.send({
+        // Build request body with all required parameters
+        const requestBody = {
           model: NANO_BANANA_MODEL,
           messages: messages,
           modalities: ["image", "text"],
-          // Image generation config for Gemini models
           image_config: {
-            aspect_ratio: aspectRatio.replace(":", ":"), // e.g. "1:1", "16:9"
+            aspect_ratio: aspectRatio
           }
+        };
+
+        console.log(`   Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 1000));
+
+        // Make raw HTTP request to OpenRouter
+        const response = await fetch(OPENROUTER_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
+            'X-Title': 'DivaForge'
+          },
+          body: JSON.stringify(requestBody)
         });
 
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`   API Error ${response.status}:`, errorText);
+          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
         console.log(`   Response received, processing...`);
-        console.log(`   Full result structure:`, JSON.stringify(result, null, 2).substring(0, 2000));
+        console.log(`   Full result structure:`, JSON.stringify(result, null, 2).substring(0, 3000));
 
         // Extract images from response
         const message = result.choices[0]?.message;
