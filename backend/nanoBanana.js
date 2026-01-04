@@ -103,32 +103,90 @@ router.post('/generate', async (req, res) => {
         });
 
         console.log(`   Response received, processing...`);
+        console.log(`   Full result structure:`, JSON.stringify(result, null, 2).substring(0, 2000));
 
         // Extract images from response
         const message = result.choices[0]?.message;
+        let imageFound = false;
 
+        // Method 1: Check message.images array (OpenRouter standard)
         if (message?.images && message.images.length > 0) {
           message.images.forEach((image, idx) => {
-            const imageUrl = image.image_url?.url;
+            const imageUrl = image.image_url?.url || image.url;
             if (imageUrl) {
               images.push(imageUrl);
-              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully`);
+              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully (images array)`);
+              imageFound = true;
             }
           });
-        } else if (message?.content) {
-          // Check if content contains base64 image data
-          const content = typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
-          const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+        }
+
+        // Method 2: Check content as array of parts (multimodal response)
+        if (!imageFound && Array.isArray(message?.content)) {
+          for (const part of message.content) {
+            // Check for inline_data format (Google-style)
+            if (part.inline_data?.data) {
+              const mimeType = part.inline_data.mime_type || 'image/png';
+              const imageDataUrl = `data:${mimeType};base64,${part.inline_data.data}`;
+              images.push(imageDataUrl);
+              console.log(`   ✅ Image ${i + 1} generated successfully (inline_data)`);
+              imageFound = true;
+            }
+            // Check for image_url format
+            if (part.type === 'image_url' && part.image_url?.url) {
+              images.push(part.image_url.url);
+              console.log(`   ✅ Image ${i + 1} generated successfully (image_url part)`);
+              imageFound = true;
+            }
+            // Check for image type with b64_json
+            if (part.type === 'image' && part.b64_json) {
+              const imageDataUrl = `data:image/png;base64,${part.b64_json}`;
+              images.push(imageDataUrl);
+              console.log(`   ✅ Image ${i + 1} generated successfully (b64_json)`);
+              imageFound = true;
+            }
+          }
+        }
+
+        // Method 3: Check content as string for base64 data
+        if (!imageFound && message?.content && typeof message.content === 'string') {
+          const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
           if (base64Match) {
             images.push(base64Match[0]);
-            console.log(`   ✅ Image ${i + 1} generated successfully (base64)`);
-          } else {
-            console.log(`   ⚠️ No image found in response for image ${i + 1}`);
-            console.log(`   Response content preview: ${content.substring(0, 200)}...`);
-            warnings.push(`No image in response ${i + 1}`);
+            console.log(`   ✅ Image ${i + 1} generated successfully (base64 string)`);
+            imageFound = true;
           }
-        } else {
+        }
+
+        // Method 4: Check for image in result directly (some APIs)
+        if (!imageFound && result.data) {
+          if (Array.isArray(result.data)) {
+            for (const item of result.data) {
+              if (item.b64_json) {
+                const imageDataUrl = `data:image/png;base64,${item.b64_json}`;
+                images.push(imageDataUrl);
+                console.log(`   ✅ Image ${i + 1} generated successfully (result.data)`);
+                imageFound = true;
+              }
+              if (item.url) {
+                images.push(item.url);
+                console.log(`   ✅ Image ${i + 1} generated successfully (result.data url)`);
+                imageFound = true;
+              }
+            }
+          }
+        }
+
+        if (!imageFound) {
           console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+          console.log(`   Message keys:`, message ? Object.keys(message) : 'no message');
+          console.log(`   Message content type:`, typeof message?.content);
+          if (message?.content) {
+            const contentPreview = typeof message.content === 'string'
+              ? message.content.substring(0, 500)
+              : JSON.stringify(message.content).substring(0, 500);
+            console.log(`   Content preview:`, contentPreview);
+          }
           warnings.push(`No image in response ${i + 1}`);
         }
 
