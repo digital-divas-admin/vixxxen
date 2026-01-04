@@ -7621,14 +7621,8 @@
           <button class="model-tab" onclick="selectModel('seedream')" id="seedreamTab" data-nsfw="true">
             🌊 Seedream 4.5
           </button>
-          <button class="model-tab" onclick="selectModel('flux')" id="fluxTab" data-nsfw="true">
-            ⚡ Flux
-          </button>
           <button class="model-tab" onclick="selectModel('qwen')" id="qwenGenTab" data-nsfw="true">
             🎨 Qwen
-          </button>
-          <button class="model-tab" onclick="selectModel('qwen-image-edit')" id="qwenTab" data-nsfw="true">
-            ✨ Qwen Image Edit
           </button>
         </div>
       </div>
@@ -7643,20 +7637,6 @@
             <div class="reference-upload-text">Click to upload reference images</div>
           </div>
           <div id="referenceGrid" class="reference-grid"></div>
-        </div>
-
-        <!-- Qwen Edit Images (1-3 required) -->
-        <div class="section" id="qwenImagesSection" style="display: none;">
-          <div class="section-label">Source Images (Required - 1 to 3 images)</div>
-          <div style="font-size: 0.75rem; color: #666; margin-bottom: 8px;">
-            Upload images to edit or combine (best results with 1-3 images)
-          </div>
-          <input type="file" id="qwenFileInput" accept="image/*" multiple onchange="handleQwenFileUpload(event)">
-          <div class="reference-upload" onclick="document.getElementById('qwenFileInput').click()">
-            <div class="reference-upload-icon">🖼️</div>
-            <div class="reference-upload-text">Click to upload images to edit</div>
-          </div>
-          <div id="qwenImageGrid" class="reference-grid"></div>
         </div>
 
         <!-- Prompt -->
@@ -7681,44 +7661,18 @@
                 <option value="3:4">3:4 Portrait</option>
               </select>
             </div>
+            <div class="setting-item" id="resolutionSetting">
+              <select id="resolution">
+                <option value="2K" selected>2K Resolution</option>
+                <option value="4K">4K Resolution</option>
+              </select>
+            </div>
             <div class="setting-item full">
               <select id="numGenerations">
                 <option value="1" selected>1 Generation</option>
                 <option value="2">2 Generations</option>
                 <option value="3">3 Generations</option>
                 <option value="4">4 Generations</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Flux Settings -->
-        <div class="section" id="fluxSettings" style="display: none;">
-          <div class="section-label">Settings</div>
-          <div class="settings-grid">
-            <div class="setting-item">
-              <select id="fluxAspectRatio">
-                <option value="1:1">1:1 Square</option>
-                <option value="16:9">16:9 Landscape</option>
-                <option value="9:16">9:16 Portrait</option>
-                <option value="4:3">4:3 Classic</option>
-                <option value="3:4">3:4 Portrait</option>
-              </select>
-            </div>
-            <div class="setting-item">
-              <select id="fluxNumGenerations">
-                <option value="1" selected>1 Generation</option>
-                <option value="2">2 Generations</option>
-                <option value="3">3 Generations</option>
-                <option value="4">4 Generations</option>
-              </select>
-            </div>
-            <div class="setting-item full">
-              <select id="fluxCharacter">
-                <option value="none" selected>No Character (LoRA)</option>
-                <option value="aika">👧 Aika</option>
-                <option value="jessica">👩 Jessica</option>
-                <option value="alexis">💃 Alexis</option>
               </select>
             </div>
           </div>
@@ -7758,52 +7712,6 @@
                 <option value="Nova_QWEN_v1_000004500.safetensors">💫 Nova</option>
                 <option value="Amy_QWEN_v1_000003500.safetensors">🌸 Amy</option>
               </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Qwen Image Edit Settings -->
-        <div class="section" id="qwenSettings" style="display: none;">
-          <div class="section-label">Settings</div>
-          <div class="settings-grid">
-            <div class="setting-item">
-              <select id="qwenAspectRatio">
-                <option value="match_input_image" selected>Match Input Image</option>
-                <option value="1:1">1:1 Square</option>
-                <option value="16:9">16:9 Landscape</option>
-                <option value="9:16">9:16 Portrait</option>
-                <option value="4:3">4:3 Classic</option>
-                <option value="3:4">3:4 Portrait</option>
-              </select>
-            </div>
-            <div class="setting-item">
-              <select id="qwenOutputFormat">
-                <option value="webp" selected>WebP</option>
-                <option value="png">PNG</option>
-                <option value="jpg">JPG</option>
-              </select>
-            </div>
-            <div class="setting-item">
-              <label style="font-size: 0.75rem; color: #888; display: block; margin-bottom: 4px;">Output Quality</label>
-              <input type="number" id="qwenOutputQuality" min="0" max="100" value="95"
-                     style="width: 100%; padding: 10px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 6px; color: #fff;">
-            </div>
-            <div class="setting-item">
-              <label style="font-size: 0.75rem; color: #888; display: block; margin-bottom: 4px;">Seed (Optional)</label>
-              <input type="number" id="qwenSeed" placeholder="Random"
-                     style="width: 100%; padding: 10px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 6px; color: #fff;">
-            </div>
-            <div class="setting-item full">
-              <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 6px; cursor: pointer;">
-                <input type="checkbox" id="qwenGoFast" checked style="cursor: pointer;">
-                <span style="font-size: 0.85rem;">⚡ Go Fast (optimized speed)</span>
-              </label>
-            </div>
-            <div class="setting-item full">
-              <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 6px; cursor: pointer;">
-                <input type="checkbox" id="qwenDisableSafety" style="cursor: pointer;">
-                <span style="font-size: 0.85rem;">🔓 Disable Safety Checker</span>
-              </label>
             </div>
           </div>
         </div>
@@ -11357,28 +11265,20 @@
       currentModel = model;
       const nanoTab = document.getElementById('nanoTab');
       const seedreamTab = document.getElementById('seedreamTab');
-      const fluxTab = document.getElementById('fluxTab');
       const qwenGenTab = document.getElementById('qwenGenTab');
-      const qwenTab = document.getElementById('qwenTab');
       const referenceSection = document.getElementById('referenceSection');
-      const qwenImagesSection = document.getElementById('qwenImagesSection');
       const standardSettings = document.getElementById('standardSettings');
-      const fluxSettings = document.getElementById('fluxSettings');
       const qwenGenSettings = document.getElementById('qwenGenSettings');
-      const qwenSettings = document.getElementById('qwenSettings');
+      const resolutionSetting = document.getElementById('resolutionSetting');
 
       // Reset all tabs
       nanoTab.classList.remove('active');
       seedreamTab.classList.remove('active');
-      fluxTab.classList.remove('active');
       qwenGenTab.classList.remove('active');
-      qwenTab.classList.remove('active');
 
       // Hide all settings sections
       standardSettings.style.display = 'none';
-      fluxSettings.style.display = 'none';
       qwenGenSettings.style.display = 'none';
-      qwenSettings.style.display = 'none';
 
       // Reset prompt placeholder
       document.getElementById('promptInput').placeholder =
@@ -11388,31 +11288,19 @@
       if (model === 'nano-banana') {
         nanoTab.classList.add('active');
         referenceSection.style.display = 'block';
-        qwenImagesSection.style.display = 'none';
         standardSettings.style.display = 'block';
+        // Hide resolution for Nano Banana (uses aspect ratio instead)
+        if (resolutionSetting) resolutionSetting.style.display = 'none';
       } else if (model === 'seedream') {
         seedreamTab.classList.add('active');
         referenceSection.style.display = 'block';
-        qwenImagesSection.style.display = 'none';
         standardSettings.style.display = 'block';
-      } else if (model === 'flux') {
-        fluxTab.classList.add('active');
-        referenceSection.style.display = 'none';
-        qwenImagesSection.style.display = 'none';
-        fluxSettings.style.display = 'block';
+        // Show resolution for Seedream
+        if (resolutionSetting) resolutionSetting.style.display = 'block';
       } else if (model === 'qwen') {
         qwenGenTab.classList.add('active');
         referenceSection.style.display = 'none';
-        qwenImagesSection.style.display = 'none';
         qwenGenSettings.style.display = 'block';
-      } else if (model === 'qwen-image-edit') {
-        qwenTab.classList.add('active');
-        referenceSection.style.display = 'none';
-        qwenImagesSection.style.display = 'block';
-        qwenSettings.style.display = 'block';
-        // Update prompt placeholder for Qwen Image Edit
-        document.getElementById('promptInput').placeholder =
-          "Describe how to edit or combine the images... (e.g., 'The woman in image 1 wearing the dress from image 2 in the pose from image 3')";
       }
 
       // Update button cost display
@@ -13633,15 +13521,9 @@
 
       // Calculate and check credits
       let aspectRatio, numOutputs;
-      if (currentModel === 'qwen-image-edit') {
-        aspectRatio = document.getElementById('qwenAspectRatio')?.value || '1:1';
-        numOutputs = 1;
-      } else if (currentModel === 'qwen') {
+      if (currentModel === 'qwen') {
         aspectRatio = document.getElementById('qwenGenAspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('qwenGenNumGenerations')?.value || 1);
-      } else if (currentModel === 'flux') {
-        aspectRatio = document.getElementById('fluxAspectRatio')?.value || '1:1';
-        numOutputs = parseInt(document.getElementById('fluxNumGenerations')?.value || 1);
       } else {
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
@@ -13694,30 +13576,7 @@
       try {
         let endpoint, payload;
 
-        if (currentModel === 'qwen-image-edit') {
-          // Qwen Image Edit validation
-          if (qwenImages.length === 0) {
-            showError('Please upload at least 1 image for Qwen Image Edit!');
-            throw new Error('No images uploaded');
-          }
-
-          endpoint = `${API_BASE_URL}/api/qwen-image-edit/generate`;
-          payload = {
-            images: qwenImages.map(img => img.dataUrl),
-            prompt,
-            aspectRatio: document.getElementById('qwenAspectRatio').value,
-            outputFormat: document.getElementById('qwenOutputFormat').value,
-            outputQuality: parseInt(document.getElementById('qwenOutputQuality').value),
-            goFast: document.getElementById('qwenGoFast').checked,
-            disableSafetyChecker: document.getElementById('qwenDisableSafety').checked
-          };
-
-          // Add seed if provided
-          const seed = document.getElementById('qwenSeed').value;
-          if (seed) {
-            payload.seed = parseInt(seed);
-          }
-        } else if (currentModel === 'qwen') {
+        if (currentModel === 'qwen') {
           // Qwen generation via ComfyUI/RunPod (proxied through backend to avoid CORS)
           // ComfyUI returns 1 image per request, so we loop for multiple generations
 
@@ -13872,7 +13731,7 @@
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
-            resolution: '2K', // Default to 2K
+            resolution: resolution, // Use selected resolution (2K or 4K)
             numOutputs
           };
 
@@ -13881,10 +13740,11 @@
             payload.referenceImages = referenceImages.map(img => img.dataUrl);
           }
         } else {
+          // Nano Banana Pro
           endpoint = `${API_BASE_URL}/api/nano-banana/generate`;
           payload = {
             prompt,
-            aspectRatio,
+            aspectRatio: aspectRatio, // Pass aspect ratio to Nano Banana
             numOutputs
           };
 
