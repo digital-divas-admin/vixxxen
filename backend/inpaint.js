@@ -38,13 +38,29 @@ async function pollJobStatus(statusUrl, jobId) {
         console.log(`   Full completed response:`, JSON.stringify(data, null, 2).substring(0, 1000));
 
         // Extract image URL from various possible response formats
-        const imageUrl = data.image || data.imageUrl || data.output || data.url || data.result ||
+        let imageUrl = data.image || data.imageUrl || data.url || data.result ||
                         (data.images && data.images[0]) ||
                         (data.outputs && data.outputs[0]) ||
                         (data.output && data.output.images && data.output.images[0]);
 
+        // Handle output.message format (raw base64 without data URI prefix)
+        if (!imageUrl && data.output) {
+          if (typeof data.output === 'string') {
+            imageUrl = data.output;
+          } else if (data.output.message) {
+            // Convert raw base64 to data URL if needed
+            const base64Data = data.output.message;
+            if (base64Data.startsWith('data:')) {
+              imageUrl = base64Data;
+            } else {
+              imageUrl = `data:image/png;base64,${base64Data}`;
+            }
+          }
+        }
+
         if (imageUrl) {
-          console.log(`✅ Job completed, image URL found: ${imageUrl.substring(0, 100)}...`);
+          const preview = typeof imageUrl === 'string' ? imageUrl.substring(0, 100) : '[object]';
+          console.log(`✅ Job completed, image URL found: ${preview}...`);
           return { success: true, image: imageUrl };
         } else {
           console.error('❌ Job completed but no image URL in response:', JSON.stringify(data, null, 2));
