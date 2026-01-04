@@ -1216,7 +1216,7 @@
       margin-top: 4px;
     }
 
-    /* Audio Tab Styles */
+    /* Form Input Styles */
     .input-select {
       width: 100%;
       padding: 12px;
@@ -1319,59 +1319,6 @@
       background: rgba(255, 46, 187, 0.1);
       border-radius: 8px;
       border: 1px solid rgba(255, 46, 187, 0.2);
-    }
-
-    .audio-output-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .audio-item {
-      background: #1a1a1a;
-      border-radius: 12px;
-      padding: 16px;
-      border: 1px solid #2a2a2a;
-    }
-
-    .audio-item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .audio-item-voice {
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .audio-item-meta {
-      font-size: 0.75rem;
-      color: #666;
-    }
-
-    .audio-item audio {
-      width: 100%;
-      height: 40px;
-    }
-
-    .audio-item-text {
-      font-size: 0.85rem;
-      color: #888;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid #2a2a2a;
-      line-height: 1.4;
-      max-height: 60px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .audio-item-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
     }
 
     /* Education Tab Styles */
@@ -7553,10 +7500,6 @@
           <div class="nav-icon">💬</div>
           <div class="nav-label">Caption</div>
         </div>
-        <div class="nav-tab" onclick="switchMainTab('audio')" id="audioNavTab">
-          <div class="nav-icon">🎵</div>
-          <div class="nav-label">Audio</div>
-        </div>
         <div class="nav-tab" onclick="switchMainTab('marketplace')" id="marketplaceNavTab">
           <div class="nav-icon">🛍️</div>
           <div class="nav-label">Marketplace</div>
@@ -8373,151 +8316,6 @@
       </div>
     </div>
     <!-- End Caption Tab Section -->
-
-    <!-- Audio Tab Section -->
-    <div class="tab-section" id="audioSection">
-      <div class="left-panel">
-        <div class="header">
-          <div class="logo-container">
-            <div>
-              <h1>Audio Generation</h1>
-              <div class="tagline">AI Voice & Text-to-Speech</div>
-            </div>
-          </div>
-          <div class="model-tabs">
-            <button class="model-tab active" onclick="selectAudioMode('tts')" id="ttsTab">
-              🗣️ Text to Speech
-            </button>
-            <button class="model-tab" onclick="selectAudioMode('clone')" id="cloneTab">
-              🎤 Voice Clone
-            </button>
-          </div>
-        </div>
-
-        <div class="content">
-          <!-- Text-to-Speech Mode -->
-          <div id="ttsMode">
-            <div class="section">
-              <div class="section-label">Select Voice</div>
-              <select class="input-select" id="voiceSelect" onchange="updateVoicePreview()">
-                <optgroup label="DivaForge Characters">
-                  <option value="aika">🎀 Aika - Energetic & Friendly</option>
-                  <option value="jessica">💎 Jessica - Elegant & Sophisticated</option>
-                  <option value="alexis">🔥 Alexis - Bold & Confident</option>
-                </optgroup>
-                <optgroup label="ElevenLabs Voices">
-                  <option value="rachel">Rachel - Calm & Warm</option>
-                  <option value="domi">Domi - Strong & Confident</option>
-                  <option value="bella">Bella - Soft & Pleasant</option>
-                  <option value="antoni">Antoni - Well-Rounded & Expressive</option>
-                  <option value="elli">Elli - Emotional & Engaging</option>
-                  <option value="josh">Josh - Deep & Mature</option>
-                  <option value="arnold">Arnold - Crisp & Articulate</option>
-                  <option value="adam">Adam - Deep & Narration</option>
-                  <option value="sam">Sam - Raspy & Dynamic</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <div class="section">
-              <div class="section-label">Text to Convert</div>
-              <textarea class="prompt-input" id="audioTextInput" placeholder="Enter the text you want to convert to speech..." rows="6" oninput="updateAudioCredits()"></textarea>
-              <div class="char-count" id="audioCharCount">0 characters (~0 credits)</div>
-            </div>
-
-            <div class="section">
-              <div class="section-label">Voice Settings</div>
-              <div class="slider-container">
-                <label class="slider-label">
-                  <span>Stability</span>
-                  <span id="stabilityValue">50%</span>
-                </label>
-                <input type="range" class="slider" id="voiceStability" min="0" max="100" value="50" oninput="document.getElementById('stabilityValue').textContent = this.value + '%'">
-                <div class="slider-hint">Lower = more expressive, Higher = more consistent</div>
-              </div>
-
-              <div class="slider-container">
-                <label class="slider-label">
-                  <span>Clarity + Similarity</span>
-                  <span id="clarityValue">75%</span>
-                </label>
-                <input type="range" class="slider" id="voiceClarity" min="0" max="100" value="75" oninput="document.getElementById('clarityValue').textContent = this.value + '%'">
-                <div class="slider-hint">Higher = clearer but may have artifacts</div>
-              </div>
-
-              <div class="slider-container">
-                <label class="slider-label">
-                  <span>Style Exaggeration</span>
-                  <span id="styleValue">0%</span>
-                </label>
-                <input type="range" class="slider" id="voiceStyle" min="0" max="100" value="0" oninput="document.getElementById('styleValue').textContent = this.value + '%'">
-                <div class="slider-hint">Amplify the voice's style (use sparingly)</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Voice Clone Mode -->
-          <div id="cloneMode" style="display: none;">
-            <div class="section">
-              <div class="section-label">Create a Voice Clone</div>
-              <div class="clone-info">
-                Upload an audio sample (1+ minute recommended) to create a custom voice clone. This voice will be saved to your account.
-              </div>
-
-              <input type="file" id="voiceCloneInput" accept="audio/*" onchange="handleVoiceCloneUpload(event)" style="display: none;">
-              <div class="reference-upload" onclick="document.getElementById('voiceCloneInput').click()">
-                <div class="reference-upload-icon">🎤</div>
-                <div class="reference-upload-text">Click to upload audio sample</div>
-                <div class="reference-upload-hint">MP3, WAV, M4A (1-5 minutes recommended)</div>
-              </div>
-
-              <div id="cloneAudioPreview" style="display: none; margin-top: 12px;">
-                <audio id="clonePreviewPlayer" controls style="width: 100%;"></audio>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-label">Voice Name</div>
-              <input type="text" class="prompt-input" id="cloneVoiceName" placeholder="Enter a name for this voice..." style="padding: 12px;">
-            </div>
-
-            <div class="section">
-              <div class="section-label">Voice Description (Optional)</div>
-              <textarea class="prompt-input" id="cloneVoiceDescription" placeholder="Describe the voice characteristics..." rows="2"></textarea>
-            </div>
-
-            <button class="generate-btn" id="cloneVoiceBtn" onclick="createVoiceClone()">
-              <span id="cloneVoiceBtnText">🎤 Create Voice Clone (200 credits)</span>
-            </button>
-          </div>
-
-          <!-- Generate Button (TTS Mode) -->
-          <div id="ttsGenerateSection">
-            <button class="generate-btn" id="audioGenerateBtn" onclick="generateAudio()">
-              <span id="audioGenerateBtnText">🔊 Generate Audio (10 credits)</span>
-            </button>
-          </div>
-
-          <div id="audioErrorContainer"></div>
-        </div>
-      </div>
-
-      <div class="right-panel">
-        <div class="output-header-container">
-          <div class="output-header">Generated Audio</div>
-        </div>
-        <div class="audio-output-container" id="audioOutputContainer">
-          <div class="output-placeholder">
-            <div class="output-placeholder-icon">🎵</div>
-            <div class="output-placeholder-text">
-              Your generated audio will appear here<br>
-              <span style="color: #666; font-size: 0.85rem;">Select a voice, enter text, and click Generate</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- End Audio Tab Section -->
 
     <!-- Marketplace Tab Section -->
     <div class="tab-section" id="marketplaceSection">
@@ -10784,7 +10582,7 @@
         // Add placeholders for jobs that don't have visible elements
         Object.entries(activeGenerationJobs).forEach(([jobId, job]) => {
           if ((job.status === 'pending' || job.status === 'processing') && !document.querySelector(`[data-job-id="${jobId}"]`)) {
-            const placeholder = createLoadingPlaceholder(job.index || 1);
+            const placeholder = createLoadingPlaceholder();
             placeholder.dataset.jobId = jobId;
             outputGrid.insertBefore(placeholder, outputGrid.firstChild);
           }
@@ -11352,307 +11150,6 @@
     // Initialize content mode when DOM is ready
     document.addEventListener('DOMContentLoaded', initContentMode);
 
-    // ===========================================
-    // AUDIO GENERATION FUNCTIONS
-    // ===========================================
-    let currentAudioMode = 'tts';
-    let generatedAudios = [];
-    let isGeneratingAudio = false;
-    let voiceCloneFile = null;
-
-    // ElevenLabs voice IDs mapping (these are example IDs - you'll need real ones from ElevenLabs)
-    const voiceMap = {
-      // DivaForge character voices (will be custom cloned voices)
-      'aika': 'EXAVITQu4vr4xnSDxMaL', // placeholder - Rachel
-      'jessica': 'MF3mGyEYCl7XYWbV9V6O', // placeholder - Elli
-      'alexis': 'XB0fDUnXU5powFXDhCwa', // placeholder - Charlotte
-      // ElevenLabs preset voices
-      'rachel': 'EXAVITQu4vr4xnSDxMaL',
-      'domi': 'AZnzlk1XvdvUeBnXmlld',
-      'bella': 'EXAVITQu4vr4xnSDxMaL',
-      'antoni': 'ErXwobaYiN019PkySvjV',
-      'elli': 'MF3mGyEYCl7XYWbV9V6O',
-      'josh': 'TxGEqnHWrfWFTfGW9XjX',
-      'arnold': 'VR6AewLTigWG4xSOukaG',
-      'adam': 'pNInz6obpgDQGcFmaJgB',
-      'sam': 'yoZ06aMxZJJ28mfd3POQ'
-    };
-
-    function selectAudioMode(mode) {
-      currentAudioMode = mode;
-
-      // Update tabs
-      document.getElementById('ttsTab').classList.toggle('active', mode === 'tts');
-      document.getElementById('cloneTab').classList.toggle('active', mode === 'clone');
-
-      // Show/hide modes
-      document.getElementById('ttsMode').style.display = mode === 'tts' ? 'block' : 'none';
-      document.getElementById('cloneMode').style.display = mode === 'clone' ? 'block' : 'none';
-      document.getElementById('ttsGenerateSection').style.display = mode === 'tts' ? 'block' : 'none';
-    }
-
-    function updateAudioCredits() {
-      const text = document.getElementById('audioTextInput').value;
-      const charCount = text.length;
-      const credits = calculateAudioCredits(charCount);
-
-      document.getElementById('audioCharCount').textContent = `${charCount} characters (~${credits} credits)`;
-      document.getElementById('audioGenerateBtnText').textContent = `🔊 Generate Audio (${credits} credits)`;
-    }
-
-    function calculateAudioCredits(charCount) {
-      if (charCount === 0) return 10;
-      if (charCount <= 500) return 10;
-      if (charCount <= 1000) return 20;
-      if (charCount <= 2000) return 35;
-      return Math.ceil(charCount / 50); // ~1 credit per 50 chars for longer text
-    }
-
-    function updateVoicePreview() {
-      const voice = document.getElementById('voiceSelect').value;
-      console.log('Selected voice:', voice);
-      // Could add a preview button here in the future
-    }
-
-    async function generateAudio() {
-      if (isGeneratingAudio) return;
-
-      // Check if user is logged in
-      if (!isUserLoggedIn || !currentUser) {
-        alert('Please log in to generate audio.');
-        openSubscriptionPage();
-        return;
-      }
-
-      const text = document.getElementById('audioTextInput').value.trim();
-      if (!text) {
-        showAudioError('Please enter some text to convert to speech');
-        return;
-      }
-
-      const voice = document.getElementById('voiceSelect').value;
-      const voiceId = voiceMap[voice] || voiceMap['rachel'];
-      const stability = document.getElementById('voiceStability').value / 100;
-      const clarity = document.getElementById('voiceClarity').value / 100;
-      const style = document.getElementById('voiceStyle').value / 100;
-
-      const credits = calculateAudioCredits(text.length);
-
-      if (!hasEnoughCredits(credits)) {
-        showInsufficientCreditsError(credits);
-        return;
-      }
-
-      // Deduct credits
-      const deducted = await deductCredits(credits, `Audio generation (${voice})`);
-      if (!deducted) {
-        showInsufficientCreditsError(credits);
-        return;
-      }
-
-      isGeneratingAudio = true;
-      const btn = document.getElementById('audioGenerateBtn');
-      const btnText = document.getElementById('audioGenerateBtnText');
-      btn.disabled = true;
-      btnText.textContent = '⏳ Generating...';
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/elevenlabs/tts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text,
-            voiceId,
-            stability,
-            similarity_boost: clarity,
-            style,
-            model_id: 'eleven_multilingual_v2'
-          })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Audio generation failed');
-        }
-
-        // Add to output
-        const voiceName = document.getElementById('voiceSelect').selectedOptions[0].text;
-        addAudioToOutput(data.audioUrl, voiceName, text);
-
-        // Log generation for 2257 compliance
-        logGeneration('audio', 'elevenlabs-tts', text.substring(0, 100), contentMode === 'nsfw', 1, data.audioUrl);
-
-        console.log('🔊 Audio generated successfully');
-      } catch (error) {
-        console.error('Audio generation failed:', error);
-        await refundCredits(credits, `Audio generation failed: ${error.message}`);
-        showAudioError(error.message);
-      } finally {
-        isGeneratingAudio = false;
-        btn.disabled = false;
-        updateAudioCredits();
-      }
-    }
-
-    function addAudioToOutput(audioUrl, voiceName, text) {
-      const container = document.getElementById('audioOutputContainer');
-
-      // Clear placeholder if first audio
-      if (generatedAudios.length === 0) {
-        container.innerHTML = '';
-      }
-
-      const timestamp = Date.now();
-      const audioItem = document.createElement('div');
-      audioItem.className = 'audio-item';
-      audioItem.innerHTML = `
-        <div class="audio-item-header">
-          <span class="audio-item-voice">🎤 ${voiceName}</span>
-          <span class="audio-item-meta">${text.length} chars</span>
-        </div>
-        <audio controls src="${audioUrl}"></audio>
-        <div class="audio-item-text">${text.substring(0, 150)}${text.length > 150 ? '...' : ''}</div>
-        <div class="audio-item-actions">
-          <button class="icon-btn" onclick="downloadAudio('${audioUrl}', ${timestamp})" title="Download">
-            <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </button>
-        </div>
-      `;
-
-      container.insertBefore(audioItem, container.firstChild);
-      generatedAudios.push({ url: audioUrl, voice: voiceName, text, timestamp });
-    }
-
-    function downloadAudio(url, timestamp) {
-      fetch(url)
-        .then(response => response.blob())
-        .then(blob => {
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `divaforge-audio-${timestamp}.mp3`;
-          link.click();
-          URL.revokeObjectURL(link.href);
-        })
-        .catch(err => {
-          console.error('Download failed:', err);
-          showAudioError('Failed to download audio');
-        });
-    }
-
-    function handleVoiceCloneUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (!file.type.startsWith('audio/')) {
-        showAudioError('Please upload an audio file (MP3, WAV, M4A)');
-        return;
-      }
-
-      voiceCloneFile = file;
-
-      // Show preview
-      const preview = document.getElementById('cloneAudioPreview');
-      const player = document.getElementById('clonePreviewPlayer');
-      player.src = URL.createObjectURL(file);
-      preview.style.display = 'block';
-
-      console.log('Voice clone file uploaded:', file.name);
-    }
-
-    async function createVoiceClone() {
-      if (!voiceCloneFile) {
-        showAudioError('Please upload an audio sample first');
-        return;
-      }
-
-      const voiceName = document.getElementById('cloneVoiceName').value.trim();
-      if (!voiceName) {
-        showAudioError('Please enter a name for the voice');
-        return;
-      }
-
-      const description = document.getElementById('cloneVoiceDescription').value.trim();
-      const credits = 200;
-
-      if (!hasEnoughCredits(credits)) {
-        showInsufficientCreditsError(credits);
-        return;
-      }
-
-      const deducted = await deductCredits(credits, `Voice clone creation: ${voiceName}`);
-      if (!deducted) {
-        showInsufficientCreditsError(credits);
-        return;
-      }
-
-      const btn = document.getElementById('cloneVoiceBtn');
-      const btnText = document.getElementById('cloneVoiceBtnText');
-      btn.disabled = true;
-      btnText.textContent = '⏳ Creating voice...';
-
-      try {
-        const formData = new FormData();
-        formData.append('audio', voiceCloneFile);
-        formData.append('name', voiceName);
-        formData.append('description', description);
-
-        const response = await fetch(`${API_BASE_URL}/api/elevenlabs/clone`, {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Voice cloning failed');
-        }
-
-        alert(`Voice "${voiceName}" created successfully! It will appear in your voice selection.`);
-
-        // Add to voice select
-        const select = document.getElementById('voiceSelect');
-        const optgroup = select.querySelector('optgroup[label="DivaForge Characters"]');
-        const option = document.createElement('option');
-        option.value = data.voiceId;
-        option.textContent = `🎤 ${voiceName} (Custom)`;
-        optgroup.appendChild(option);
-
-        // Store in voiceMap
-        voiceMap[data.voiceId] = data.voiceId;
-
-        // Clear form
-        voiceCloneFile = null;
-        document.getElementById('cloneVoiceName').value = '';
-        document.getElementById('cloneVoiceDescription').value = '';
-        document.getElementById('cloneAudioPreview').style.display = 'none';
-        document.getElementById('voiceCloneInput').value = '';
-
-        console.log('🎤 Voice clone created:', data.voiceId);
-      } catch (error) {
-        console.error('Voice cloning failed:', error);
-        await refundCredits(credits, `Voice cloning failed: ${error.message}`);
-        showAudioError(error.message);
-      } finally {
-        btn.disabled = false;
-        btnText.textContent = '🎤 Create Voice Clone (200 credits)';
-      }
-    }
-
-    function showAudioError(message) {
-      const container = document.getElementById('audioErrorContainer');
-      container.innerHTML = `
-        <div class="error-message">
-          ❌ ${message}
-        </div>
-      `;
-      setTimeout(() => { container.innerHTML = ''; }, 7000);
-    }
-
     // Edit/Eraser state
     let currentEditTool = 'eraser'; // 'eraser' or 'bg-remover'
     let editSourceImage = null;
@@ -11671,7 +11168,7 @@
     let currentCaptionModel = 'gpt-5'; // 'gpt-5' or 'grok-4'
     let conversationHistory = []; // Store conversation messages for context
 
-    // Switch between main navigation tabs (Image, Video, Edit, Caption, Audio)
+    // Switch between main navigation tabs (Image, Video, Edit, Inpaint, Caption)
     function switchMainTab(tab) {
       // Hide all tab sections
       document.querySelectorAll('.tab-section').forEach(section => {
@@ -11708,9 +11205,6 @@
       } else if (tab === 'caption') {
         document.getElementById('captionSection').classList.add('active');
         document.getElementById('captionNavTab').classList.add('active');
-      } else if (tab === 'audio') {
-        document.getElementById('audioSection').classList.add('active');
-        document.getElementById('audioNavTab').classList.add('active');
       } else if (tab === 'marketplace') {
         document.getElementById('marketplaceSection').classList.add('active');
         document.getElementById('marketplaceNavTab').classList.add('active');
@@ -13008,7 +12502,7 @@
       document.getElementById('editErrorContainer').innerHTML = '';
 
       // Create loading placeholder
-      const placeholder = createLoadingPlaceholder(1);
+      const placeholder = createLoadingPlaceholder();
       outputGrid.insertBefore(placeholder, outputGrid.firstChild);
 
       try {
@@ -14282,7 +13776,7 @@
       // Create loading placeholders for each image (insert at top)
       const placeholders = [];
       for (let i = 0; i < numOutputs; i++) {
-        const placeholderEl = createLoadingPlaceholder(i + 1);
+        const placeholderEl = createLoadingPlaceholder();
         placeholderEl.dataset.batchId = batchId;
         // Insert at the beginning so newest images appear at top
         outputGrid.insertBefore(placeholderEl, outputGrid.firstChild);
@@ -14426,13 +13920,13 @@
       }
     }
 
-    function createLoadingPlaceholder(number) {
+    function createLoadingPlaceholder() {
       const placeholderDiv = document.createElement('div');
       placeholderDiv.className = 'output-item';
       placeholderDiv.innerHTML = `
         <div class="output-placeholder-loading">
           <div class="loading-static-overlay"></div>
-          <div class="loading-text">Generating ${number}...</div>
+          <div class="loading-text">Generating...</div>
         </div>
       `;
       return placeholderDiv;
