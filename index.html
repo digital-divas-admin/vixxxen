@@ -10324,6 +10324,90 @@
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
 
+    // Active generation jobs tracking (persisted to survive tab switches)
+    let activeGenerationJobs = {};
+
+    // Persist and restore generation state for tab switching
+    function saveGenerationState() {
+      if (Object.keys(activeGenerationJobs).length > 0) {
+        sessionStorage.setItem('activeGenerationJobs', JSON.stringify(activeGenerationJobs));
+        sessionStorage.setItem('isGenerating', isGenerating.toString());
+      }
+    }
+
+    function restoreGenerationState() {
+      const savedJobs = sessionStorage.getItem('activeGenerationJobs');
+      const savedIsGenerating = sessionStorage.getItem('isGenerating');
+
+      if (savedJobs) {
+        try {
+          activeGenerationJobs = JSON.parse(savedJobs);
+          console.log('📥 Restored active generation jobs:', Object.keys(activeGenerationJobs).length);
+        } catch (e) {
+          activeGenerationJobs = {};
+        }
+      }
+
+      if (savedIsGenerating === 'true') {
+        isGenerating = true;
+        // Re-check active jobs and restore UI
+        restorePlaceholdersForActiveJobs();
+      }
+    }
+
+    function clearGenerationState() {
+      activeGenerationJobs = {};
+      sessionStorage.removeItem('activeGenerationJobs');
+      sessionStorage.removeItem('isGenerating');
+    }
+
+    function restorePlaceholdersForActiveJobs() {
+      const outputGrid = document.getElementById('outputGrid');
+      const btn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('generateText');
+
+      // Count active jobs
+      const activeCount = Object.values(activeGenerationJobs).filter(j => j.status === 'pending' || j.status === 'processing').length;
+
+      if (activeCount > 0) {
+        console.log(`🔄 Restoring ${activeCount} active generation placeholder(s)`);
+
+        // Update button state
+        btn.classList.add('generating');
+        btnText.textContent = `⏳ Generating (${activeCount} active)...`;
+        btn.disabled = true;
+
+        // Add placeholders for jobs that don't have visible elements
+        Object.entries(activeGenerationJobs).forEach(([jobId, job]) => {
+          if ((job.status === 'pending' || job.status === 'processing') && !document.querySelector(`[data-job-id="${jobId}"]`)) {
+            const placeholder = createLoadingPlaceholder(job.index || 1);
+            placeholder.dataset.jobId = jobId;
+            outputGrid.insertBefore(placeholder, outputGrid.firstChild);
+          }
+        });
+      }
+    }
+
+    // Handle page visibility changes (tab switch, minimize, etc.)
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ Tab became visible, checking generation state...');
+        restoreGenerationState();
+        restorePlaceholdersForActiveJobs();
+      } else {
+        // Tab is hidden - save state
+        saveGenerationState();
+      }
+    });
+
+    // Also handle window focus/blur for additional coverage
+    window.addEventListener('focus', function() {
+      if (isGenerating) {
+        console.log('🔄 Window focused, ensuring placeholders are visible...');
+        restorePlaceholdersForActiveJobs();
+      }
+    });
+
     // Video generation state
     let currentVideoModel = 'kling';
     let videoStartImage = null;
@@ -13633,6 +13717,23 @@
 
             console.log(`📋 ComfyUI job ${genIndex + 1} submitted:`, jobId);
 
+            // Track job for persistence across tab switches
+            activeGenerationJobs[jobId] = {
+              status: 'pending',
+              index: genIndex + 1,
+              model: 'qwen',
+              prompt: qwenPrompt,
+              startTime: Date.now()
+            };
+
+            // Mark placeholder with job ID for recovery
+            if (qwenPlaceholders[genIndex]) {
+              qwenPlaceholders[genIndex].dataset.jobId = jobId;
+            }
+
+            // Save state for tab switch recovery
+            saveGenerationState();
+
             // Poll for job completion via backend proxy
             const maxPolls = 300; // 5 minutes max per image (1 poll per second)
             let pollCount = 0;
@@ -13640,32 +13741,54 @@
             let resultData = null;
 
             while (!jobComplete && pollCount < maxPolls) {
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+              // Use a longer delay if tab is hidden to reduce CPU usage
+              const pollDelay = document.visibilityState === 'visible' ? 1000 : 3000;
+              await new Promise(resolve => setTimeout(resolve, pollDelay));
               pollCount++;
 
-              const statusResponse = await fetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
-              if (!statusResponse.ok) {
-                console.warn('Status check failed, retrying...');
-                continue;
+              // Update job status periodically
+              if (activeGenerationJobs[jobId]) {
+                activeGenerationJobs[jobId].status = 'processing';
+                activeGenerationJobs[jobId].pollCount = pollCount;
+                saveGenerationState();
               }
 
-              const statusData = await statusResponse.json();
-              if (pollCount % 10 === 0) {
-                console.log(`⏳ Gen ${genIndex + 1} Poll ${pollCount}: status =`, statusData.status || statusData.state);
-              }
+              try {
+                const statusResponse = await fetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
+                if (!statusResponse.ok) {
+                  console.warn('Status check failed, retrying...');
+                  continue;
+                }
 
-              if (statusData.status === 'completed' || statusData.state === 'completed' || statusData.status === 'success') {
-                jobComplete = true;
-                resultData = statusData;
-              } else if (statusData.status === 'failed' || statusData.state === 'failed' || statusData.error) {
-                throw new Error(statusData.error || 'ComfyUI generation failed');
+                const statusData = await statusResponse.json();
+                if (pollCount % 10 === 0 || document.visibilityState === 'visible') {
+                  console.log(`⏳ Gen ${genIndex + 1} Poll ${pollCount}: status =`, statusData.status || statusData.state);
+                }
+
+                if (statusData.status === 'completed' || statusData.state === 'completed' || statusData.status === 'success') {
+                  jobComplete = true;
+                  resultData = statusData;
+                } else if (statusData.status === 'failed' || statusData.state === 'failed' || statusData.error) {
+                  delete activeGenerationJobs[jobId];
+                  saveGenerationState();
+                  throw new Error(statusData.error || 'ComfyUI generation failed');
+                }
+              } catch (fetchError) {
+                // Network error during poll - continue trying
+                console.warn('Poll fetch error:', fetchError.message);
               }
               // Otherwise keep polling (pending/processing)
             }
 
             if (!jobComplete) {
+              delete activeGenerationJobs[jobId];
+              saveGenerationState();
               throw new Error(`Generation ${genIndex + 1} timed out - job took too long`);
             }
+
+            // Job completed - remove from tracking
+            delete activeGenerationJobs[jobId];
+            saveGenerationState();
 
             // Extract image from result - ComfyUI returns base64 in output.message
             let imageUrl = null;
@@ -13719,6 +13842,9 @@
 
           // Log generation for compliance
           logGeneration('image', 'qwen', qwenPrompt, contentMode === 'nsfw', numOutputs);
+
+          // Clear generation state - all Qwen jobs complete
+          clearGenerationState();
 
           // Skip the normal response handling since we handled it above
           isGenerating = false;
@@ -13847,6 +13973,8 @@
         });
         showError(errorMessage);
       } finally {
+        // Clear generation state
+        clearGenerationState();
         isGenerating = false;
         btn.classList.remove('generating');
         updateImageGenerateButtonCost(); // Update button with cost again
