@@ -4417,14 +4417,18 @@
     }
 
     .inpaint-result-section {
-      position: fixed;
-      bottom: 0;
-      left: 90px;
-      right: 0;
-      background: #111;
-      border-top: 1px solid #2a2a2a;
-      padding: 20px 24px;
-      z-index: 50;
+      width: 400px;
+      min-width: 300px;
+      background: #0a0a0a;
+      border-left: 1px solid #2a2a2a;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .inpaint-result-section.hidden {
+      display: none;
     }
 
     .inpaint-result-header {
@@ -4432,6 +4436,8 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2a2a;
     }
 
     .inpaint-result-header h3 {
@@ -4451,16 +4457,17 @@
     }
 
     .inpaint-result-image-container img {
-      max-height: 200px;
+      max-width: 100%;
+      max-height: 400px;
       border-radius: 8px;
       border: 1px solid #2a2a2a;
     }
 
     .inpaint-results-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      display: flex;
+      flex-direction: column;
       gap: 16px;
-      max-height: 250px;
+      flex: 1;
       overflow-y: auto;
     }
 
@@ -4474,41 +4481,65 @@
 
     .inpaint-result-item img {
       width: 100%;
-      height: 150px;
-      object-fit: cover;
+      max-height: 350px;
+      object-fit: contain;
       display: block;
+      background: #0a0a0a;
     }
 
     .inpaint-result-item-actions {
       display: flex;
-      gap: 4px;
-      padding: 8px;
+      gap: 8px;
+      padding: 12px;
       background: #111;
       justify-content: center;
     }
 
     .inpaint-result-item-actions button {
-      padding: 4px 8px;
-      font-size: 0.75rem;
-      border-radius: 4px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      border-radius: 6px;
       border: 1px solid #333;
       background: #222;
       color: #fff;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
 
     .inpaint-result-item-actions button:hover {
       background: #333;
+      border-color: #444;
     }
 
     .inpaint-result-item-actions button.primary {
-      background: #ff2ebb;
-      border-color: #ff2ebb;
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      border: none;
     }
 
     .inpaint-result-item-actions button.primary:hover {
-      background: #e025a5;
+      opacity: 0.9;
+    }
+
+    .inpaint-result-placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .inpaint-result-placeholder-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .inpaint-result-placeholder-text {
+      font-size: 0.95rem;
+      line-height: 1.5;
     }
 
     .chat-typing {
@@ -7165,11 +7196,30 @@
     }
 
     .light-theme .inpaint-result-section {
-      background: #ffffff !important;
+      background: #f5f5f7 !important;
       border-color: #d1d1d6 !important;
     }
 
     .light-theme .inpaint-result-header h3 {
+      color: #1d1d1f !important;
+    }
+
+    .light-theme .inpaint-result-placeholder {
+      color: #999 !important;
+    }
+
+    .light-theme .inpaint-result-item {
+      background: #ffffff !important;
+      border-color: #d1d1d6 !important;
+    }
+
+    .light-theme .inpaint-result-item-actions {
+      background: #f5f5f7 !important;
+    }
+
+    .light-theme .inpaint-result-item-actions button {
+      background: #ffffff !important;
+      border-color: #d1d1d6 !important;
       color: #1d1d1f !important;
     }
 
@@ -8256,15 +8306,22 @@
             <span>Generating...</span>
           </div>
         </div>
-      </div>
 
-      <!-- Result Section -->
-      <div class="inpaint-result-section" id="inpaintResultSection" style="display: none;">
-        <div class="inpaint-result-header">
-          <h3>Results</h3>
-        </div>
-        <div class="inpaint-results-grid" id="inpaintResultsGrid">
-          <!-- Results will be populated dynamically -->
+        <!-- Result Section (Right Panel) -->
+        <div class="inpaint-result-section" id="inpaintResultSection">
+          <div class="inpaint-result-header">
+            <h3>Results</h3>
+          </div>
+          <div class="inpaint-results-grid" id="inpaintResultsGrid">
+            <!-- Placeholder when no results -->
+            <div class="inpaint-result-placeholder" id="inpaintResultPlaceholder">
+              <div class="inpaint-result-placeholder-icon">✨</div>
+              <div class="inpaint-result-placeholder-text">
+                Your inpainted images will appear here<br>
+                <span style="color: #555; font-size: 0.85rem;">Paint a mask and click Generate</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -13233,7 +13290,6 @@
       // Show loading
       document.getElementById('inpaintGenerateBtn').disabled = true;
       document.getElementById('inpaintLoading').style.display = 'flex';
-      document.getElementById('inpaintResultSection').style.display = 'none';
 
       const endpoint = inpaintMode === 'sfw' ? '/api/inpaint/inpaint-sfw' : '/api/inpaint/inpaint-nsfw';
       const results = [];
@@ -13295,7 +13351,6 @@
 
         // Display all results in grid
         displayInpaintResults(results);
-        document.getElementById('inpaintResultSection').style.display = 'block';
 
         console.log(`✅ Inpaint complete: ${successCount}/${numGenerations} images generated`);
 
@@ -13310,7 +13365,15 @@
 
     function displayInpaintResults(results) {
       const grid = document.getElementById('inpaintResultsGrid');
-      grid.innerHTML = results.map((url, index) => `
+      const placeholder = document.getElementById('inpaintResultPlaceholder');
+
+      // Hide placeholder
+      if (placeholder) {
+        placeholder.style.display = 'none';
+      }
+
+      // Generate result items HTML
+      const resultsHtml = results.map((url, index) => `
         <div class="inpaint-result-item">
           <img src="${url}" alt="Inpaint result ${index + 1}" onclick="openImagePreview('${url}')">
           <div class="inpaint-result-item-actions">
@@ -13320,6 +13383,9 @@
           </div>
         </div>
       `).join('');
+
+      // Keep placeholder in DOM but hidden, add results
+      grid.innerHTML = resultsHtml + (placeholder ? '<div id="inpaintResultPlaceholder" class="inpaint-result-placeholder" style="display:none;"></div>' : '');
     }
 
     function sendInpaintToEdit() {
