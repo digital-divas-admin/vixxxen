@@ -14015,8 +14015,209 @@
       }
     }
 
+    // Track active generation batches for concurrent generation support
+    let activeGenerationBatches = 0;
+
+    function updateGenerateButtonState() {
+      const btn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('generateText');
+
+      if (activeGenerationBatches > 0) {
+        btn.classList.add('generating');
+        btnText.textContent = `⏳ ${activeGenerationBatches} generating...`;
+        btn.disabled = false; // Keep enabled for more generations
+      } else {
+        btn.classList.remove('generating');
+        updateImageGenerateButtonCost();
+        btn.disabled = false;
+      }
+    }
+
+    // Async Qwen generation that runs in background
+    async function runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, contentMode, costPerImage, batchId) {
+      const btn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('generateText');
+
+      try {
+        // Get selected character/LoRA
+        const loraValue = document.getElementById('qwenGenCharacter')?.value;
+        const loras = [];
+        let qwenPrompt = prompt;
+
+        if (loraValue && loraValue !== 'none') {
+          if (loraValue.endsWith('.safetensors')) {
+            loras.push(loraValue);
+          } else {
+            const character = allMarketplaceCharacters.find(c => c.id === loraValue);
+            if (character && character.lora_url) {
+              loras.push(character.lora_url);
+              if (character.trigger_word) {
+                qwenPrompt = `${character.trigger_word} ${prompt}`;
+              }
+            }
+          }
+        }
+
+        console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId });
+
+        // Reverse placeholders array so first generation fills the top placeholder
+        const qwenPlaceholders = [...placeholders].reverse();
+
+        // Loop through each generation request sequentially
+        for (let genIndex = 0; genIndex < numOutputs; genIndex++) {
+          console.log(`🎨 [Batch ${batchId}] Starting generation ${genIndex + 1} of ${numOutputs}`);
+
+          // Submit job via backend proxy
+          const submitResponse = await fetch(`${API_BASE_URL}/api/qwen/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: qwenPrompt, loras })
+          });
+
+          if (!submitResponse.ok) {
+            const errorData = await submitResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to submit job to ComfyUI');
+          }
+
+          const submitData = await submitResponse.json();
+          const jobId = submitData.job_id || submitData.jobId || submitData.id;
+
+          if (!jobId) {
+            throw new Error('No job ID returned from ComfyUI');
+          }
+
+          console.log(`📋 [Batch ${batchId}] ComfyUI job ${genIndex + 1} submitted:`, jobId);
+
+          // Track job for persistence across tab switches
+          activeGenerationJobs[jobId] = {
+            status: 'pending',
+            index: genIndex + 1,
+            model: 'qwen',
+            prompt: qwenPrompt,
+            startTime: Date.now(),
+            batchId
+          };
+
+          // Mark placeholder with job ID for recovery
+          if (qwenPlaceholders[genIndex]) {
+            qwenPlaceholders[genIndex].dataset.jobId = jobId;
+          }
+
+          saveGenerationState();
+
+          // Poll for job completion
+          const maxPolls = 300;
+          let pollCount = 0;
+          let jobComplete = false;
+          let resultData = null;
+
+          while (!jobComplete && pollCount < maxPolls) {
+            const pollDelay = document.visibilityState === 'visible' ? 1000 : 3000;
+            await new Promise(resolve => setTimeout(resolve, pollDelay));
+            pollCount++;
+
+            if (activeGenerationJobs[jobId]) {
+              activeGenerationJobs[jobId].status = 'processing';
+              activeGenerationJobs[jobId].pollCount = pollCount;
+              saveGenerationState();
+            }
+
+            try {
+              const statusResponse = await fetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
+              if (!statusResponse.ok) continue;
+
+              const statusData = await statusResponse.json();
+              if (pollCount % 10 === 0) {
+                console.log(`⏳ [Batch ${batchId}] Gen ${genIndex + 1} Poll ${pollCount}: status =`, statusData.status || statusData.state);
+              }
+
+              if (statusData.status === 'completed' || statusData.state === 'completed' || statusData.status === 'success') {
+                jobComplete = true;
+                resultData = statusData;
+              } else if (statusData.status === 'failed' || statusData.state === 'failed' || statusData.error) {
+                delete activeGenerationJobs[jobId];
+                saveGenerationState();
+                throw new Error(statusData.error || 'ComfyUI generation failed');
+              }
+            } catch (fetchError) {
+              console.warn('Poll fetch error:', fetchError.message);
+            }
+          }
+
+          if (!jobComplete) {
+            delete activeGenerationJobs[jobId];
+            saveGenerationState();
+            updatePlaceholderWithError(qwenPlaceholders[genIndex], `Generation ${genIndex + 1} timed out`);
+            continue;
+          }
+
+          // Job completed - remove from tracking
+          delete activeGenerationJobs[jobId];
+          saveGenerationState();
+
+          // Extract image from result
+          let imageUrl = null;
+          if (resultData.output?.message && typeof resultData.output.message === 'string') {
+            const base64Data = resultData.output.message;
+            imageUrl = `data:image/png;base64,${base64Data}`;
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete`);
+          } else if (resultData.images?.[0]) {
+            imageUrl = resultData.images[0];
+          } else if (resultData.output?.images?.[0]) {
+            imageUrl = resultData.output.images[0];
+          }
+
+          if (!imageUrl) {
+            console.error('No image in response:', resultData);
+            updatePlaceholderWithError(qwenPlaceholders[genIndex], `Generation ${genIndex + 1} failed - no image`);
+            continue;
+          }
+
+          // Process this image
+          const isNsfwMode = contentMode === 'nsfw';
+          const newImage = {
+            url: imageUrl,
+            model: 'qwen-comfyui',
+            aspectRatio: aspectRatio,
+            timestamp: Date.now() + genIndex,
+            isNsfw: isNsfwMode
+          };
+          generatedImages.push(newImage);
+          replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
+
+          // Upload to Supabase Storage
+          uploadImageToStorage(imageUrl, {
+            prompt: qwenPrompt,
+            model: 'qwen',
+            isNsfw: contentMode === 'nsfw',
+            aspectRatio: aspectRatio,
+            resolution: resolution,
+            creditsUsed: costPerImage
+          }).then(storedUrl => {
+            if (storedUrl) {
+              newImage.storedUrl = storedUrl;
+              console.log('📁 Image saved to permanent storage');
+            }
+          });
+        }
+
+        // Log generation for compliance
+        logGeneration('image', 'qwen', qwenPrompt, contentMode === 'nsfw', numOutputs);
+        console.log(`✅ [Batch ${batchId}] Qwen generation complete`);
+
+      } catch (error) {
+        console.error(`❌ [Batch ${batchId}] Qwen generation error:`, error);
+        showError(error.message || 'Generation failed');
+      } finally {
+        // Decrement batch counter and update button
+        activeGenerationBatches--;
+        clearGenerationState();
+        updateGenerateButtonState();
+      }
+    }
+
     async function generateImages() {
-      if (isGenerating) return;
+      // Allow concurrent generations - removed blocking check
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
@@ -14057,20 +14258,22 @@
         return;
       }
 
-      isGenerating = true;
+      // Track this generation batch
+      activeGenerationBatches++;
+      const batchId = Date.now();
+
       const btn = document.getElementById('generateBtn');
       const btnText = document.getElementById('generateText');
 
+      // Show generating state but keep button enabled for new generations
       btn.classList.add('generating');
-      btnText.textContent = '⏳ Generating...';
-      btn.disabled = true;
+      updateGenerateButtonState();
 
-      // Variables already declared above for credit calculation - reusing them
-
-      // Clear placeholder if it's first generation
+      // Clear placeholder if it's first generation (no images yet)
       const outputGrid = document.getElementById('outputGrid');
-      if (generatedImages.length === 0) {
-        outputGrid.innerHTML = '';
+      const placeholder = outputGrid.querySelector('.output-placeholder');
+      if (placeholder) {
+        placeholder.remove();
       }
 
       // Clear any previous errors
@@ -14079,209 +14282,24 @@
       // Create loading placeholders for each image (insert at top)
       const placeholders = [];
       for (let i = 0; i < numOutputs; i++) {
-        const placeholder = createLoadingPlaceholder(i + 1);
+        const placeholderEl = createLoadingPlaceholder(i + 1);
+        placeholderEl.dataset.batchId = batchId;
         // Insert at the beginning so newest images appear at top
-        outputGrid.insertBefore(placeholder, outputGrid.firstChild);
-        placeholders.unshift(placeholder); // Add to beginning of array
+        outputGrid.insertBefore(placeholderEl, outputGrid.firstChild);
+        placeholders.unshift(placeholderEl); // Add to beginning of array
+      }
+
+      // For Qwen, run generation in background and return immediately
+      if (currentModel === 'qwen') {
+        // Start Qwen generation asynchronously (non-blocking)
+        runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, contentMode, costPerImage, batchId);
+        return; // Return immediately - button is re-enabled
       }
 
       try {
         let endpoint, payload;
 
-        if (currentModel === 'qwen') {
-          // Qwen generation via ComfyUI/RunPod (proxied through backend to avoid CORS)
-          // ComfyUI returns 1 image per request, so we loop for multiple generations
-
-          // Get selected character/LoRA
-          const loraValue = document.getElementById('qwenGenCharacter')?.value;
-          const loras = [];
-          let qwenPrompt = prompt;
-
-          if (loraValue && loraValue !== 'none') {
-            // Check if it's a built-in LoRA (filename ending in .safetensors)
-            if (loraValue.endsWith('.safetensors')) {
-              loras.push(loraValue);
-            } else {
-              // Look up in marketplace characters
-              const character = allMarketplaceCharacters.find(c => c.id === loraValue);
-              if (character && character.lora_url) {
-                loras.push(character.lora_url);
-                // Prepend trigger word to prompt if available
-                if (character.trigger_word) {
-                  qwenPrompt = `${character.trigger_word} ${prompt}`;
-                }
-              }
-            }
-          }
-
-          console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs });
-
-          // Reverse placeholders array so first generation fills the top placeholder
-          const qwenPlaceholders = [...placeholders].reverse();
-
-          // Loop through each generation request sequentially
-          for (let genIndex = 0; genIndex < numOutputs; genIndex++) {
-            console.log(`🎨 Starting generation ${genIndex + 1} of ${numOutputs}`);
-            btnText.textContent = `⏳ Generating ${genIndex + 1}/${numOutputs}...`;
-
-            // Submit job via backend proxy
-            const submitResponse = await fetch(`${API_BASE_URL}/api/qwen/generate`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: qwenPrompt, loras })
-            });
-
-            if (!submitResponse.ok) {
-              const errorData = await submitResponse.json().catch(() => ({}));
-              throw new Error(errorData.error || 'Failed to submit job to ComfyUI');
-            }
-
-            const submitData = await submitResponse.json();
-            const jobId = submitData.job_id || submitData.jobId || submitData.id;
-
-            if (!jobId) {
-              throw new Error('No job ID returned from ComfyUI');
-            }
-
-            console.log(`📋 ComfyUI job ${genIndex + 1} submitted:`, jobId);
-
-            // Track job for persistence across tab switches
-            activeGenerationJobs[jobId] = {
-              status: 'pending',
-              index: genIndex + 1,
-              model: 'qwen',
-              prompt: qwenPrompt,
-              startTime: Date.now()
-            };
-
-            // Mark placeholder with job ID for recovery
-            if (qwenPlaceholders[genIndex]) {
-              qwenPlaceholders[genIndex].dataset.jobId = jobId;
-            }
-
-            // Save state for tab switch recovery
-            saveGenerationState();
-
-            // Poll for job completion via backend proxy
-            const maxPolls = 300; // 5 minutes max per image (1 poll per second)
-            let pollCount = 0;
-            let jobComplete = false;
-            let resultData = null;
-
-            while (!jobComplete && pollCount < maxPolls) {
-              // Use a longer delay if tab is hidden to reduce CPU usage
-              const pollDelay = document.visibilityState === 'visible' ? 1000 : 3000;
-              await new Promise(resolve => setTimeout(resolve, pollDelay));
-              pollCount++;
-
-              // Update job status periodically
-              if (activeGenerationJobs[jobId]) {
-                activeGenerationJobs[jobId].status = 'processing';
-                activeGenerationJobs[jobId].pollCount = pollCount;
-                saveGenerationState();
-              }
-
-              try {
-                const statusResponse = await fetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
-                if (!statusResponse.ok) {
-                  console.warn('Status check failed, retrying...');
-                  continue;
-                }
-
-                const statusData = await statusResponse.json();
-                if (pollCount % 10 === 0 || document.visibilityState === 'visible') {
-                  console.log(`⏳ Gen ${genIndex + 1} Poll ${pollCount}: status =`, statusData.status || statusData.state);
-                }
-
-                if (statusData.status === 'completed' || statusData.state === 'completed' || statusData.status === 'success') {
-                  jobComplete = true;
-                  resultData = statusData;
-                } else if (statusData.status === 'failed' || statusData.state === 'failed' || statusData.error) {
-                  delete activeGenerationJobs[jobId];
-                  saveGenerationState();
-                  throw new Error(statusData.error || 'ComfyUI generation failed');
-                }
-              } catch (fetchError) {
-                // Network error during poll - continue trying
-                console.warn('Poll fetch error:', fetchError.message);
-              }
-              // Otherwise keep polling (pending/processing)
-            }
-
-            if (!jobComplete) {
-              delete activeGenerationJobs[jobId];
-              saveGenerationState();
-              throw new Error(`Generation ${genIndex + 1} timed out - job took too long`);
-            }
-
-            // Job completed - remove from tracking
-            delete activeGenerationJobs[jobId];
-            saveGenerationState();
-
-            // Extract image from result - ComfyUI returns base64 in output.message
-            let imageUrl = null;
-
-            // Check for base64 image in output.message (ComfyUI/RunPod format)
-            if (resultData.output?.message && typeof resultData.output.message === 'string') {
-              // It's a base64 string - convert to data URL
-              const base64Data = resultData.output.message;
-              imageUrl = `data:image/png;base64,${base64Data}`;
-              console.log(`✅ ComfyUI generation ${genIndex + 1} complete (base64)`);
-            } else if (resultData.images?.[0]) {
-              imageUrl = resultData.images[0];
-            } else if (resultData.output?.images?.[0]) {
-              imageUrl = resultData.output.images[0];
-            }
-
-            if (!imageUrl) {
-              console.error('No image in response:', resultData);
-              updatePlaceholderWithError(qwenPlaceholders[genIndex], `Generation ${genIndex + 1} failed - no image returned`);
-              continue;
-            }
-
-            // Process this image
-            const isNsfwMode = contentMode === 'nsfw';
-            const newImage = {
-              url: imageUrl,
-              model: 'qwen-comfyui',
-              aspectRatio: aspectRatio,
-              timestamp: Date.now() + genIndex,
-              isNsfw: isNsfwMode
-            };
-            console.log('🔞 Image generated with NSFW flag:', isNsfwMode);
-            generatedImages.push(newImage);
-            replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
-
-            // Upload to Supabase Storage
-            uploadImageToStorage(imageUrl, {
-              prompt: qwenPrompt,
-              model: 'qwen',
-              isNsfw: contentMode === 'nsfw',
-              aspectRatio: aspectRatio,
-              resolution: resolution,
-              creditsUsed: costPerImage
-            }).then(storedUrl => {
-              if (storedUrl) {
-                newImage.storedUrl = storedUrl;
-                console.log('📁 Image saved to permanent storage');
-              }
-            });
-          }
-
-          // Log generation for compliance
-          logGeneration('image', 'qwen', qwenPrompt, contentMode === 'nsfw', numOutputs);
-
-          // Clear generation state - all Qwen jobs complete
-          clearGenerationState();
-
-          // Skip the normal response handling since we handled it above
-          isGenerating = false;
-          btn.classList.remove('generating');
-          btnText.textContent = `⚡ Generate (${totalCost} credits)`;
-          btn.disabled = false;
-          return;
-
-        } else if (currentModel === 'seedream') {
+        if (currentModel === 'seedream') {
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
@@ -14401,12 +14419,10 @@
         });
         showError(errorMessage);
       } finally {
-        // Clear generation state
+        // Decrement batch counter and update button state
+        activeGenerationBatches--;
         clearGenerationState();
-        isGenerating = false;
-        btn.classList.remove('generating');
-        updateImageGenerateButtonCost(); // Update button with cost again
-        btn.disabled = false;
+        updateGenerateButtonState();
       }
     }
 
@@ -14540,8 +14556,21 @@
         </div>
       `;
 
-      // Insert at the top so newest images appear first
-      outputGrid.insertBefore(imageDiv, outputGrid.firstChild);
+      // Find first non-placeholder element to insert before
+      // This prevents history images from being inserted above active generation placeholders
+      const placeholders = outputGrid.querySelectorAll('.output-item .output-placeholder-loading, .output-item .output-placeholder-failed');
+      if (placeholders.length > 0) {
+        // Find the last placeholder's parent and insert after it
+        const lastPlaceholder = placeholders[placeholders.length - 1].closest('.output-item');
+        if (lastPlaceholder && lastPlaceholder.nextSibling) {
+          outputGrid.insertBefore(imageDiv, lastPlaceholder.nextSibling);
+        } else {
+          outputGrid.appendChild(imageDiv);
+        }
+      } else {
+        // No placeholders, insert at beginning
+        outputGrid.insertBefore(imageDiv, outputGrid.firstChild);
+      }
     }
 
     function downloadImage(url, timestamp) {
