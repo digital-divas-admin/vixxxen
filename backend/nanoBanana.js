@@ -63,42 +63,34 @@ router.post('/generate', async (req, res) => {
       console.log(`   Generating image ${i + 1}/${numOutputs}...`);
 
       try {
-        // Build the message content
-        const messageContent = [];
+        // Build the prompt
+        let imagePrompt = prompt;
+        if (aspectRatio !== "1:1") {
+          imagePrompt = `${prompt} (aspect ratio: ${aspectRatio})`;
+        }
 
-        // Add reference images first if provided
+        // Build messages array
+        let messages = [];
+
+        // Add reference images if provided
         if (referenceImages && referenceImages.length > 0) {
-          for (const imageDataUrl of referenceImages) {
-            messageContent.push({
-              type: "image_url",
-              image_url: {
-                url: imageDataUrl
-              }
-            });
-          }
+          const contentParts = referenceImages.map(imageDataUrl => ({
+            type: "image_url",
+            image_url: { url: imageDataUrl }
+          }));
+          contentParts.push({ type: "text", text: `Use these as reference. ${imagePrompt}` });
+          messages.push({ role: "user", content: contentParts });
+        } else {
+          // Simple string content for basic generation
+          messages.push({ role: "user", content: imagePrompt });
         }
 
-        // Build image generation prompt with aspect ratio
-        let imagePrompt = `Generate an image with aspect ratio ${aspectRatio}: ${prompt}`;
-
-        if (referenceImages.length > 0) {
-          imagePrompt += ` Use the provided reference image(s) as style guidance.`;
-        }
-
-        messageContent.push({
-          type: "text",
-          text: imagePrompt
-        });
+        console.log(`   Request messages:`, JSON.stringify(messages, null, 2).substring(0, 500));
 
         // Make request to OpenRouter using SDK
         const result = await openrouter.chat.send({
           model: NANO_BANANA_MODEL,
-          messages: [
-            {
-              role: "user",
-              content: messageContent
-            }
-          ],
+          messages: messages,
           modalities: ["image", "text"]
         });
 
