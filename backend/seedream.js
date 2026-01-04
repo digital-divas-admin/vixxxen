@@ -1,18 +1,14 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const { OpenRouter } = require('@openrouter/sdk');
 
 const router = express.Router();
 
-// OpenRouter API configuration
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-
 // Seedream 4.5 model via OpenRouter
-// Using Google's Imagen or similar image generation model available on OpenRouter
-const SEEDREAM_MODEL = "google/gemini-2.0-flash-exp:free";
+const SEEDREAM_MODEL = "bytedance-seed/seedream-4.5";
 
 /**
  * POST /api/seedream/generate
- * Generate an image using Seedream model via OpenRouter
+ * Generate an image using Seedream 4.5 model via OpenRouter
  *
  * Body:
  * {
@@ -53,18 +49,17 @@ router.post('/generate', async (req, res) => {
     // Seedream 4.5 uses 'size' parameter: "2K", "4K", or "custom"
     const validSize = ['2K', '4K'].includes(resolution) ? resolution : '2K';
 
-    // Map resolution to dimensions for the prompt
-    const resolutionMap = {
-      '2K': '2048x2048',
-      '4K': '4096x4096'
-    };
-
     console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via OpenRouter...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Size: ${validSize}`);
     console.log(`   Guidance Scale: ${guidanceScale}`);
-    console.log(`   Making ${numOutputs} separate calls...`);
+    console.log(`   Model: ${SEEDREAM_MODEL}`);
+
+    // Initialize OpenRouter client
+    const openrouter = new OpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY
+    });
 
     // Generate images sequentially
     const images = [];
@@ -90,91 +85,67 @@ router.post('/generate', async (req, res) => {
         }
 
         // Build comprehensive image generation prompt
-        let imagePrompt = `Generate a high-quality ${validSize} resolution image.
-
-Description: ${prompt}`;
+        let imagePrompt = `Generate a high-quality ${validSize} resolution image: ${prompt}`;
 
         if (negativePrompt) {
-          imagePrompt += `\n\nAvoid: ${negativePrompt}`;
+          imagePrompt += ` Avoid: ${negativePrompt}`;
         }
 
         if (referenceImages.length > 0) {
-          imagePrompt += `\n\nUse the provided reference image(s) as style/composition guidance.`;
+          imagePrompt += ` Use the provided reference image(s) as style/composition guidance.`;
         }
-
-        imagePrompt += `\n\nOutput ONLY the generated image, no text or explanations.`;
 
         messageContent.push({
           type: "text",
           text: imagePrompt
         });
 
-        // Make request to OpenRouter
-        const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
-            'X-Title': 'DivaForge'
-          },
-          body: JSON.stringify({
-            model: SEEDREAM_MODEL,
-            messages: [
-              {
-                role: "user",
-                content: messageContent
-              }
-            ],
-            max_tokens: 4096,
-            temperature: 0.8
-          })
+        // Make request to OpenRouter using SDK
+        const result = await openrouter.chat.send({
+          model: SEEDREAM_MODEL,
+          messages: [
+            {
+              role: "user",
+              content: messageContent
+            }
+          ],
+          modalities: ["image", "text"]
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
-        }
-
-        const result = await response.json();
         console.log(`   Response received, processing...`);
 
-        // Extract image from response
-        if (result.choices && result.choices.length > 0) {
-          const choice = result.choices[0];
-          const content = choice.message?.content;
+        // Extract images from response
+        const message = result.choices[0]?.message;
 
+        if (message?.images && message.images.length > 0) {
+          message.images.forEach((image, idx) => {
+            const imageUrl = image.image_url?.url;
+            if (imageUrl) {
+              images.push(imageUrl);
+              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully`);
+            }
+          });
+        } else if (message?.content) {
           // Check if content contains base64 image data
-          if (typeof content === 'string') {
-            // Look for base64 image patterns
-            const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-            if (base64Match) {
-              images.push(base64Match[0]);
-              console.log(`   ✅ Image ${i + 1} generated successfully`);
-            } else {
-              console.log(`   ⚠️ No image found in response for image ${i + 1}`);
-              console.log(`   Response content preview: ${content.substring(0, 200)}...`);
-              warnings.push(`Image generation not available for this model`);
-            }
-          } else if (Array.isArray(content)) {
-            // Handle multimodal response format
-            for (const part of content) {
-              if (part.type === 'image_url' && part.image_url?.url) {
-                images.push(part.image_url.url);
-                console.log(`   ✅ Image ${i + 1} generated successfully`);
-              } else if (part.type === 'image' && part.source?.data) {
-                const imageDataUrl = `data:${part.source.media_type || 'image/png'};base64,${part.source.data}`;
-                images.push(imageDataUrl);
-                console.log(`   ✅ Image ${i + 1} generated successfully`);
-              }
-            }
+          const content = typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+          const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+          if (base64Match) {
+            images.push(base64Match[0]);
+            console.log(`   ✅ Image ${i + 1} generated successfully (base64)`);
+          } else {
+            console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+            console.log(`   Response content preview: ${content.substring(0, 200)}...`);
+            warnings.push(`No image in response ${i + 1}`);
           }
+        } else {
+          console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+          warnings.push(`No image in response ${i + 1}`);
+        }
 
-          // Check finish reason
-          if (choice.finish_reason === 'content_filter') {
-            console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
-            warnings.push(`Image was blocked by content filter`);
-          }
+        // Check finish reason
+        if (result.choices[0]?.finish_reason === 'content_filter') {
+          console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
+          warnings.push(`Image was blocked by content filter`);
         }
       } catch (apiError) {
         console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
@@ -190,7 +161,7 @@ Description: ${prompt}`;
     if (images.length === 0) {
       const errorMsg = warnings.length > 0
         ? `No images were generated. ${warnings.join('. ')}`
-        : 'No images were generated. The model may not support image generation.';
+        : 'No images were generated.';
       throw new Error(errorMsg);
     }
 
@@ -218,7 +189,7 @@ Description: ${prompt}`;
     console.error('Seedream generation error:', error);
 
     // Handle specific error types
-    if (error.message?.includes('API key') || error.message?.includes('401')) {
+    if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
       return res.status(401).json({
         error: 'Invalid API key',
         message: 'Please check your OpenRouter API key at https://openrouter.ai/keys'

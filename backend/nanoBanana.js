@@ -1,17 +1,14 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const { OpenRouter } = require('@openrouter/sdk');
 
 const router = express.Router();
 
-// OpenRouter API configuration
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-
-// Nano Banana Pro model (Gemini 2.0 Flash via OpenRouter for image generation)
-const NANO_BANANA_MODEL = "google/gemini-2.0-flash-exp:free";
+// Nano Banana Pro model (Gemini 3 Pro Image Preview via OpenRouter)
+const NANO_BANANA_MODEL = "google/gemini-3-pro-image-preview";
 
 /**
  * POST /api/nano-banana/generate
- * Generate an image using Nano Banana Pro (Gemini via OpenRouter)
+ * Generate an image using Nano Banana Pro (Gemini 3 via OpenRouter)
  *
  * Body:
  * {
@@ -53,6 +50,11 @@ router.post('/generate', async (req, res) => {
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Model: ${NANO_BANANA_MODEL}`);
 
+    // Initialize OpenRouter client
+    const openrouter = new OpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY
+    });
+
     // Generate images sequentially
     const images = [];
     const warnings = [];
@@ -76,84 +78,64 @@ router.post('/generate', async (req, res) => {
           }
         }
 
-        // Add the text prompt with image generation instruction
-        const imagePrompt = `Generate an image with the following description. Output ONLY the image, no text explanation.
+        // Build image generation prompt with aspect ratio
+        let imagePrompt = `Generate an image with aspect ratio ${aspectRatio}: ${prompt}`;
 
-Aspect ratio: ${aspectRatio}
-Description: ${prompt}`;
+        if (referenceImages.length > 0) {
+          imagePrompt += ` Use the provided reference image(s) as style guidance.`;
+        }
 
         messageContent.push({
           type: "text",
           text: imagePrompt
         });
 
-        // Make request to OpenRouter
-        const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
-            'X-Title': 'DivaForge'
-          },
-          body: JSON.stringify({
-            model: NANO_BANANA_MODEL,
-            messages: [
-              {
-                role: "user",
-                content: messageContent
-              }
-            ],
-            max_tokens: 4096,
-            temperature: 0.7
-          })
+        // Make request to OpenRouter using SDK
+        const result = await openrouter.chat.send({
+          model: NANO_BANANA_MODEL,
+          messages: [
+            {
+              role: "user",
+              content: messageContent
+            }
+          ],
+          modalities: ["image", "text"]
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
-        }
-
-        const result = await response.json();
         console.log(`   Response received, processing...`);
 
-        // Extract image from response
-        if (result.choices && result.choices.length > 0) {
-          const choice = result.choices[0];
-          const content = choice.message?.content;
+        // Extract images from response
+        const message = result.choices[0]?.message;
 
+        if (message?.images && message.images.length > 0) {
+          message.images.forEach((image, idx) => {
+            const imageUrl = image.image_url?.url;
+            if (imageUrl) {
+              images.push(imageUrl);
+              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully`);
+            }
+          });
+        } else if (message?.content) {
           // Check if content contains base64 image data
-          if (typeof content === 'string') {
-            // Look for base64 image patterns or markdown image syntax
-            const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-            if (base64Match) {
-              images.push(base64Match[0]);
-              console.log(`   ✅ Image ${i + 1} generated successfully`);
-            } else {
-              // If no image in response, this model might not support image generation
-              console.log(`   ⚠️ No image found in response for image ${i + 1}`);
-              console.log(`   Response content preview: ${content.substring(0, 200)}...`);
-              warnings.push(`Image generation not available for this model`);
-            }
-          } else if (Array.isArray(content)) {
-            // Handle multimodal response format
-            for (const part of content) {
-              if (part.type === 'image_url' && part.image_url?.url) {
-                images.push(part.image_url.url);
-                console.log(`   ✅ Image ${i + 1} generated successfully`);
-              } else if (part.type === 'image' && part.source?.data) {
-                const imageDataUrl = `data:${part.source.media_type || 'image/png'};base64,${part.source.data}`;
-                images.push(imageDataUrl);
-                console.log(`   ✅ Image ${i + 1} generated successfully`);
-              }
-            }
+          const content = typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+          const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+          if (base64Match) {
+            images.push(base64Match[0]);
+            console.log(`   ✅ Image ${i + 1} generated successfully (base64)`);
+          } else {
+            console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+            console.log(`   Response content preview: ${content.substring(0, 200)}...`);
+            warnings.push(`No image in response ${i + 1}`);
           }
+        } else {
+          console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+          warnings.push(`No image in response ${i + 1}`);
+        }
 
-          // Check finish reason
-          if (choice.finish_reason === 'content_filter') {
-            console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
-            warnings.push(`Image was blocked by content filter`);
-          }
+        // Check finish reason
+        if (result.choices[0]?.finish_reason === 'content_filter') {
+          console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
+          warnings.push(`Image was blocked by content filter`);
         }
       } catch (apiError) {
         console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
@@ -169,7 +151,7 @@ Description: ${prompt}`;
     if (images.length === 0) {
       const errorMsg = warnings.length > 0
         ? `No images were generated. ${warnings.join('. ')}`
-        : 'No images were generated. The model may not support image generation.';
+        : 'No images were generated.';
       throw new Error(errorMsg);
     }
 
@@ -197,7 +179,7 @@ Description: ${prompt}`;
     console.error('Nano Banana Pro generation error:', error);
 
     // Handle specific error types
-    if (error.message?.includes('API key') || error.message?.includes('401')) {
+    if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
       return res.status(401).json({
         error: 'Invalid API key',
         message: 'Please check your OpenRouter API key at https://openrouter.ai/keys'
