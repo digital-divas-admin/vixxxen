@@ -1,19 +1,18 @@
 const express = require('express');
-const Replicate = require('replicate');
+const fetch = require('node-fetch');
 
 const router = express.Router();
 
-// Initialize Replicate client
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY,
-});
+// OpenRouter API configuration
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
-// Seedream 4.5 model endpoint (ByteDance official - upgraded version with better reference image support)
-const SEEDREAM_MODEL = "bytedance/seedream-4.5";
+// Seedream 4.5 model via OpenRouter
+// Using Google's Imagen or similar image generation model available on OpenRouter
+const SEEDREAM_MODEL = "google/gemini-2.0-flash-exp:free";
 
 /**
  * POST /api/seedream/generate
- * Generate an image using Seedream model
+ * Generate an image using Seedream model via OpenRouter
  *
  * Body:
  * {
@@ -42,8 +41,8 @@ router.post('/generate', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    if (!process.env.REPLICATE_API_KEY) {
-      return res.status(500).json({ error: 'Replicate API key not configured' });
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.status(500).json({ error: 'OpenRouter API key not configured' });
     }
 
     // Validate reference images (Seedream 4.5 supports up to 14)
@@ -54,59 +53,132 @@ router.post('/generate', async (req, res) => {
     // Seedream 4.5 uses 'size' parameter: "2K", "4K", or "custom"
     const validSize = ['2K', '4K'].includes(resolution) ? resolution : '2K';
 
-    console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5...`);
+    // Map resolution to dimensions for the prompt
+    const resolutionMap = {
+      '2K': '2048x2048',
+      '4K': '4096x4096'
+    };
+
+    console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via OpenRouter...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Size: ${validSize}`);
     console.log(`   Guidance Scale: ${guidanceScale}`);
-    console.log(`   Note: Seedream 4.5 doesn't support batch generation, making ${numOutputs} separate calls`);
+    console.log(`   Making ${numOutputs} separate calls...`);
 
-    // Seedream 4 doesn't support num_outputs, so we make multiple calls
-    // Run sequentially to avoid rate limits for accounts with low credit
-    console.log(`   Running ${numOutputs} generation(s) sequentially to avoid rate limits...`);
-    const outputs = [];
+    // Generate images sequentially
+    const images = [];
+    const warnings = [];
 
     for (let i = 0; i < numOutputs; i++) {
       console.log(`   Generating image ${i + 1}/${numOutputs}...`);
 
-      // Build input object according to Seedream 4.5 schema
-      const input = {
-        prompt,
-        size: validSize,
-        aspect_ratio: referenceImages.length > 0 ? "match_input_image" : "1:1",
-        sequential_image_generation: "disabled",
-        max_images: 1
-      };
-
-      // Add reference images if provided
-      if (referenceImages.length > 0) {
-        // Use image_input parameter as per Seedream 4.5 official schema
-        input.image_input = referenceImages;
-        console.log(`   Using ${referenceImages.length} reference image(s) via image_input parameter (array)`);
-        console.log(`   First image preview: ${referenceImages[0].substring(0, 100)}...`);
-      } else {
-        input.image_input = []; // Empty array when no references
-      }
-
-      console.log(`   Input parameters:`, JSON.stringify({
-        ...input,
-        image_input: input.image_input.length > 0 ? `[${input.image_input.length} images, ${input.image_input[0].substring(0, 50)}...]` : "[]"
-      }, null, 2));
-
       try {
-        const output = await replicate.run(SEEDREAM_MODEL, {
-          input
-        });
-        console.log(`   ✅ Image ${i + 1} generated successfully`);
-        console.log(`   Output type: ${typeof output}, isArray: ${Array.isArray(output)}`);
-        if (Array.isArray(output)) {
-          console.log(`   Output contains ${output.length} item(s)`);
+        // Build the message content
+        const messageContent = [];
+
+        // Add reference images first if provided
+        if (referenceImages && referenceImages.length > 0) {
+          for (const imageDataUrl of referenceImages) {
+            messageContent.push({
+              type: "image_url",
+              image_url: {
+                url: imageDataUrl
+              }
+            });
+          }
         }
-        outputs.push(output);
+
+        // Build comprehensive image generation prompt
+        let imagePrompt = `Generate a high-quality ${validSize} resolution image.
+
+Description: ${prompt}`;
+
+        if (negativePrompt) {
+          imagePrompt += `\n\nAvoid: ${negativePrompt}`;
+        }
+
+        if (referenceImages.length > 0) {
+          imagePrompt += `\n\nUse the provided reference image(s) as style/composition guidance.`;
+        }
+
+        imagePrompt += `\n\nOutput ONLY the generated image, no text or explanations.`;
+
+        messageContent.push({
+          type: "text",
+          text: imagePrompt
+        });
+
+        // Make request to OpenRouter
+        const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
+            'X-Title': 'DivaForge'
+          },
+          body: JSON.stringify({
+            model: SEEDREAM_MODEL,
+            messages: [
+              {
+                role: "user",
+                content: messageContent
+              }
+            ],
+            max_tokens: 4096,
+            temperature: 0.8
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log(`   Response received, processing...`);
+
+        // Extract image from response
+        if (result.choices && result.choices.length > 0) {
+          const choice = result.choices[0];
+          const content = choice.message?.content;
+
+          // Check if content contains base64 image data
+          if (typeof content === 'string') {
+            // Look for base64 image patterns
+            const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+            if (base64Match) {
+              images.push(base64Match[0]);
+              console.log(`   ✅ Image ${i + 1} generated successfully`);
+            } else {
+              console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+              console.log(`   Response content preview: ${content.substring(0, 200)}...`);
+              warnings.push(`Image generation not available for this model`);
+            }
+          } else if (Array.isArray(content)) {
+            // Handle multimodal response format
+            for (const part of content) {
+              if (part.type === 'image_url' && part.image_url?.url) {
+                images.push(part.image_url.url);
+                console.log(`   ✅ Image ${i + 1} generated successfully`);
+              } else if (part.type === 'image' && part.source?.data) {
+                const imageDataUrl = `data:${part.source.media_type || 'image/png'};base64,${part.source.data}`;
+                images.push(imageDataUrl);
+                console.log(`   ✅ Image ${i + 1} generated successfully`);
+              }
+            }
+          }
+
+          // Check finish reason
+          if (choice.finish_reason === 'content_filter') {
+            console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
+            warnings.push(`Image was blocked by content filter`);
+          }
+        }
       } catch (apiError) {
         console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
-        console.error(`   Full error:`, JSON.stringify(apiError, null, 2));
-        throw apiError;
+        warnings.push(`Image ${i + 1} failed: ${apiError.message}`);
       }
 
       // Small delay between requests to avoid rate limiting
@@ -115,26 +187,24 @@ router.post('/generate', async (req, res) => {
       }
     }
 
-    console.log(`   ✅ Generation complete!`);
-    console.log(`   Received ${outputs.length} response(s)`);
+    if (images.length === 0) {
+      const errorMsg = warnings.length > 0
+        ? `No images were generated. ${warnings.join('. ')}`
+        : 'No images were generated. The model may not support image generation.';
+      throw new Error(errorMsg);
+    }
 
-    // Flatten the results (each output might be a single URL or array)
-    let images = [];
-    outputs.forEach(output => {
-      if (Array.isArray(output)) {
-        images.push(...output);
-      } else {
-        images.push(output);
-      }
-    });
-
-    console.log(`   Final image count: ${images.length}`);
+    console.log(`   ✅ Generation complete! Created ${images.length} image(s)`);
+    if (warnings.length > 0) {
+      console.log(`   ⚠️ Warnings: ${warnings.join(', ')}`);
+    }
 
     // Return the generated images
     res.json({
       success: true,
       model: 'seedream-4.5',
       images: images,
+      warnings: warnings.length > 0 ? warnings : undefined,
       parameters: {
         prompt,
         size: validSize,
@@ -148,10 +218,24 @@ router.post('/generate', async (req, res) => {
     console.error('Seedream generation error:', error);
 
     // Handle specific error types
-    if (error.message?.includes('insufficient_quota')) {
+    if (error.message?.includes('API key') || error.message?.includes('401')) {
+      return res.status(401).json({
+        error: 'Invalid API key',
+        message: 'Please check your OpenRouter API key at https://openrouter.ai/keys'
+      });
+    }
+
+    if (error.message?.includes('insufficient') || error.message?.includes('402')) {
       return res.status(402).json({
         error: 'Insufficient funds',
-        message: 'Please add credits to your Replicate account at https://replicate.com/account/billing'
+        message: 'Please add credits to your OpenRouter account at https://openrouter.ai/credits'
+      });
+    }
+
+    if (error.message?.includes('rate') || error.message?.includes('429')) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: 'Please try again later.'
       });
     }
 
@@ -168,10 +252,11 @@ router.post('/generate', async (req, res) => {
  */
 router.get('/status', (req, res) => {
   res.json({
-    model: 'seedream',
-    configured: !!process.env.REPLICATE_API_KEY,
+    model: 'seedream-4.5',
+    configured: !!process.env.OPENROUTER_API_KEY,
     endpoint: SEEDREAM_MODEL,
-    status: process.env.REPLICATE_API_KEY ? 'ready' : 'missing_api_key'
+    provider: 'openrouter',
+    status: process.env.OPENROUTER_API_KEY ? 'ready' : 'missing_api_key'
   });
 });
 

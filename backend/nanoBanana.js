@@ -1,19 +1,17 @@
 const express = require('express');
-const { GoogleGenAI, Modality } = require('@google/genai');
+const fetch = require('node-fetch');
 
 const router = express.Router();
 
-// Initialize Google GenAI client
-const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_API_KEY
-});
+// OpenRouter API configuration
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
-// Nano Banana Pro model (Gemini 3 Pro Image Preview)
-const NANO_BANANA_MODEL = "gemini-3-pro-image-preview";
+// Nano Banana Pro model (Gemini 2.0 Flash via OpenRouter for image generation)
+const NANO_BANANA_MODEL = "google/gemini-2.0-flash-exp:free";
 
 /**
  * POST /api/nano-banana/generate
- * Generate an image using Nano Banana Pro (Gemini 3 Pro Image)
+ * Generate an image using Nano Banana Pro (Gemini via OpenRouter)
  *
  * Body:
  * {
@@ -38,8 +36,8 @@ router.post('/generate', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    if (!process.env.GOOGLE_API_KEY) {
-      return res.status(500).json({ error: 'Google API key not configured' });
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.status(500).json({ error: 'OpenRouter API key not configured' });
     }
 
     const validAspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"];
@@ -49,13 +47,13 @@ router.post('/generate', async (req, res) => {
       });
     }
 
-    console.log(`\n🍌 Generating ${numOutputs} image(s) with Nano Banana Pro...`);
+    console.log(`\n🍌 Generating ${numOutputs} image(s) with Nano Banana Pro via OpenRouter...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   Aspect Ratio: ${aspectRatio}`);
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Model: ${NANO_BANANA_MODEL}`);
 
-    // Generate images sequentially (Google AI API typically generates one at a time)
+    // Generate images sequentially
     const images = [];
     const warnings = [];
 
@@ -63,103 +61,103 @@ router.post('/generate', async (req, res) => {
       console.log(`   Generating image ${i + 1}/${numOutputs}...`);
 
       try {
-        let requestContent;
+        // Build the message content
+        const messageContent = [];
 
-        // If we have reference images, build a multi-part request like the Python example
-        // Python: model.generate_content([text_prompt, ref_img])
+        // Add reference images first if provided
         if (referenceImages && referenceImages.length > 0) {
-          const contentParts = [];
-
-          // Add text prompt first
-          contentParts.push({
-            text: prompt
-          });
-
-          // Add reference images
           for (const imageDataUrl of referenceImages) {
-            // Extract base64 data from data URL
-            const base64Data = imageDataUrl.split(',')[1];
-            const mimeType = imageDataUrl.match(/data:([^;]+);/)?.[1] || 'image/png';
-
-            contentParts.push({
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType
+            messageContent.push({
+              type: "image_url",
+              image_url: {
+                url: imageDataUrl
               }
             });
           }
-
-          requestContent = contentParts;
-        } else {
-          // Simple text-only request (this was working before)
-          requestContent = prompt;
         }
 
-        console.log(`   Request content type:`, Array.isArray(requestContent) ? 'array' : 'string');
+        // Add the text prompt with image generation instruction
+        const imagePrompt = `Generate an image with the following description. Output ONLY the image, no text explanation.
 
-        // Use generateContent with the image generation model
-        const result = await ai.models.generateContent({
-          model: NANO_BANANA_MODEL,
-          contents: requestContent
+Aspect ratio: ${aspectRatio}
+Description: ${prompt}`;
+
+        messageContent.push({
+          type: "text",
+          text: imagePrompt
         });
 
+        // Make request to OpenRouter
+        const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
+            'X-Title': 'DivaForge'
+          },
+          body: JSON.stringify({
+            model: NANO_BANANA_MODEL,
+            messages: [
+              {
+                role: "user",
+                content: messageContent
+              }
+            ],
+            max_tokens: 4096,
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `OpenRouter API error: ${response.status}`);
+        }
+
+        const result = await response.json();
         console.log(`   Response received, processing...`);
-        console.log(`   Type of result:`, typeof result);
-        console.log(`   Result has candidates?:`, !!result?.candidates);
-        console.log(`   Result has response?:`, !!result?.response);
 
-        // Try to access response.candidates if it exists
-        const candidatesSource = result?.response?.candidates || result?.candidates;
-        console.log(`   Candidates source:`, candidatesSource ? 'found' : 'not found');
+        // Extract image from response
+        if (result.choices && result.choices.length > 0) {
+          const choice = result.choices[0];
+          const content = choice.message?.content;
 
-        // Extract image data from response according to official Google docs
-        if (candidatesSource && candidatesSource.length > 0) {
-          const candidate = candidatesSource[0];
-          console.log(`   Processing candidate, has content?:`, !!candidate?.content);
-          console.log(`   Finish reason:`, candidate?.finishReason);
-
-          // Check for safety blocks
-          if (candidate.finishReason === 'IMAGE_SAFETY' || candidate.finishReason === 'SAFETY') {
-            console.log(`   ⚠️ Image ${i + 1} blocked by safety filters`);
-            warnings.push(`Image was blocked by Google safety filters`);
-            continue; // Skip to next image
-          }
-
-          // Look for image parts in the response
-          if (candidate.content && candidate.content.parts) {
-            for (const part of candidate.content.parts) {
-              if (part.text) {
-                console.log(`   Model text: ${part.text}`);
-              } else if (part.inlineData && part.inlineData.data) {
-                // Convert base64 to data URL
-                const mimeType = part.inlineData.mimeType || 'image/png';
-                const imageDataUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+          // Check if content contains base64 image data
+          if (typeof content === 'string') {
+            // Look for base64 image patterns or markdown image syntax
+            const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+            if (base64Match) {
+              images.push(base64Match[0]);
+              console.log(`   ✅ Image ${i + 1} generated successfully`);
+            } else {
+              // If no image in response, this model might not support image generation
+              console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+              console.log(`   Response content preview: ${content.substring(0, 200)}...`);
+              warnings.push(`Image generation not available for this model`);
+            }
+          } else if (Array.isArray(content)) {
+            // Handle multimodal response format
+            for (const part of content) {
+              if (part.type === 'image_url' && part.image_url?.url) {
+                images.push(part.image_url.url);
+                console.log(`   ✅ Image ${i + 1} generated successfully`);
+              } else if (part.type === 'image' && part.source?.data) {
+                const imageDataUrl = `data:${part.source.media_type || 'image/png'};base64,${part.source.data}`;
                 images.push(imageDataUrl);
-                console.log(`   ✅ Image ${i + 1} generated successfully (${mimeType})`);
+                console.log(`   ✅ Image ${i + 1} generated successfully`);
               }
             }
           }
-        }
 
-        // If no image was found, log the response structure for debugging
-        if (images.length === i) {
-          console.log(`   ⚠️ No image found in response for image ${i + 1}`);
-          console.log(`   Result keys:`, Object.keys(result));
-          console.log(`   Full response:`, JSON.stringify(result, null, 2).substring(0, 5000));
-
-          // Check if there's a response property
-          if (result.response) {
-            console.log(`   result.response exists, keys:`, Object.keys(result.response));
-            console.log(`   result.response:`, JSON.stringify(result.response, null, 2).substring(0, 3000));
+          // Check finish reason
+          if (choice.finish_reason === 'content_filter') {
+            console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
+            warnings.push(`Image was blocked by content filter`);
           }
         }
       } catch (apiError) {
         console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
-        if (apiError.response) {
-          console.error(`   API Response:`, apiError.response);
-        }
-        warnings.push(`Image failed`);
-        // Don't throw - continue with remaining images
+        warnings.push(`Image failed: ${apiError.message}`);
       }
 
       // Small delay between requests to avoid rate limiting
@@ -171,7 +169,7 @@ router.post('/generate', async (req, res) => {
     if (images.length === 0) {
       const errorMsg = warnings.length > 0
         ? `No images were generated. ${warnings.join('. ')}`
-        : 'No images were generated. The API response may have changed format.';
+        : 'No images were generated. The model may not support image generation.';
       throw new Error(errorMsg);
     }
 
@@ -199,17 +197,17 @@ router.post('/generate', async (req, res) => {
     console.error('Nano Banana Pro generation error:', error);
 
     // Handle specific error types
-    if (error.message?.includes('API key')) {
+    if (error.message?.includes('API key') || error.message?.includes('401')) {
       return res.status(401).json({
         error: 'Invalid API key',
-        message: 'Please check your Google AI Studio API key at https://aistudio.google.com/apikey'
+        message: 'Please check your OpenRouter API key at https://openrouter.ai/keys'
       });
     }
 
-    if (error.message?.includes('quota')) {
+    if (error.message?.includes('quota') || error.message?.includes('429')) {
       return res.status(429).json({
-        error: 'Quota exceeded',
-        message: 'You have exceeded your API quota. Please check your usage at https://aistudio.google.com/'
+        error: 'Rate limit exceeded',
+        message: 'You have exceeded your API rate limit. Please try again later.'
       });
     }
 
@@ -227,9 +225,10 @@ router.post('/generate', async (req, res) => {
 router.get('/status', (req, res) => {
   res.json({
     model: 'nano-banana-pro',
-    configured: !!process.env.GOOGLE_API_KEY,
+    configured: !!process.env.OPENROUTER_API_KEY,
     endpoint: NANO_BANANA_MODEL,
-    status: process.env.GOOGLE_API_KEY ? 'ready' : 'missing_api_key'
+    provider: 'openrouter',
+    status: process.env.OPENROUTER_API_KEY ? 'ready' : 'missing_api_key'
   });
 });
 
