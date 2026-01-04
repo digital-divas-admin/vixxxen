@@ -1,7 +1,10 @@
 const express = require('express');
-const { OpenRouter } = require('@openrouter/sdk');
+const fetch = require('node-fetch');
 
 const router = express.Router();
+
+// OpenRouter API endpoint
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Seedream 4.5 model via OpenRouter
 const SEEDREAM_MODEL = "bytedance-seed/seedream-4.5";
@@ -56,11 +59,6 @@ router.post('/generate', async (req, res) => {
     console.log(`   Guidance Scale: ${guidanceScale}`);
     console.log(`   Model: ${SEEDREAM_MODEL}`);
 
-    // Initialize OpenRouter client
-    const openrouter = new OpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY
-    });
-
     // Generate images sequentially
     const images = [];
     const warnings = [];
@@ -69,75 +67,103 @@ router.post('/generate', async (req, res) => {
       console.log(`   Generating image ${i + 1}/${numOutputs}...`);
 
       try {
-        // Build the message content
-        const messageContent = [];
-
-        // Add reference images first if provided
-        if (referenceImages && referenceImages.length > 0) {
-          for (const imageDataUrl of referenceImages) {
-            messageContent.push({
-              type: "image_url",
-              image_url: {
-                url: imageDataUrl
-              }
-            });
-          }
-        }
-
-        // Build comprehensive image generation prompt
-        let imagePrompt = `Generate a high-quality ${validSize} resolution image: ${prompt}`;
-
+        // Build the prompt
+        let imagePrompt = prompt;
         if (negativePrompt) {
           imagePrompt += ` Avoid: ${negativePrompt}`;
         }
 
-        if (referenceImages.length > 0) {
-          imagePrompt += ` Use the provided reference image(s) as style/composition guidance.`;
+        // Build messages array
+        let messages = [];
+
+        // Add reference images if provided
+        if (referenceImages && referenceImages.length > 0) {
+          const contentParts = referenceImages.map(imageDataUrl => ({
+            type: "image_url",
+            image_url: { url: imageDataUrl }
+          }));
+          contentParts.push({ type: "text", text: `Use these as reference. ${imagePrompt}` });
+          messages.push({ role: "user", content: contentParts });
+        } else {
+          // Simple string content for basic generation
+          messages.push({ role: "user", content: imagePrompt });
         }
 
-        messageContent.push({
-          type: "text",
-          text: imagePrompt
-        });
-
-        // Make request to OpenRouter using SDK
-        const result = await openrouter.chat.send({
+        // Build request body with all required parameters
+        const requestBody = {
           model: SEEDREAM_MODEL,
-          messages: [
-            {
-              role: "user",
-              content: messageContent
-            }
-          ],
+          messages: messages,
           modalities: ["image", "text"]
+        };
+
+        console.log(`   Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 500));
+
+        // Make raw HTTP request to OpenRouter
+        const response = await fetch(OPENROUTER_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
+            'X-Title': 'DivaForge'
+          },
+          body: JSON.stringify(requestBody)
         });
 
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`   API Error ${response.status}:`, errorText);
+          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
         console.log(`   Response received, processing...`);
 
         // Extract images from response
         const message = result.choices[0]?.message;
+        let imageFound = false;
 
+        // Method 1: Check message.images array (OpenRouter standard)
         if (message?.images && message.images.length > 0) {
           message.images.forEach((image, idx) => {
-            const imageUrl = image.image_url?.url;
+            const imageUrl = image.image_url?.url || image.url;
             if (imageUrl) {
               images.push(imageUrl);
-              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully`);
+              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully (images array)`);
+              imageFound = true;
             }
           });
-        } else if (message?.content) {
-          // Check if content contains base64 image data
-          const content = typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
-          const base64Match = content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+        }
+
+        // Method 2: Check content as array of parts (multimodal response)
+        if (!imageFound && Array.isArray(message?.content)) {
+          for (const part of message.content) {
+            if (part.inline_data?.data) {
+              const mimeType = part.inline_data.mime_type || 'image/png';
+              const imageDataUrl = `data:${mimeType};base64,${part.inline_data.data}`;
+              images.push(imageDataUrl);
+              console.log(`   ✅ Image ${i + 1} generated successfully (inline_data)`);
+              imageFound = true;
+            }
+            if (part.type === 'image_url' && part.image_url?.url) {
+              images.push(part.image_url.url);
+              console.log(`   ✅ Image ${i + 1} generated successfully (image_url part)`);
+              imageFound = true;
+            }
+          }
+        }
+
+        // Method 3: Check content as string for base64 data
+        if (!imageFound && message?.content && typeof message.content === 'string') {
+          const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
           if (base64Match) {
             images.push(base64Match[0]);
-            console.log(`   ✅ Image ${i + 1} generated successfully (base64)`);
-          } else {
-            console.log(`   ⚠️ No image found in response for image ${i + 1}`);
-            console.log(`   Response content preview: ${content.substring(0, 200)}...`);
-            warnings.push(`No image in response ${i + 1}`);
+            console.log(`   ✅ Image ${i + 1} generated successfully (base64 string)`);
+            imageFound = true;
           }
-        } else {
+        }
+
+        if (!imageFound) {
           console.log(`   ⚠️ No image found in response for image ${i + 1}`);
           warnings.push(`No image in response ${i + 1}`);
         }
