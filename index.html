@@ -10064,22 +10064,23 @@
 
     // Display video history in the video output grid (initial load)
     async function displayVideoHistory() {
+      const videoOutputGrid = document.getElementById('videoOutputGrid');
+      if (!videoOutputGrid) return;
+
+      // Check for existing session videos - skip reload to prevent duplicates
+      const existingItems = videoOutputGrid.querySelectorAll('.output-item').length;
+      if (existingItems > 0) {
+        console.log('🎬 Skipping history load - session videos already present');
+        return;
+      }
+
       // Reset pagination state
       videoHistoryOffset = 0;
       videoHistoryHasMore = true;
       videoHistoryLoading = false;
 
-      const videoOutputGrid = document.getElementById('videoOutputGrid');
-      if (!videoOutputGrid) return;
-
-      // Check for existing session videos
-      const existingItems = videoOutputGrid.querySelectorAll('.output-item').length;
-
-      // Only clear if this is initial load (no existing session videos)
-      if (existingItems === 0) {
-        videoOutputGrid.innerHTML = '';
-        generatedVideos.length = 0;
-      }
+      videoOutputGrid.innerHTML = '';
+      generatedVideos.length = 0;
 
       // Load first batch
       const videos = await loadVideoHistory(0, VIDEO_PAGE_SIZE);
@@ -10328,22 +10329,23 @@
 
     // Display image history in the grid (initial load)
     async function displayImageHistory() {
+      const outputGrid = document.getElementById('outputGrid');
+      if (!outputGrid) return;
+
+      // Check for existing session images - skip reload to prevent duplicates
+      const existingItems = outputGrid.querySelectorAll('.output-item').length;
+      if (existingItems > 0) {
+        console.log('📁 Skipping history load - session images already present');
+        return;
+      }
+
       // Reset pagination state
       imageHistoryOffset = 0;
       imageHistoryHasMore = true;
       imageHistoryLoading = false;
 
-      const outputGrid = document.getElementById('outputGrid');
-      if (!outputGrid) return;
-
-      // Check for existing session images
-      const existingItems = outputGrid.querySelectorAll('.output-item').length;
-
-      // Only clear if this is initial load (no existing session images)
-      if (existingItems === 0) {
-        outputGrid.innerHTML = '';
-        generatedImages.length = 0;
-      }
+      outputGrid.innerHTML = '';
+      generatedImages.length = 0;
 
       // Load first batch
       const history = await loadImageHistory(0, IMAGE_PAGE_SIZE);
@@ -10396,15 +10398,22 @@
 
     // Display edit history in the grid
     async function displayEditHistory() {
+      // Get the edit output grid
+      const outputGrid = document.getElementById('editOutputGrid');
+      if (!outputGrid) return;
+
+      // Check for existing session items - skip reload to prevent duplicates
+      const existingItems = outputGrid.querySelectorAll('.output-item').length;
+      if (existingItems > 0) {
+        console.log('✂️ Skipping history load - session edits already present');
+        return;
+      }
+
       const history = await loadEditHistory();
       if (history.length === 0) {
         console.log('✂️ No edit history to display');
         return;
       }
-
-      // Get the edit output grid
-      const outputGrid = document.getElementById('editOutputGrid');
-      if (!outputGrid) return;
 
       // Clear placeholder if it exists
       const placeholder = outputGrid.querySelector('.output-placeholder');
