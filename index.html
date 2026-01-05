@@ -4,6 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vixxxen - AI Image Generator</title>
+
+  <!-- Resource hints for faster loading -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.socket.io">
+
+  <!-- Critical loading splash (inline to show immediately) -->
+  <style id="splash-styles">
+    .loading-splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.3s ease-out;
+    }
+    .loading-splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-splash-logo {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+    .loading-splash-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 46, 187, 0.2);
+      border-top-color: #ff2ebb;
+      border-radius: 50%;
+      animation: splash-spin 1s linear infinite;
+    }
+    .loading-splash-text {
+      color: #888;
+      margin-top: 16px;
+      font-size: 0.9rem;
+    }
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
   <style>
     * {
       margin: 0;
@@ -7643,6 +7696,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
+  <!-- Loading splash (shown while page loads) -->
+  <div class="loading-splash" id="loadingSplash">
+    <div class="loading-splash-logo">Vixxxen</div>
+    <div class="loading-splash-spinner"></div>
+    <div class="loading-splash-text">Loading...</div>
+  </div>
+
   <!-- Cold Start Banner (shown when server is waking up) -->
   <div class="cold-start-banner" id="coldStartBanner">
     <div class="spinner"></div>
@@ -10774,6 +10834,22 @@
     // Run health check on page load
     document.addEventListener('DOMContentLoaded', checkServerHealth);
 
+    // Hide loading splash when page is ready
+    function hideLoadingSplash() {
+      const splash = document.getElementById('loadingSplash');
+      if (splash) {
+        splash.classList.add('hidden');
+        // Remove from DOM after animation
+        setTimeout(() => splash.remove(), 300);
+      }
+    }
+
+    // Hide splash when DOM is ready (most content loaded)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small delay to ensure styles are applied
+      setTimeout(hideLoadingSplash, 100);
+    });
+
     // Check if session is still valid before starting generation
     async function checkSessionValid() {
       try {
@@ -11805,10 +11881,32 @@
     async function generateVideo() {
       if (isGeneratingVideo) return;
 
+      // Debounce rapid clicks (prevent accidental double-clicks)
+      const now = Date.now();
+      if (now - lastVideoGenClick < CLICK_DEBOUNCE_MS) {
+        console.log('⏳ Ignoring rapid click - please wait');
+        return;
+      }
+      lastVideoGenClick = now;
+
+      // Show immediate visual feedback
+      const btn = document.getElementById('videoGenerateBtn');
+      const btnText = document.getElementById('videoGenerateText');
+      const originalText = btnText.textContent;
+      btnText.textContent = '⏳ Starting...';
+      btn.disabled = true;
+
+      // Helper to reset button on early return
+      const resetButton = () => {
+        btnText.textContent = originalText;
+        btn.disabled = false;
+      };
+
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
         alert('Please log in to generate videos.');
         openSubscriptionPage();
+        resetButton();
         return;
       }
 
@@ -11817,12 +11915,14 @@
       if (!sessionValid) {
         alert('Your session has expired. Please log in again.');
         openSubscriptionPage();
+        resetButton();
         return;
       }
 
       const prompt = document.getElementById('videoPromptInput').value.trim();
       if (!prompt) {
         showVideoError('Please enter a prompt first!');
+        resetButton();
         return;
       }
 
@@ -11845,6 +11945,7 @@
 
       if (!hasEnoughCredits(cost)) {
         showInsufficientCreditsError(cost);
+        resetButton();
         return;
       }
 
@@ -11852,12 +11953,11 @@
       const deducted = await deductCredits(cost, `Video generation (${currentVideoModel})`);
       if (!deducted) {
         showInsufficientCreditsError(cost);
+        resetButton();
         return;
       }
 
       isGeneratingVideo = true;
-      const btn = document.getElementById('videoGenerateBtn');
-      const btnText = document.getElementById('videoGenerateText');
 
       // Capture model and NSFW flag at START of generation (before any async operations)
       const capturedVideoModel = currentVideoModel;
@@ -14030,13 +14130,38 @@
       }
     }
 
+    // Debounce tracking to prevent rapid double-clicks
+    let lastImageGenClick = 0;
+    let lastVideoGenClick = 0;
+    const CLICK_DEBOUNCE_MS = 1000; // 1 second between clicks
+
     async function generateImages() {
-      // Allow concurrent generations - removed blocking check
+      // Debounce rapid clicks (prevent accidental double-clicks)
+      const now = Date.now();
+      if (now - lastImageGenClick < CLICK_DEBOUNCE_MS) {
+        console.log('⏳ Ignoring rapid click - please wait');
+        return;
+      }
+      lastImageGenClick = now;
+
+      // Show immediate visual feedback
+      const btn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('generateText');
+      const originalText = btnText.textContent;
+      btnText.textContent = '⏳ Starting...';
+      btn.disabled = true;
+
+      // Helper to reset button on early return
+      const resetButton = () => {
+        btnText.textContent = originalText;
+        btn.disabled = false;
+      };
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
         alert('Please log in to generate images.');
         openSubscriptionPage();
+        resetButton();
         return;
       }
 
@@ -14045,12 +14170,14 @@
       if (!sessionValid) {
         alert('Your session has expired. Please log in again.');
         openSubscriptionPage();
+        resetButton();
         return;
       }
 
       const prompt = document.getElementById('promptInput').value.trim();
       if (!prompt) {
         showError('Please enter a prompt first!');
+        resetButton();
         return;
       }
 
@@ -14070,6 +14197,7 @@
 
       if (!hasEnoughCredits(totalCost)) {
         showInsufficientCreditsError(totalCost);
+        resetButton();
         return;
       }
 
@@ -14077,6 +14205,7 @@
       const deducted = await deductCredits(totalCost, `Image generation (${currentModel})`);
       if (!deducted) {
         showInsufficientCreditsError(totalCost);
+        resetButton();
         return;
       }
 
@@ -14084,11 +14213,9 @@
       activeGenerationBatches++;
       const batchId = Date.now();
 
-      const btn = document.getElementById('generateBtn');
-      const btnText = document.getElementById('generateText');
-
-      // Show generating state but keep button enabled for new generations
+      // Show generating state - re-enable button for concurrent generations
       btn.classList.add('generating');
+      btn.disabled = false;
       updateGenerateButtonState();
 
       // Clear placeholder if it's first generation (no images yet)
