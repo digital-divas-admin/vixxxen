@@ -1148,13 +1148,18 @@
     #videoSection .left-panel {
       display: flex;
       flex-direction: column;
-      max-height: calc(100vh - 60px);
+      height: calc(100vh - 100px); /* Account for footer */
+      overflow: hidden;
+    }
+
+    #videoSection .left-panel .header {
+      flex-shrink: 0;
     }
 
     #videoSection .content {
       flex: 1;
       overflow-y: auto;
-      padding-bottom: 20px;
+      padding-bottom: 30px;
     }
 
     /* Placeholder for empty tabs */
