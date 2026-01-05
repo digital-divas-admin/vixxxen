@@ -10653,6 +10653,14 @@
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
 
+    // NSFW-only models - always tag output as NSFW regardless of content mode
+    const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
+
+    // Helper to check if content should be tagged NSFW (based on mode OR model)
+    function isNsfwContent(model) {
+      return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
+    }
+
     // Active generation jobs tracking (persisted to survive tab switches)
     let activeGenerationJobs = {};
 
@@ -11837,7 +11845,7 @@
           url: data.videoUrl,
           model: modelName,
           timestamp: Date.now(),
-          isNsfw: contentMode === 'nsfw'
+          isNsfw: isNsfwContent(currentVideoModel)
         };
 
         // Add model-specific metadata
@@ -11864,11 +11872,11 @@
           prompt: prompt,
           model: modelName,
           duration: newVideo.duration || null,
-          isNsfw: contentMode === 'nsfw'
+          isNsfw: isNsfwContent(currentVideoModel)
         });
 
         // Log generation for 2257 compliance
-        logGeneration('video', modelName, prompt, contentMode === 'nsfw', 1, data.videoUrl);
+        logGeneration('video', modelName, prompt, isNsfwContent(currentVideoModel), 1, data.videoUrl);
 
       } catch (error) {
         console.error('Video generation failed:', error);
@@ -13820,7 +13828,7 @@
           }
 
           // Process this image
-          const isNsfwMode = contentMode === 'nsfw';
+          const isNsfwMode = isNsfwContent('qwen');
           const newImage = {
             url: imageUrl,
             model: 'qwen-comfyui',
@@ -13835,7 +13843,7 @@
           uploadImageToStorage(imageUrl, {
             prompt: qwenPrompt,
             model: 'qwen',
-            isNsfw: contentMode === 'nsfw',
+            isNsfw: isNsfwContent('qwen'),
             aspectRatio: aspectRatio,
             resolution: resolution,
             creditsUsed: costPerImage
@@ -13848,7 +13856,7 @@
         }
 
         // Log generation for compliance
-        logGeneration('image', 'qwen', qwenPrompt, contentMode === 'nsfw', numOutputs);
+        logGeneration('image', 'qwen', qwenPrompt, isNsfwContent('qwen'), numOutputs);
         console.log(`✅ [Batch ${batchId}] Qwen generation complete`);
 
       } catch (error) {
@@ -13998,7 +14006,7 @@
         console.log('Generation successful:', data);
 
         // Log generation for 2257 compliance
-        logGeneration('image', currentModel, prompt, contentMode === 'nsfw', data.images?.length || 1);
+        logGeneration('image', currentModel, prompt, isNsfwContent(currentModel), data.images?.length || 1);
 
         // Replace placeholders with actual images
         let imageIndex = 0;
@@ -14008,7 +14016,7 @@
         for (let i = 0; i < numOutputs; i++) {
           if (imageIndex < data.images.length) {
             // This image succeeded - replace with actual image
-            const isNsfwMode = contentMode === 'nsfw';
+            const isNsfwMode = isNsfwContent(currentModel);
             const newImage = {
               url: data.images[imageIndex],
               model: data.model,
@@ -14027,7 +14035,7 @@
               aspectRatio: aspectRatio,
               resolution: resolution,
               creditsUsed: costPerImage,
-              isNsfw: contentMode === 'nsfw'
+              isNsfw: isNsfwContent(currentModel)
             }).then(storedUrl => {
               if (storedUrl) {
                 newImage.storedUrl = storedUrl;
