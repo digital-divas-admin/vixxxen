@@ -7587,6 +7587,51 @@
     .light-theme .membership-btn {
       color: #ffffff !important;
     }
+
+    /* Cold Start Banner */
+    .cold-start-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #ff9500, #ff6b00);
+      color: #fff;
+      padding: 12px 20px;
+      text-align: center;
+      z-index: 10001;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+      font-size: 0.9rem;
+    }
+
+    .cold-start-banner.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .cold-start-banner .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .cold-start-banner.ready {
+      background: linear-gradient(135deg, #00c853, #00a844);
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -7598,6 +7643,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
+  <!-- Cold Start Banner (shown when server is waking up) -->
+  <div class="cold-start-banner" id="coldStartBanner">
+    <div class="spinner"></div>
+    <span id="coldStartText">Waking up server... This may take up to 50 seconds on first visit.</span>
+  </div>
+
   <div class="container">
     <!-- Main Navigation Sidebar -->
     <div class="main-nav">
@@ -10020,7 +10071,11 @@
 
     // Create video item HTML
     function createVideoItemHTML(video) {
-      const isNsfw = video.is_nsfw || false;
+      // Use pre-computed NSFW flag if available, otherwise check model
+      const modelName = video.model || '';
+      const isNsfw = video._computedNsfw !== undefined
+        ? video._computedNsfw
+        : (video.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase()));
       return `
         <div class="select-checkbox" onclick="toggleVideoSelection(event, this)"></div>
         ${isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
@@ -10090,7 +10145,10 @@
           return;
         }
 
-        const isNsfw = video.is_nsfw || false;
+        // Check NSFW: use DB flag OR check if model is NSFW-only (fixes old records)
+        const modelName = video.model || '';
+        const isNsfw = video.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase());
+        video._computedNsfw = isNsfw; // Pass to createVideoItemHTML
         const videoItem = document.createElement('div');
         videoItem.className = 'output-item';
         videoItem.dataset.videoId = video.id || '';
@@ -10292,15 +10350,19 @@
           return;
         }
 
+        // Check NSFW: use DB flag OR check if model is NSFW-only (fixes old records)
+        const modelName = img.model || 'Unknown';
+        const isNsfwContent = img.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase());
+
         const imageData = {
           url: img.public_url,
           prompt: img.prompt,
-          model: img.model || 'Unknown',
+          model: modelName,
           aspectRatio: img.aspect_ratio || 'Square',
           timestamp: new Date(img.created_at).getTime(),
           fromHistory: true,
           id: img.id,
-          isNsfw: img.is_nsfw || false
+          isNsfw: isNsfwContent
         };
         generatedImages.push(imageData);
 
@@ -10557,7 +10619,9 @@
       // Add history images to the grid (newest first, so we reverse)
       history.reverse().forEach(img => {
         const metadata = img.metadata || {};
-        const isNsfw = img.is_nsfw || false;
+        // Check NSFW: use DB flag OR check if model is NSFW-only (fixes old records)
+        const modelName = img.model || metadata.model || '';
+        const isNsfw = img.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase());
         const editType = metadata.type || 'Edit';
         const typeLabel = editType.charAt(0).toUpperCase() + editType.slice(1);
 
@@ -10659,6 +10723,84 @@
     // Helper to check if content should be tagged NSFW (based on mode OR model)
     function isNsfwContent(model) {
       return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
+    }
+
+    // Cold start check - detect slow server response on Render free tier
+    let serverReady = false;
+
+    async function checkServerHealth() {
+      const banner = document.getElementById('coldStartBanner');
+      const bannerText = document.getElementById('coldStartText');
+      if (!banner || isLocal) return; // Skip on localhost
+
+      const startTime = Date.now();
+      let showBannerTimeout;
+
+      // Show banner after 3 seconds if still waiting
+      showBannerTimeout = setTimeout(() => {
+        banner.classList.add('active');
+        bannerText.textContent = 'Waking up server... This may take up to 50 seconds on first visit.';
+      }, 3000);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(60000) // 60 second timeout
+        });
+
+        clearTimeout(showBannerTimeout);
+        const elapsed = Date.now() - startTime;
+
+        if (response.ok) {
+          serverReady = true;
+          // If banner was shown, briefly show success message
+          if (banner.classList.contains('active')) {
+            banner.classList.add('ready');
+            bannerText.textContent = `Server ready! (took ${Math.round(elapsed / 1000)}s)`;
+            setTimeout(() => {
+              banner.classList.remove('active', 'ready');
+            }, 2000);
+          }
+          console.log(`✅ Server health check passed in ${elapsed}ms`);
+        }
+      } catch (error) {
+        clearTimeout(showBannerTimeout);
+        console.error('❌ Server health check failed:', error);
+        banner.classList.add('active');
+        bannerText.textContent = 'Server unavailable. Please refresh or try again later.';
+      }
+    }
+
+    // Run health check on page load
+    document.addEventListener('DOMContentLoaded', checkServerHealth);
+
+    // Check if session is still valid before starting generation
+    async function checkSessionValid() {
+      try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error || !session) {
+          console.warn('⚠️ Session check failed - user may need to re-login');
+          return false;
+        }
+
+        // Check if session is about to expire (within 5 minutes)
+        const expiresAt = session.expires_at;
+        if (expiresAt) {
+          const expiresIn = (expiresAt * 1000) - Date.now();
+          if (expiresIn < 5 * 60 * 1000) { // Less than 5 minutes
+            console.warn('⚠️ Session expiring soon, attempting refresh...');
+            const { error: refreshError } = await supabaseClient.auth.refreshSession();
+            if (refreshError) {
+              console.error('❌ Session refresh failed:', refreshError);
+              return false;
+            }
+          }
+        }
+        return true;
+      } catch (err) {
+        console.error('❌ Session check error:', err);
+        return false;
+      }
     }
 
     // Active generation jobs tracking (persisted to survive tab switches)
@@ -11666,6 +11808,14 @@
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
         alert('Please log in to generate videos.');
+        openSubscriptionPage();
+        return;
+      }
+
+      // Verify session is still valid (prevents mid-generation expiry issues)
+      const sessionValid = await checkSessionValid();
+      if (!sessionValid) {
+        alert('Your session has expired. Please log in again.');
         openSubscriptionPage();
         return;
       }
@@ -13890,6 +14040,14 @@
         return;
       }
 
+      // Verify session is still valid (prevents mid-generation expiry issues)
+      const sessionValid = await checkSessionValid();
+      if (!sessionValid) {
+        alert('Your session has expired. Please log in again.');
+        openSubscriptionPage();
+        return;
+      }
+
       const prompt = document.getElementById('promptInput').value.trim();
       if (!prompt) {
         showError('Please enter a prompt first!');
@@ -15524,6 +15682,21 @@
         loadMarketplaceCharacters();
       } else {
         console.log('🔐 No user in session, logging out...');
+
+        // Check if there were active generations - warn user
+        const hadActiveGenerations = Object.keys(activeGenerationJobs).length > 0 ||
+                                      isGenerating || isGeneratingVideo;
+
+        if (hadActiveGenerations) {
+          console.warn('⚠️ Session expired during active generation');
+          alert('Your session has expired. Any in-progress generations may not be saved. Please log in again.');
+          // Clear generation state since user is logged out
+          activeGenerationJobs = {};
+          isGenerating = false;
+          isGeneratingVideo = false;
+          clearGenerationState();
+        }
+
         currentUser = null;
         isUserLoggedIn = false;
         userCredits = 0;
