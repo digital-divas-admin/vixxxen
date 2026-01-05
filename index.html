@@ -10502,8 +10502,9 @@
     const isLocal = window.location.hostname === 'localhost'
       || window.location.hostname === '127.0.0.1'
       || window.location.protocol === 'file:';
-    const API_BASE_URL = isLocal ? 'http://localhost:3002' : 'https://genva.onrender.com';
-    console.log(`🔗 API URL: ${API_BASE_URL} (${isLocal ? 'local' : 'production'})`);
+    // In production, use empty string for same-origin API calls
+    const API_BASE_URL = isLocal ? 'http://localhost:3002' : '';
+    console.log(`🔗 API URL: ${API_BASE_URL || window.location.origin} (${isLocal ? 'local' : 'production'})`);
     let currentModel = 'nano-banana';
     let generatedImages = [];
     let referenceImages = [];
