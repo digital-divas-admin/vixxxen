@@ -11709,6 +11709,10 @@
       const btn = document.getElementById('videoGenerateBtn');
       const btnText = document.getElementById('videoGenerateText');
 
+      // Capture model and NSFW flag at START of generation (before any async operations)
+      const capturedVideoModel = currentVideoModel;
+      const isNsfwAtStart = isNsfwContent(capturedVideoModel);
+
       btn.classList.add('generating');
       btnText.textContent = '⏳ Generating...';
       btn.disabled = true;
@@ -11729,7 +11733,7 @@
       try {
         let endpoint, payload, modelName;
 
-        if (currentVideoModel === 'kling') {
+        if (capturedVideoModel === 'kling') {
           // Kling model
           const aspectRatio = document.getElementById('videoAspectRatio').value;
           const duration = parseInt(document.getElementById('videoDuration').value);
@@ -11754,7 +11758,7 @@
 
           modelName = 'kling-2.5-turbo-pro';
 
-        } else if (currentVideoModel === 'wan') {
+        } else if (capturedVideoModel === 'wan') {
           // Wan model
           const resolution = document.getElementById('wanResolution').value;
           const numFrames = parseInt(document.getElementById('wanNumFrames').value);
@@ -11840,19 +11844,19 @@
 
         console.log('Video generation successful:', data);
 
-        // Create new video object
+        // Create new video object (use NSFW flag captured at start)
         const newVideo = {
           url: data.videoUrl,
           model: modelName,
           timestamp: Date.now(),
-          isNsfw: isNsfwContent(currentVideoModel)
+          isNsfw: isNsfwAtStart
         };
 
         // Add model-specific metadata
-        if (currentVideoModel === 'kling') {
+        if (capturedVideoModel === 'kling') {
           newVideo.aspectRatio = payload.aspectRatio;
           newVideo.duration = payload.duration;
-        } else if (currentVideoModel === 'wan') {
+        } else if (capturedVideoModel === 'wan') {
           newVideo.resolution = payload.resolution;
           newVideo.frames = payload.numFrames;
           newVideo.fps = payload.framesPerSecond;
@@ -11872,11 +11876,11 @@
           prompt: prompt,
           model: modelName,
           duration: newVideo.duration || null,
-          isNsfw: isNsfwContent(currentVideoModel)
+          isNsfw: isNsfwAtStart
         });
 
         // Log generation for 2257 compliance
-        logGeneration('video', modelName, prompt, isNsfwContent(currentVideoModel), 1, data.videoUrl);
+        logGeneration('video', modelName, prompt, isNsfwAtStart, 1, data.videoUrl);
 
       } catch (error) {
         console.error('Video generation failed:', error);
@@ -13688,9 +13692,13 @@
     }
 
     // Async Qwen generation that runs in background
-    async function runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, contentMode, costPerImage, batchId) {
+    async function runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, capturedContentMode, costPerImage, batchId) {
       const btn = document.getElementById('generateBtn');
       const btnText = document.getElementById('generateText');
+
+      // Capture NSFW flag at START of generation (not when response arrives)
+      const isNsfwAtStart = capturedContentMode === 'nsfw' || NSFW_ONLY_MODELS.includes('qwen');
+      const totalCost = costPerImage * numOutputs;
 
       try {
         // Get selected character/LoRA
@@ -13827,14 +13835,13 @@
             continue;
           }
 
-          // Process this image
-          const isNsfwMode = isNsfwContent('qwen');
+          // Process this image - use NSFW flag captured at start, not current mode
           const newImage = {
             url: imageUrl,
             model: 'qwen-comfyui',
             aspectRatio: aspectRatio,
             timestamp: Date.now() + genIndex,
-            isNsfw: isNsfwMode
+            isNsfw: isNsfwAtStart
           };
           generatedImages.push(newImage);
           replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
@@ -13843,7 +13850,7 @@
           uploadImageToStorage(imageUrl, {
             prompt: qwenPrompt,
             model: 'qwen',
-            isNsfw: isNsfwContent('qwen'),
+            isNsfw: isNsfwAtStart,
             aspectRatio: aspectRatio,
             resolution: resolution,
             creditsUsed: costPerImage
@@ -13856,12 +13863,15 @@
         }
 
         // Log generation for compliance
-        logGeneration('image', 'qwen', qwenPrompt, isNsfwContent('qwen'), numOutputs);
+        logGeneration('image', 'qwen', qwenPrompt, isNsfwAtStart, numOutputs);
         console.log(`✅ [Batch ${batchId}] Qwen generation complete`);
 
       } catch (error) {
         console.error(`❌ [Batch ${batchId}] Qwen generation error:`, error);
         showError(error.message || 'Generation failed');
+
+        // Refund credits on failure
+        await refundCredits(totalCost, `Qwen generation failed: ${error.message || 'Unknown error'}`);
       } finally {
         // Decrement batch counter and update button
         activeGenerationBatches--;
@@ -13943,8 +13953,12 @@
         placeholders.unshift(placeholderEl); // Add to beginning of array
       }
 
+      // Capture model and NSFW flag at START of generation (before any async operations)
+      const capturedModel = currentModel;
+      const isNsfwAtStart = isNsfwContent(capturedModel);
+
       // For Qwen, run generation in background and return immediately
-      if (currentModel === 'qwen') {
+      if (capturedModel === 'qwen') {
         // Start Qwen generation asynchronously (non-blocking)
         runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, contentMode, costPerImage, batchId);
         return; // Return immediately - button is re-enabled
@@ -13953,7 +13967,7 @@
       try {
         let endpoint, payload;
 
-        if (currentModel === 'seedream') {
+        if (capturedModel === 'seedream') {
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
@@ -14006,7 +14020,7 @@
         console.log('Generation successful:', data);
 
         // Log generation for 2257 compliance
-        logGeneration('image', currentModel, prompt, isNsfwContent(currentModel), data.images?.length || 1);
+        logGeneration('image', capturedModel, prompt, isNsfwAtStart, data.images?.length || 1);
 
         // Replace placeholders with actual images
         let imageIndex = 0;
@@ -14015,27 +14029,26 @@
         // Update each placeholder - first with successful images, then with failures
         for (let i = 0; i < numOutputs; i++) {
           if (imageIndex < data.images.length) {
-            // This image succeeded - replace with actual image
-            const isNsfwMode = isNsfwContent(currentModel);
+            // This image succeeded - replace with actual image (use NSFW flag captured at start)
             const newImage = {
               url: data.images[imageIndex],
               model: data.model,
               aspectRatio: aspectRatio,
               timestamp: Date.now() + imageIndex,
-              isNsfw: isNsfwMode
+              isNsfw: isNsfwAtStart
             };
-            console.log('🔞 Image generated with NSFW flag:', isNsfwMode);
+            console.log('🔞 Image generated with NSFW flag:', isNsfwAtStart);
             generatedImages.push(newImage);
             replacePlaceholderWithImage(placeholders[i], newImage);
 
             // Upload to Supabase Storage (async, don't block UI)
             uploadImageToStorage(data.images[imageIndex], {
               prompt: prompt,
-              model: currentModel,
+              model: capturedModel,
               aspectRatio: aspectRatio,
               resolution: resolution,
               creditsUsed: costPerImage,
-              isNsfw: isNsfwContent(currentModel)
+              isNsfw: isNsfwAtStart
             }).then(storedUrl => {
               if (storedUrl) {
                 newImage.storedUrl = storedUrl;
