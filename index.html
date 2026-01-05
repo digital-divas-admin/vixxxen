@@ -1141,6 +1141,20 @@
     .content {
       padding: 20px;
       flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Video tab specific - ensure generate button stays visible */
+    #videoSection .left-panel {
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 60px);
+    }
+
+    #videoSection .content {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 20px;
     }
 
     /* Placeholder for empty tabs */
