@@ -1,0 +1,156 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 123456789,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": ["66", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["58", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": { "title": "KSampler" }
+  },
+  "6": {
+    "inputs": {
+      "text": "placeholder prompt",
+      "clip": ["38", 0]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Positive Prompt)" }
+  },
+  "7": {
+    "inputs": {
+      "text": "",
+      "clip": ["38", 0]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Negative Prompt)" }
+  },
+  "8": {
+    "inputs": {
+      "samples": ["3", 0],
+      "vae": ["39", 0]
+    },
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE Decode" }
+  },
+  "37": {
+    "inputs": {
+      "unet_name": "qwen_image_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": { "title": "Load Qwen Diffusion Model" }
+  },
+  "38": {
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": { "title": "Load Qwen CLIP" }
+  },
+  "39": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": { "title": "Load Qwen VAE" }
+  },
+  "58": {
+    "inputs": {
+      "width": 1152,
+      "height": 1536,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": { "title": "EmptySD3LatentImage" }
+  },
+  "60": {
+    "inputs": {
+      "filename_prefix": "output",
+      "images": ["8", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": { "title": "Save Image" }
+  },
+  "66": {
+    "inputs": {
+      "shift": 2,
+      "model": ["76", 0]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": { "title": "ModelSamplingAuraFlow" }
+  },
+  "76": {
+    "inputs": {
+      "PowerLoraLoaderHeaderWidget": { "type": "PowerLoraLoaderHeaderWidget" },
+      "lora_1": { "on": true, "lora": "qwen-boreal-portraits-portraits-high-rank.safetensors", "strength": 0.6 },
+      "lora_2": { "on": true, "lora": "Qwen-Image-Lightning-4steps-V2.0.safetensors", "strength": 1 },
+      "➕ Add Lora": "",
+      "model": ["37", 0]
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": { "title": "Power Lora Loader (rgthree)" }
+  },
+  "100": {
+    "inputs": {
+      "ckpt_name": "pornmaster-v7real.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": { "title": "Load SDXL Pornmaster Checkpoint" }
+  },
+  "101": {
+    "inputs": {
+      "lora_name": "lcm-lora-sdxl.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": ["100", 0],
+      "clip": ["100", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load SDXL LCM LoRA" }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "bigeye-v1.safetensors",
+      "strength_model": 0.6,
+      "strength_clip": 0.6,
+      "model": ["101", 0],
+      "clip": ["101", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load Bigeye LoRA" }
+  },
+  "103": {
+    "inputs": {
+      "lora_name": "add-detail-xl.safetensors",
+      "strength_model": 0.6,
+      "strength_clip": 0.6,
+      "model": ["102", 0],
+      "clip": ["102", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load Add Detail XL LoRA" }
+  },
+  "104": {
+    "inputs": {
+      "control_net_name": "controlnet-inpaint-dreamer-sdxl.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": { "title": "Load ControlNet Inpaint" }
+  },
+  "105": {
+    "inputs": {
+      "control_net_name": "qwen_controlnet_inpaint.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": { "title": "Load Qwen ControlNet Inpaint" }
+  }
+}
