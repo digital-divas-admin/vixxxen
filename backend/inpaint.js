@@ -10,86 +10,69 @@ const POLL_INTERVAL = 3000; // Poll every 3 seconds
 const MAX_POLL_ATTEMPTS = 200; // Max ~10 minutes of polling
 
 // ============================================================================
-// SFW INPAINT WORKFLOW (Qwen-based)
+// SFW INPAINT WORKFLOW (Qwen-based) - Simplified for RunPod compatibility
 // ============================================================================
-const getSfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = null, loras = [] }) => {
+const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [] }) => {
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'sfw');
 
+  // For RunPod worker, use simple KSampler-based workflow
+  // Image is passed separately via input.images and referenced by name
   return {
-    "1": {
-      "inputs": {
-        "noise_mask": true,
-        "positive": ["13", 0],
-        "negative": ["2", 0],
-        "vae": ["12", 0],
-        "pixels": ["14", 0],
-        "mask": ["3", 0]
-      },
-      "class_type": "InpaintModelConditioning",
-      "_meta": { "title": "InpaintModelConditioning" }
-    },
-    "2": {
-      "inputs": {
-        "text": negativePrompt,
-        "clip": ["15", 1]
-      },
-      "class_type": "CLIPTextEncode",
-      "_meta": { "title": "CLIP Text Encode (Prompt)" }
-    },
     "3": {
       "inputs": {
-        "kernel_size": 10,
-        "sigma": 10,
-        "mask": ["14", 1]
+        "seed": actualSeed,
+        "steps": 6,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 0.6,
+        "model": ["15", 0],
+        "positive": ["6", 0],
+        "negative": ["7", 0],
+        "latent_image": ["12", 0]
       },
-      "class_type": "ImpactGaussianBlurMask",
-      "_meta": { "title": "Gaussian Blur Mask" }
-    },
-    "4": {
-      "inputs": { "sampler_name": "euler" },
-      "class_type": "KSamplerSelect",
-      "_meta": { "title": "KSamplerSelect" }
+      "class_type": "KSampler",
+      "_meta": { "title": "KSampler" }
     },
     "5": {
       "inputs": {
-        "model": ["8", 0],
-        "conditioning": ["1", 0]
+        "image": "input_image.png"
       },
-      "class_type": "BasicGuider",
-      "_meta": { "title": "BasicGuider" }
+      "class_type": "LoadImage",
+      "_meta": { "title": "Load Image" }
     },
     "6": {
-      "inputs": { "noise_seed": actualSeed },
-      "class_type": "RandomNoise",
-      "_meta": { "title": "RandomNoise" }
+      "inputs": {
+        "text": prompt,
+        "clip": ["15", 1]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": { "title": "Positive Prompt" }
     },
     "7": {
       "inputs": {
-        "noise": ["6", 0],
-        "guider": ["5", 0],
-        "sampler": ["4", 0],
-        "sigmas": ["18", 0],
-        "latent_image": ["1", 2]
+        "text": negativePrompt || "",
+        "clip": ["15", 1]
       },
-      "class_type": "SamplerCustomAdvanced",
-      "_meta": { "title": "SamplerCustomAdvanced" }
+      "class_type": "CLIPTextEncode",
+      "_meta": { "title": "Negative Prompt" }
     },
     "8": {
       "inputs": {
-        "strength": 1,
-        "model": ["15", 0]
-      },
-      "class_type": "DifferentialDiffusion",
-      "_meta": { "title": "Differential Diffusion" }
-    },
-    "9": {
-      "inputs": {
-        "samples": ["7", 0],
-        "vae": ["12", 0]
+        "samples": ["3", 0],
+        "vae": ["11", 0]
       },
       "class_type": "VAEDecode",
       "_meta": { "title": "VAE Decode" }
+    },
+    "9": {
+      "inputs": {
+        "filename_prefix": "Inpaint_SFW",
+        "images": ["8", 0]
+      },
+      "class_type": "SaveImage",
+      "_meta": { "title": "Save Image" }
     },
     "10": {
       "inputs": {
@@ -101,6 +84,20 @@ const getSfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = null
       "_meta": { "title": "Load CLIP" }
     },
     "11": {
+      "inputs": { "vae_name": "qwen_image_vae.safetensors" },
+      "class_type": "VAELoader",
+      "_meta": { "title": "Load VAE" }
+    },
+    "12": {
+      "inputs": {
+        "pixels": ["5", 0],
+        "vae": ["11", 0],
+        "mask": ["5", 1]
+      },
+      "class_type": "VAEEncodeForInpaint",
+      "_meta": { "title": "VAE Encode (for Inpainting)" }
+    },
+    "14": {
       "inputs": {
         "unet_name": "qwen_image_bf16.safetensors",
         "weight_dtype": "default"
@@ -108,70 +105,16 @@ const getSfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = null
       "class_type": "UNETLoader",
       "_meta": { "title": "Load Diffusion Model" }
     },
-    "12": {
-      "inputs": { "vae_name": "qwen_image_vae.safetensors" },
-      "class_type": "VAELoader",
-      "_meta": { "title": "Load VAE" }
-    },
-    "13": {
-      "inputs": {
-        "guidance": 1,
-        "conditioning": ["17", 0]
-      },
-      "class_type": "FluxGuidance",
-      "_meta": { "title": "FluxGuidance" }
-    },
-    "14": {
-      "inputs": {
-        "image": image,
-        "resize": false,
-        "width": 512,
-        "height": 0,
-        "repeat": 1,
-        "keep_proportion": false,
-        "divisible_by": 2,
-        "mask_channel": "alpha",
-        "background_color": ""
-      },
-      "class_type": "LoadAndResizeImage",
-      "_meta": { "title": "Load & Resize Image" }
-    },
     "15": {
       "inputs": {
         "PowerLoraLoaderHeaderWidget": { "type": "PowerLoraLoaderHeaderWidget" },
         ...loraConfig,
         "➕ Add Lora": "",
-        "model": ["11", 0],
+        "model": ["14", 0],
         "clip": ["10", 0]
       },
       "class_type": "Power Lora Loader (rgthree)",
       "_meta": { "title": "Power Lora Loader (rgthree)" }
-    },
-    "16": {
-      "inputs": {
-        "filename_prefix": "Inpainting/%date:yyyy-MM-dd%/%date:yyyy-MM-dd%",
-        "images": ["9", 0]
-      },
-      "class_type": "SaveImage",
-      "_meta": { "title": "Save Image" }
-    },
-    "17": {
-      "inputs": {
-        "text": prompt,
-        "clip": ["15", 1]
-      },
-      "class_type": "CLIPTextEncode",
-      "_meta": { "title": "Positive Prompt" }
-    },
-    "18": {
-      "inputs": {
-        "scheduler": "simple",
-        "steps": 6,
-        "denoise": 0.5,
-        "model": ["15", 0]
-      },
-      "class_type": "BasicScheduler",
-      "_meta": { "title": "BasicScheduler" }
     }
   };
 };
@@ -425,12 +368,22 @@ async function pollRunPodJob(jobId) {
 // ============================================================================
 // SUBMIT JOB TO RUNPOD
 // ============================================================================
-async function submitToRunPod(workflow, mode) {
+async function submitToRunPod(workflow, mode, images = []) {
   if (!RUNPOD_API_KEY || !RUNPOD_ENDPOINT_ID) {
     throw new Error('RunPod not configured. Set RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID.');
   }
 
   console.log(`📤 Submitting ${mode} inpaint job to RunPod...`);
+  console.log(`   Images to upload: ${images.length}`);
+
+  // Build input payload
+  const input = { workflow };
+
+  // Add images if provided (for inpainting)
+  if (images.length > 0) {
+    input.images = images;
+    console.log(`   Image names: ${images.map(i => i.name).join(', ')}`);
+  }
 
   const response = await fetch(`${RUNPOD_BASE_URL}/run`, {
     method: 'POST',
@@ -438,7 +391,7 @@ async function submitToRunPod(workflow, mode) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${RUNPOD_API_KEY}`
     },
-    body: JSON.stringify({ input: { workflow } })
+    body: JSON.stringify({ input })
   });
 
   if (!response.ok) {
@@ -506,16 +459,27 @@ router.post('/inpaint-sfw', async (req, res) => {
     console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
     console.log(`   Image size: ${Math.round(image.length / 1024)}KB`);
 
-    // Build workflow
+    // Strip data URL prefix if present
+    let base64Image = image;
+    if (image.startsWith('data:')) {
+      base64Image = image.split(',')[1];
+    }
+
+    // Build workflow (image is passed separately)
     const workflow = getSfwInpaintWorkflow({
-      image,
       prompt,
       negativePrompt: '',
       loras
     });
 
-    // Submit to RunPod
-    const jobId = await submitToRunPod(workflow, 'SFW');
+    // Prepare images array for RunPod
+    const images = [{
+      name: 'input_image.png',
+      image: base64Image
+    }];
+
+    // Submit to RunPod with images
+    const jobId = await submitToRunPod(workflow, 'SFW', images);
 
     // Poll for completion
     const result = await pollRunPodJob(jobId);
