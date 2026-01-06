@@ -732,6 +732,134 @@
       transform: scale(1.05);
     }
 
+    /* Lightbox Modal */
+    .lightbox-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .lightbox-image {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+      user-select: none;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      z-index: 10001;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 64px;
+      height: 64px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 48px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .lightbox-nav:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .lightbox-nav:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .lightbox-prev {
+      left: 20px;
+    }
+
+    .lightbox-next {
+      right: 20px;
+    }
+
+    .lightbox-counter {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 0.9rem;
+      backdrop-filter: blur(10px);
+      z-index: 10001;
+    }
+
+    /* Make modal main image clickable */
+    .character-modal-image {
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .character-modal-image:hover {
+      opacity: 0.9;
+    }
+
+    /* Make gallery items clickable */
+    .character-gallery-item {
+      cursor: pointer;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .character-gallery-item img {
+      transition: transform 0.2s;
+    }
+
+    .character-gallery-item:hover img {
+      transform: scale(1.05);
+    }
+
     /* My Characters Library */
     .library-grid {
       display: grid;
@@ -9272,6 +9400,15 @@
       </div>
     </div>
 
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="imageLightbox">
+      <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+      <button class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)">‹</button>
+      <button class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)">›</button>
+      <img id="lightboxImage" class="lightbox-image" src="" alt="">
+      <div class="lightbox-counter" id="lightboxCounter">1 / 1</div>
+    </div>
+
     <!-- Character Form Modal (Add/Edit) -->
     <div class="resource-form-modal" id="characterFormModal">
       <div class="resource-form-content" style="max-width: 700px;">
@@ -16722,12 +16859,19 @@
         `<span class="character-tag">${tag}</span>`
       ).join('');
 
-      // Render gallery images
-      const galleryContainer = document.getElementById('modalCharacterGallery');
+      // Prepare all images for lightbox (main image + gallery images)
       const galleryImages = character.galleryImages || [];
+      const allImages = [character.image, ...galleryImages];
+
+      // Make main image clickable to open lightbox
+      const mainImage = document.getElementById('modalCharacterImage');
+      mainImage.onclick = () => openLightbox(allImages, 0);
+
+      // Render gallery images with lightbox functionality
+      const galleryContainer = document.getElementById('modalCharacterGallery');
       if (galleryImages.length > 0) {
         galleryContainer.innerHTML = galleryImages.map((url, index) => `
-          <div class="character-gallery-item">
+          <div class="character-gallery-item" onclick="openLightbox(${JSON.stringify(allImages)}, ${index + 1})">
             <img src="${url}" alt="Example ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
           </div>
         `).join('');
@@ -16760,6 +16904,57 @@
       document.getElementById('characterModal').classList.remove('active');
       currentCharacterModal = null;
     }
+
+    // Lightbox functionality
+    let lightboxImages = [];
+    let currentLightboxIndex = 0;
+
+    function openLightbox(images, startIndex = 0) {
+      lightboxImages = images;
+      currentLightboxIndex = startIndex;
+      updateLightboxImage();
+      document.getElementById('imageLightbox').classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+
+    function closeLightbox() {
+      document.getElementById('imageLightbox').classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
+      lightboxImages = [];
+      currentLightboxIndex = 0;
+    }
+
+    function navigateLightbox(direction) {
+      currentLightboxIndex = (currentLightboxIndex + direction + lightboxImages.length) % lightboxImages.length;
+      updateLightboxImage();
+    }
+
+    function updateLightboxImage() {
+      document.getElementById('lightboxImage').src = lightboxImages[currentLightboxIndex];
+      document.getElementById('lightboxCounter').textContent = `${currentLightboxIndex + 1} / ${lightboxImages.length}`;
+    }
+
+    // Keyboard navigation for lightbox
+    document.addEventListener('keydown', (e) => {
+      const lightbox = document.getElementById('imageLightbox');
+      if (lightbox.classList.contains('active')) {
+        if (e.key === 'Escape') {
+          closeLightbox();
+        } else if (e.key === 'ArrowLeft') {
+          navigateLightbox(-1);
+        } else if (e.key === 'ArrowRight') {
+          navigateLightbox(1);
+        }
+      }
+    });
+
+    // Close lightbox when clicking on background
+    document.addEventListener('click', (e) => {
+      const lightbox = document.getElementById('imageLightbox');
+      if (e.target === lightbox) {
+        closeLightbox();
+      }
+    });
 
     async function purchaseCharacter() {
       if (!currentCharacterModal) return;
