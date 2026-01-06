@@ -13389,11 +13389,11 @@
     }
 
     function createMaskedImage() {
-      // Create a canvas with the original image and alpha mask
+      // Create TWO separate images: original image and mask image
       const canvas = document.getElementById('inpaintCanvas');
       const maskCanvas = document.getElementById('inpaintMaskCanvas');
 
-      // Calculate resize dimensions (max 512px to avoid 413 errors - PNG with alpha is large)
+      // Calculate resize dimensions (max 512px to avoid 413 errors)
       const MAX_DIMENSION = 512;
       let outputWidth = canvas.width;
       let outputHeight = canvas.height;
@@ -13407,36 +13407,50 @@
         console.log(`📐 Image already small enough: ${outputWidth}x${outputHeight}`);
       }
 
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = outputWidth;
-      outputCanvas.height = outputHeight;
-      const ctx = outputCanvas.getContext('2d');
+      // 1. Create the original image (no alpha modification)
+      const imageCanvas = document.createElement('canvas');
+      imageCanvas.width = outputWidth;
+      imageCanvas.height = outputHeight;
+      const imageCtx = imageCanvas.getContext('2d');
+      imageCtx.drawImage(inpaintImage, 0, 0, outputWidth, outputHeight);
 
-      // Draw original image (scaled if needed)
-      ctx.drawImage(inpaintImage, 0, 0, outputWidth, outputHeight);
+      // 2. Create the mask image (white where painted, black elsewhere)
+      const outputMaskCanvas = document.createElement('canvas');
+      outputMaskCanvas.width = outputWidth;
+      outputMaskCanvas.height = outputHeight;
+      const maskCtx = outputMaskCanvas.getContext('2d');
 
-      // Create scaled mask canvas
+      // Start with black background
+      maskCtx.fillStyle = '#000000';
+      maskCtx.fillRect(0, 0, outputWidth, outputHeight);
+
+      // Scale and draw the mask strokes
       const scaledMaskCanvas = document.createElement('canvas');
       scaledMaskCanvas.width = outputWidth;
       scaledMaskCanvas.height = outputHeight;
       const scaledMaskCtx = scaledMaskCanvas.getContext('2d');
       scaledMaskCtx.drawImage(maskCanvas, 0, 0, outputWidth, outputHeight);
 
-      // Get image data and mask data
-      const imageData = ctx.getImageData(0, 0, outputWidth, outputHeight);
+      // Get mask data and create white where painted
       const maskData = scaledMaskCtx.getImageData(0, 0, outputWidth, outputHeight);
+      const outputMaskData = maskCtx.getImageData(0, 0, outputWidth, outputHeight);
 
-      // Set alpha to 0 where mask is painted
       for (let i = 0; i < maskData.data.length; i += 4) {
-        // Check if this pixel has mask color (any non-zero alpha in mask)
+        // If mask has any paint (non-zero alpha), make it white
         if (maskData.data[i + 3] > 0) {
-          // Set alpha to 0 (transparent) for masked areas
-          imageData.data[i + 3] = 0;
+          outputMaskData.data[i] = 255;     // R
+          outputMaskData.data[i + 1] = 255; // G
+          outputMaskData.data[i + 2] = 255; // B
+          outputMaskData.data[i + 3] = 255; // A
         }
       }
 
-      ctx.putImageData(imageData, 0, 0);
-      return outputCanvas.toDataURL('image/png').split(',')[1];
+      maskCtx.putImageData(outputMaskData, 0, 0);
+
+      return {
+        image: imageCanvas.toDataURL('image/png').split(',')[1],
+        mask: outputMaskCanvas.toDataURL('image/png').split(',')[1]
+      };
     }
 
     // Poll async inpaint job until completion
@@ -13554,8 +13568,9 @@
 
       console.log('🖌️ Inpaint generation:', { prompt: inpaintPrompt, loras, mode: inpaintMode, count: numGenerations });
 
-      // Create masked image with alpha channel
-      const maskedImageBase64 = createMaskedImage();
+      // Create original image and separate mask
+      const { image: imageBase64, mask: maskBase64 } = createMaskedImage();
+      console.log('🖌️ Image size:', Math.round(imageBase64.length / 1024), 'KB, Mask size:', Math.round(maskBase64.length / 1024), 'KB');
 
       // Show loading
       document.getElementById('inpaintGenerateBtn').disabled = true;
@@ -13575,7 +13590,8 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                image: maskedImageBase64,
+                image: imageBase64,
+                mask: maskBase64,
                 prompt: inpaintPrompt,
                 loras: loras
               })
