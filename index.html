@@ -13204,7 +13204,7 @@
         ctx.drawImage(img, 0, 0);
 
         // Clear mask
-        const maskCtx = maskCanvas.getContext('2d');
+        const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
         maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
 
         // Hide placeholder
@@ -13225,7 +13225,7 @@
     }
 
     function setupInpaintDrawing(canvas, maskCanvas) {
-      const maskCtx = maskCanvas.getContext('2d');
+      const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
       maskCtx.strokeStyle = 'rgba(255, 46, 187, 0.7)';
       maskCtx.lineCap = 'round';
       maskCtx.lineJoin = 'round';
