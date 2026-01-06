@@ -149,7 +149,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
         "cfg": 7,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
-        "denoise": 0.75,
+        "denoise": 0.6,
         "model": ["9", 0],
         "positive": ["12", 0],
         "negative": ["5", 0],

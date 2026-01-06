@@ -13393,8 +13393,9 @@
       const canvas = document.getElementById('inpaintCanvas');
       const maskCanvas = document.getElementById('inpaintMaskCanvas');
 
-      // Calculate resize dimensions (max 512px to avoid 413 errors - PNG with alpha is large)
-      const MAX_DIMENSION = 512;
+      // Calculate resize dimensions (max 1024px - SDXL native resolution)
+      // RunPod payload limit is ~10MB, 1024px PNG with alpha is ~2-4MB base64
+      const MAX_DIMENSION = 1024;
       let outputWidth = canvas.width;
       let outputHeight = canvas.height;
       const scale = Math.min(MAX_DIMENSION / outputWidth, MAX_DIMENSION / outputHeight, 1);
