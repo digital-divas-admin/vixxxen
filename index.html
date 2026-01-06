@@ -4127,7 +4127,7 @@
     }
 
     .inpaint-canvas-area {
-      flex: 1;
+      flex: 0 0 400px;
       display: flex;
       flex-direction: column;
       padding: 24px;
@@ -4461,12 +4461,13 @@
 
     /* Inpaint Results - Right Panel (matches Image tab) */
     .inpaint-result-section {
-      flex: 0 0 450px;
+      flex: 1;
       background: var(--bg-primary);
       overflow-y: auto;
       overflow-x: hidden;
       padding: 20px;
       transition: background 0.3s;
+      min-width: 300px;
     }
 
     .inpaint-result-header {
@@ -4487,8 +4488,8 @@
 
     .inpaint-results-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-size, 200px), 1fr));
+      gap: 16px;
     }
 
     .inpaint-result-placeholder {
@@ -13512,6 +13513,18 @@
       document.getElementById('inpaintGenerateBtn').disabled = true;
       document.getElementById('inpaintLoading').style.display = 'flex';
 
+      // Add loading placeholders
+      const grid = document.getElementById('inpaintResultsGrid');
+      const emptyPlaceholder = document.getElementById('inpaintResultPlaceholder');
+      if (emptyPlaceholder) emptyPlaceholder.style.display = 'none';
+
+      const loadingPlaceholders = [];
+      for (let i = 0; i < numGenerations; i++) {
+        const placeholder = createInpaintLoadingPlaceholder();
+        loadingPlaceholders.push(placeholder);
+        grid.insertBefore(placeholder, grid.firstChild);
+      }
+
       const endpoint = inpaintMode === 'sfw' ? '/api/inpaint/inpaint-sfw' : '/api/inpaint/inpaint-nsfw';
       const results = [];
       let successCount = 0;
@@ -13542,47 +13555,119 @@
             }
 
             // Check if this is an async job response (has statusUrl)
+            let imageUrl = null;
             if (data.statusUrl || data.jobId) {
               console.log(`🖌️ Async job started, polling for completion...`);
-              const finalResult = await pollInpaintJob(data.statusUrl, data.jobId);
-              if (finalResult) {
-                results.push(finalResult);
-                successCount++;
-              }
+              imageUrl = await pollInpaintJob(data.statusUrl, data.jobId);
             } else {
               // Direct response with image
-              const imageUrl = data.image || data.imageUrl || data.output || data.url || data.result || (data.images && data.images[0]) || (data.outputs && data.outputs[0]);
-              if (imageUrl) {
-                results.push(imageUrl);
-                successCount++;
-              } else {
-                console.warn(`Generation ${i + 1}: No image URL found in response. Keys:`, Object.keys(data));
-              }
+              imageUrl = data.image || data.imageUrl || data.output || data.url || data.result || (data.images && data.images[0]) || (data.outputs && data.outputs[0]);
+            }
+
+            if (imageUrl) {
+              results.push(imageUrl);
+              successCount++;
+              // Replace placeholder with actual result
+              replaceInpaintPlaceholder(loadingPlaceholders[i], imageUrl);
+            } else {
+              console.warn(`Generation ${i + 1}: No image URL found in response. Keys:`, Object.keys(data));
+              // Remove failed placeholder
+              loadingPlaceholders[i].remove();
             }
           } catch (err) {
             console.error(`Generation ${i + 1} error:`, err);
+            // Remove failed placeholder
+            loadingPlaceholders[i].remove();
           }
         }
 
-        if (results.length === 0) {
-          throw new Error('No images were generated');
+        // Store first result for backward compatibility
+        if (results.length > 0) {
+          inpaintResultUrl = results[0];
         }
 
-        // Store first result for backward compatibility
-        inpaintResultUrl = results[0];
-
-        // Display all results in grid
-        displayInpaintResults(results);
+        // Show empty placeholder if no results
+        if (results.length === 0) {
+          const emptyPlaceholder = document.getElementById('inpaintResultPlaceholder');
+          if (emptyPlaceholder && grid.querySelectorAll('.output-item:not(.inpaint-loading-placeholder)').length === 0) {
+            emptyPlaceholder.style.display = '';
+          }
+          throw new Error('No images were generated');
+        }
 
         console.log(`✅ Inpaint complete: ${successCount}/${numGenerations} images generated`);
 
       } catch (error) {
         console.error('Inpaint error:', error);
         showError(error.message || 'Inpaint failed');
+        // Remove any remaining loading placeholders on error
+        loadingPlaceholders.forEach(p => p.remove());
       } finally {
         document.getElementById('inpaintGenerateBtn').disabled = false;
         document.getElementById('inpaintLoading').style.display = 'none';
+        // Clean up any remaining loading placeholders
+        document.querySelectorAll('.inpaint-loading-placeholder').forEach(p => p.remove());
       }
+    }
+
+    function createInpaintLoadingPlaceholder() {
+      const placeholderDiv = document.createElement('div');
+      placeholderDiv.className = 'output-item inpaint-loading-placeholder';
+      placeholderDiv.innerHTML = `
+        <div class="output-placeholder-loading">
+          <div class="loading-static-overlay"></div>
+          <div class="loading-text">Inpainting...</div>
+        </div>
+      `;
+      return placeholderDiv;
+    }
+
+    function replaceInpaintPlaceholder(placeholder, imageUrl) {
+      const timestamp = Date.now();
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'output-item inpaint-output-item';
+      resultDiv.dataset.imageUrl = imageUrl;
+      resultDiv.dataset.timestamp = timestamp;
+      resultDiv.innerHTML = `
+        <img src="${imageUrl}" alt="Inpaint result" onclick="showImageModal('${imageUrl}')" title="Click to view full size">
+        <div class="output-item-overlay">
+          <div class="output-item-info">
+            Inpaint Result
+          </div>
+          <div class="output-item-actions">
+            <button class="icon-btn" onclick="downloadInpaintResultUrl('${imageUrl}', ${timestamp})" title="Download">
+              <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            <div class="send-to-container">
+              <button class="icon-btn" onclick="toggleSendToMenu(event, this)" title="Send to...">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+              <div class="send-to-menu">
+                <button class="send-to-option" onclick="sendToVideo('${imageUrl}', event)">📹 Send to Video</button>
+                <button class="send-to-option" onclick="sendToEdit('${imageUrl}', event)">✂️ Send to Edit</button>
+                <button class="send-to-option" onclick="sendToCaption('${imageUrl}', event)">💬 Send to Caption</button>
+                <button class="send-to-option" onclick="sendToInpaint('${imageUrl}', event)">🖌️ Send to Inpaint</button>
+              </div>
+            </div>
+            <button class="icon-btn delete-btn" onclick="deleteInpaintResult(this.closest('.output-item'))" title="Delete">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      placeholder.replaceWith(resultDiv);
     }
 
     function displayInpaintResults(results) {
