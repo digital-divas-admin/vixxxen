@@ -13594,15 +13594,20 @@
       }
 
       // Generate result items HTML (matching image output format)
-      const resultsHtml = results.map((url, index) => `
-        <div class="output-item inpaint-output-item" data-image-url="${url}">
-          <img src="${url}" alt="Inpaint result ${index + 1}" onclick="showImageModal('${url}')" title="Click to view full size">
+      const timestamp = Date.now();
+      results.forEach((url, index) => {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'output-item inpaint-output-item';
+        resultDiv.dataset.imageUrl = url;
+        resultDiv.dataset.timestamp = timestamp + index;
+        resultDiv.innerHTML = `
+          <img src="${url}" alt="Inpaint result" onclick="showImageModal('${url}')" title="Click to view full size">
           <div class="output-item-overlay">
             <div class="output-item-info">
               Inpaint Result
             </div>
             <div class="output-item-actions">
-              <button class="icon-btn" onclick="downloadInpaintResultUrl('${url}', ${index + 1})" title="Download">
+              <button class="icon-btn" onclick="downloadInpaintResultUrl('${url}', ${timestamp + index})" title="Download">
                 <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
@@ -13633,11 +13638,10 @@
               </button>
             </div>
           </div>
-        </div>
-      `).join('');
-
-      // Keep placeholder in DOM but hidden, add results
-      grid.innerHTML = resultsHtml + (placeholder ? '<div id="inpaintResultPlaceholder" class="inpaint-result-placeholder" style="display:none;"></div>' : '');
+        `;
+        // Prepend new results (newest first)
+        grid.insertBefore(resultDiv, grid.firstChild);
+      });
     }
 
 
