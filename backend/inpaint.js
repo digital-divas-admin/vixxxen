@@ -311,11 +311,23 @@ function buildLoraConfig(userLoras = [], mode = 'sfw') {
   if (userLoras && userLoras.length > 0) {
     userLoras.forEach((lora, index) => {
       const loraKey = `lora_${index + 1}`;
-      defaults[loraKey] = {
-        "on": lora.enabled !== false,
-        "lora": lora.name,
-        "strength": lora.strength ?? 1
-      };
+
+      // Handle both string format ("lora.safetensors") and object format ({ name: "lora.safetensors", strength: 1 })
+      if (typeof lora === 'string') {
+        console.log(`   → LoRA ${index + 1}: ${lora} (string format)`);
+        defaults[loraKey] = {
+          "on": true,
+          "lora": lora,
+          "strength": 1
+        };
+      } else {
+        console.log(`   → LoRA ${index + 1}: ${lora.name} (object format, strength: ${lora.strength ?? 1})`);
+        defaults[loraKey] = {
+          "on": lora.enabled !== false,
+          "lora": lora.name,
+          "strength": lora.strength ?? 1
+        };
+      }
     });
   }
 
@@ -347,14 +359,36 @@ async function pollRunPodJob(jobId) {
 
       if (data.status === 'COMPLETED') {
         console.log(`✅ Job completed!`);
+        console.log(`   Output keys:`, data.output ? Object.keys(data.output) : 'none');
 
         // Extract image from output
         let imageUrl = null;
         if (data.output) {
           if (data.output.images && data.output.images.length > 0) {
-            imageUrl = data.output.images[0];
+            const firstImage = data.output.images[0];
+            console.log(`   First image type:`, typeof firstImage);
+
+            // Handle different formats: string, {data: "..."}, {image: "..."}
+            let base64Data;
+            if (typeof firstImage === 'string') {
+              base64Data = firstImage;
+            } else if (firstImage && typeof firstImage === 'object' && firstImage.data) {
+              console.log(`   → Image is object with data property`);
+              base64Data = firstImage.data;
+            } else if (firstImage && typeof firstImage === 'object' && firstImage.image) {
+              base64Data = firstImage.image;
+            }
+
+            if (base64Data) {
+              imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+            }
           } else if (data.output.image) {
-            imageUrl = data.output.image;
+            const imgData = data.output.image;
+            if (typeof imgData === 'string') {
+              imageUrl = imgData.startsWith('data:') ? imgData : `data:image/png;base64,${imgData}`;
+            } else if (imgData && typeof imgData === 'object' && imgData.data) {
+              imageUrl = imgData.data.startsWith('data:') ? imgData.data : `data:image/png;base64,${imgData.data}`;
+            }
           } else if (data.output.message) {
             // Base64 output
             const base64Data = data.output.message;
@@ -363,9 +397,10 @@ async function pollRunPodJob(jobId) {
         }
 
         if (imageUrl) {
+          console.log(`   ✅ Extracted image (length: ${imageUrl.length})`);
           return { success: true, image: imageUrl };
         } else {
-          console.error('❌ Job completed but no image in output:', JSON.stringify(data.output, null, 2));
+          console.error('❌ Job completed but no image in output:', JSON.stringify(data.output, null, 2).substring(0, 500));
           return { success: false, error: 'No image in output', fullResponse: data };
         }
       } else if (data.status === 'FAILED') {
