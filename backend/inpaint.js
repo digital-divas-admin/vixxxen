@@ -16,8 +16,7 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'sfw');
 
-  // For RunPod worker, use simple KSampler-based workflow
-  // Image is passed separately via input.images and referenced by name
+  // Use VAEEncode + SetLatentNoiseMask approach (more compatible)
   return {
     "3": {
       "inputs": {
@@ -30,7 +29,7 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
         "model": ["15", 0],
         "positive": ["6", 0],
         "negative": ["7", 0],
-        "latent_image": ["12", 0]
+        "latent_image": ["16", 0]
       },
       "class_type": "KSampler",
       "_meta": { "title": "KSampler" }
@@ -90,13 +89,11 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
     },
     "12": {
       "inputs": {
-        "grow_mask_by": 6,
         "pixels": ["5", 0],
-        "vae": ["11", 0],
-        "mask": ["5", 1]
+        "vae": ["11", 0]
       },
-      "class_type": "VAEEncodeForInpaint",
-      "_meta": { "title": "VAE Encode (for Inpainting)" }
+      "class_type": "VAEEncode",
+      "_meta": { "title": "VAE Encode" }
     },
     "14": {
       "inputs": {
@@ -116,6 +113,14 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
       },
       "class_type": "Power Lora Loader (rgthree)",
       "_meta": { "title": "Power Lora Loader (rgthree)" }
+    },
+    "16": {
+      "inputs": {
+        "samples": ["12", 0],
+        "mask": ["5", 1]
+      },
+      "class_type": "SetLatentNoiseMask",
+      "_meta": { "title": "Set Latent Noise Mask" }
     }
   };
 };
@@ -127,7 +132,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'nsfw');
 
-  // Simple SDXL-based inpaint workflow using standard nodes
+  // Use VAEEncode + SetLatentNoiseMask approach (more compatible)
   return {
     "1": {
       "inputs": {
@@ -148,7 +153,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
         "model": ["9", 0],
         "positive": ["12", 0],
         "negative": ["5", 0],
-        "latent_image": ["14", 0]
+        "latent_image": ["16", 0]
       },
       "class_type": "KSampler",
       "_meta": { "title": "KSampler" }
@@ -202,13 +207,19 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
     },
     "14": {
       "inputs": {
-        "grow_mask_by": 6,
         "pixels": ["6", 0],
-        "vae": ["13", 2],
+        "vae": ["13", 2]
+      },
+      "class_type": "VAEEncode",
+      "_meta": { "title": "VAE Encode" }
+    },
+    "16": {
+      "inputs": {
+        "samples": ["14", 0],
         "mask": ["6", 1]
       },
-      "class_type": "VAEEncodeForInpaint",
-      "_meta": { "title": "VAE Encode (for Inpainting)" }
+      "class_type": "SetLatentNoiseMask",
+      "_meta": { "title": "Set Latent Noise Mask" }
     }
   };
 };
