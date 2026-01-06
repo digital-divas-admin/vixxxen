@@ -14069,14 +14069,22 @@
 
           // Extract image from result
           let imageUrl = null;
-          if (resultData.output?.message && typeof resultData.output.message === 'string') {
-            const base64Data = resultData.output.message;
-            imageUrl = `data:image/png;base64,${base64Data}`;
-            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete`);
+          if (resultData.imageUrl) {
+            // Backend already extracted and formatted the image URL
+            imageUrl = resultData.imageUrl;
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (imageUrl)`);
           } else if (resultData.images?.[0]) {
             imageUrl = resultData.images[0];
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (images array)`);
+          } else if (resultData.output?.message && typeof resultData.output.message === 'string') {
+            // Fallback: handle raw base64 from output.message
+            const base64Data = resultData.output.message;
+            // Check if data already has prefix to avoid double-prefix
+            imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (output.message)`);
           } else if (resultData.output?.images?.[0]) {
             imageUrl = resultData.output.images[0];
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (output.images)`);
           }
 
           if (!imageUrl) {

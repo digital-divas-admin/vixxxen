@@ -272,12 +272,19 @@ router.get('/status/:jobId', async (req, res) => {
       console.log('✅ RunPod job completed. Output:', JSON.stringify(data.output, null, 2).substring(0, 500));
 
       // Extract image URL from output
-      // RunPod ComfyUI worker typically returns images in output.images array
+      // RunPod ComfyUI worker can return images in different formats
       if (data.output.images && data.output.images.length > 0) {
         result.imageUrl = data.output.images[0];
         result.images = data.output.images;
       } else if (data.output.image) {
         result.imageUrl = data.output.image;
+      } else if (data.output.message && typeof data.output.message === 'string') {
+        // Base64 output format from ComfyUI worker
+        const base64Data = data.output.message;
+        // Handle both with and without data: prefix
+        result.imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+        result.images = [result.imageUrl];
+        console.log('✅ Extracted base64 image from output.message');
       } else {
         // Pass through raw output for debugging
         result.output = data.output;
