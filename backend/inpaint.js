@@ -201,7 +201,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
       "_meta": { "title": "Positive Prompt" }
     },
     "13": {
-      "inputs": { "ckpt_name": "pornmaster-v7real.safetensors" },
+      "inputs": { "ckpt_name": "pornmaster_proSDXLV7.safetensors" },
       "class_type": "CheckpointLoaderSimple",
       "_meta": { "title": "Load Checkpoint" }
     },
