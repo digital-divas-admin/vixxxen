@@ -13395,8 +13395,8 @@
       const canvas = document.getElementById('inpaintCanvas');
       const maskCanvas = document.getElementById('inpaintMaskCanvas');
 
-      // Calculate resize dimensions (max 1024px - SDXL native resolution)
-      const MAX_DIMENSION = 1024;
+      // Calculate resize dimensions (max 2048px to preserve quality)
+      const MAX_DIMENSION = 2048;
       let outputWidth = canvas.width;
       let outputHeight = canvas.height;
       const scale = Math.min(MAX_DIMENSION / outputWidth, MAX_DIMENSION / outputHeight, 1);
@@ -13660,7 +13660,7 @@
       // Generate result items HTML
       const resultsHtml = results.map((url, index) => `
         <div class="inpaint-result-item">
-          <img src="${url}" alt="Inpaint result ${index + 1}" onclick="openImagePreview('${url}')">
+          <img src="${url}" alt="Inpaint result ${index + 1}" onclick="showImageModal('${url}')">
           <div class="inpaint-result-item-actions">
             <button onclick="sendInpaintResultToEdit('${url}')">Edit</button>
             <button onclick="sendInpaintResultToVideo('${url}')">Video</button>
@@ -13675,13 +13675,11 @@
 
     function sendInpaintToEdit() {
       if (!inpaintResultUrl) return;
-      switchMainTab('edit');
-      loadEditImageFromUrl(inpaintResultUrl);
+      sendToEdit(inpaintResultUrl);
     }
 
     function sendInpaintResultToEdit(url) {
-      switchMainTab('edit');
-      loadEditImageFromUrl(url);
+      sendToEdit(url);
     }
 
     function sendInpaintToVideo() {
