@@ -269,24 +269,33 @@ router.get('/status/:jobId', async (req, res) => {
 
     // If completed, include the output
     if (data.status === 'COMPLETED' && data.output) {
-      console.log('✅ RunPod job completed. Output:', JSON.stringify(data.output, null, 2).substring(0, 500));
+      console.log('✅ RunPod job completed.');
+      console.log('   Output keys:', Object.keys(data.output));
+      console.log('   Full output (first 1000 chars):', JSON.stringify(data.output, null, 2).substring(0, 1000));
 
       // Extract image URL from output
       // RunPod ComfyUI worker can return images in different formats
       if (data.output.images && data.output.images.length > 0) {
+        console.log('   → Found images array with', data.output.images.length, 'items');
+        console.log('   → First image type:', typeof data.output.images[0]);
+        console.log('   → First image preview:', String(data.output.images[0]).substring(0, 100));
         result.imageUrl = data.output.images[0];
         result.images = data.output.images;
       } else if (data.output.image) {
+        console.log('   → Found single image');
         result.imageUrl = data.output.image;
       } else if (data.output.message && typeof data.output.message === 'string') {
         // Base64 output format from ComfyUI worker
         const base64Data = data.output.message;
+        console.log('   → Found output.message (length:', base64Data.length, ')');
+        console.log('   → Starts with:', base64Data.substring(0, 50));
         // Handle both with and without data: prefix
         result.imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
         result.images = [result.imageUrl];
         console.log('✅ Extracted base64 image from output.message');
       } else {
         // Pass through raw output for debugging
+        console.log('   → No recognized image format, passing through raw output');
         result.output = data.output;
       }
     }
