@@ -90,6 +90,7 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
     },
     "12": {
       "inputs": {
+        "grow_mask_by": 6,
         "pixels": ["5", 0],
         "vae": ["11", 0],
         "mask": ["5", 1]
@@ -201,6 +202,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
     },
     "14": {
       "inputs": {
+        "grow_mask_by": 6,
         "pixels": ["6", 0],
         "vae": ["13", 2],
         "mask": ["6", 1]
