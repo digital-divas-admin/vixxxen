@@ -14069,10 +14069,14 @@
 
           // Extract image from result
           let imageUrl = null;
+          console.log(`🔍 [Batch ${batchId}] Result data keys:`, Object.keys(resultData));
+          console.log(`🔍 [Batch ${batchId}] Full resultData:`, JSON.stringify(resultData).substring(0, 500));
           if (resultData.imageUrl) {
             // Backend already extracted and formatted the image URL
             imageUrl = resultData.imageUrl;
             console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (imageUrl)`);
+            console.log(`   imageUrl length: ${imageUrl.length}`);
+            console.log(`   imageUrl preview: ${imageUrl.substring(0, 100)}`);
           } else if (resultData.images?.[0]) {
             imageUrl = resultData.images[0];
             console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (images array)`);
@@ -14413,17 +14417,20 @@
         placeholder.dataset.nsfw = 'true';
         console.log('🔞 Setting data-nsfw=true on placeholder');
       }
+      // Store image data on placeholder for click handlers (avoids inline URL issues with base64)
+      placeholder.dataset.imageUrl = image.url;
+      placeholder.dataset.timestamp = image.timestamp;
 
       placeholder.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
           </div>
           <div class="output-item-actions">
-            <button class="icon-btn" onclick="downloadImage('${image.url}', ${image.timestamp})" title="Download">
+            <button class="icon-btn" onclick="downloadImageFromParent(this)" title="Download">
               <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -14438,13 +14445,13 @@
                 </svg>
               </button>
               <div class="send-to-menu">
-                <button class="send-to-option" onclick="sendToVideo('${image.url}', event)">📹 Send to Video</button>
-                <button class="send-to-option" onclick="sendToEdit('${image.url}', event)">✂️ Send to Edit</button>
-                <button class="send-to-option" onclick="sendToCaption('${image.url}', event)">💬 Send to Caption</button>
-                <button class="send-to-option" onclick="sendToInpaint('${image.url}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="sendToVideoFromParent(this, event)">📹 Send to Video</button>
+                <button class="send-to-option" onclick="sendToEditFromParent(this, event)">✂️ Send to Edit</button>
+                <button class="send-to-option" onclick="sendToCaptionFromParent(this, event)">💬 Send to Caption</button>
+                <button class="send-to-option" onclick="sendToInpaintFromParent(this, event)">🖌️ Send to Inpaint</button>
               </div>
             </div>
-            <button class="report-btn" onclick="event.stopPropagation(); openReportModal('image', '${image.timestamp}', '${image.url}')" title="Report">
+            <button class="report-btn" onclick="event.stopPropagation(); openReportModalFromParent(this)" title="Report">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
                 <line x1="4" y1="22" x2="4" y2="15"></line>
@@ -14462,6 +14469,7 @@
       imageDiv.className = 'output-item';
       imageDiv.dataset.imageId = image.id || '';
       imageDiv.dataset.imageUrl = image.url;
+      imageDiv.dataset.timestamp = image.timestamp;
 
       // Set NSFW flag if present
       if (image.isNsfw) {
@@ -14471,13 +14479,13 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
           </div>
           <div class="output-item-actions">
-            <button class="icon-btn" onclick="downloadImage('${image.url}', ${image.timestamp})" title="Download">
+            <button class="icon-btn" onclick="downloadImageFromParent(this)" title="Download">
               <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -14492,13 +14500,13 @@
                 </svg>
               </button>
               <div class="send-to-menu">
-                <button class="send-to-option" onclick="sendToVideo('${image.url}', event)">📹 Send to Video</button>
-                <button class="send-to-option" onclick="sendToEdit('${image.url}', event)">✂️ Send to Edit</button>
-                <button class="send-to-option" onclick="sendToCaption('${image.url}', event)">💬 Send to Caption</button>
-                <button class="send-to-option" onclick="sendToInpaint('${image.url}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="sendToVideoFromParent(this, event)">📹 Send to Video</button>
+                <button class="send-to-option" onclick="sendToEditFromParent(this, event)">✂️ Send to Edit</button>
+                <button class="send-to-option" onclick="sendToCaptionFromParent(this, event)">💬 Send to Caption</button>
+                <button class="send-to-option" onclick="sendToInpaintFromParent(this, event)">🖌️ Send to Inpaint</button>
               </div>
             </div>
-            <button class="report-btn" onclick="event.stopPropagation(); openReportModal('image', '${image.timestamp}', '${image.url}')" title="Report">
+            <button class="report-btn" onclick="event.stopPropagation(); openReportModalFromParent(this)" title="Report">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
                 <line x1="4" y1="22" x2="4" y2="15"></line>
@@ -14547,6 +14555,45 @@
           console.error('Download failed:', err);
           showError('Failed to download image');
         });
+    }
+
+    // Helper functions that get URL from parent data attributes (avoids base64 in onclick)
+    function getImageDataFromParent(element) {
+      const container = element.closest('.output-item');
+      return {
+        url: container.dataset.imageUrl,
+        timestamp: container.dataset.timestamp
+      };
+    }
+
+    function downloadImageFromParent(element) {
+      const data = getImageDataFromParent(element);
+      downloadImage(data.url, data.timestamp);
+    }
+
+    function sendToVideoFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToVideo(data.url, event);
+    }
+
+    function sendToEditFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToEdit(data.url, event);
+    }
+
+    function sendToCaptionFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToCaption(data.url, event);
+    }
+
+    function sendToInpaintFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToInpaint(data.url, event);
+    }
+
+    function openReportModalFromParent(element) {
+      const data = getImageDataFromParent(element);
+      openReportModal('image', data.timestamp, data.url);
     }
 
     // ===========================================
@@ -15010,6 +15057,8 @@
     }
 
     function showImageModal(url) {
+      console.log('🖼️ Opening lightbox with URL:', url ? url.substring(0, 100) + '...' : 'EMPTY');
+      console.log('   URL length:', url ? url.length : 0);
       const modal = document.getElementById('imageModal');
       const modalImage = document.getElementById('modalImage');
       modalImage.src = url;
