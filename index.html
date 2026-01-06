@@ -13389,12 +13389,13 @@
     }
 
     function createMaskedImage() {
-      // Create a canvas with the original image and alpha mask
+      // Create TWO separate images:
+      // 1. Original image (full RGB, no alpha modification)
+      // 2. Mask image (white=inpaint, black=keep)
       const canvas = document.getElementById('inpaintCanvas');
       const maskCanvas = document.getElementById('inpaintMaskCanvas');
 
       // Calculate resize dimensions (max 1024px - SDXL native resolution)
-      // RunPod payload limit is ~10MB, 1024px PNG with alpha is ~2-4MB base64
       const MAX_DIMENSION = 1024;
       let outputWidth = canvas.width;
       let outputHeight = canvas.height;
@@ -13403,41 +13404,52 @@
       if (scale < 1) {
         outputWidth = Math.round(outputWidth * scale);
         outputHeight = Math.round(outputHeight * scale);
-        console.log(`📐 Resizing image from ${canvas.width}x${canvas.height} to ${outputWidth}x${outputHeight}`);
-      } else {
-        console.log(`📐 Image already small enough: ${outputWidth}x${outputHeight}`);
+        console.log(`📐 Resizing from ${canvas.width}x${canvas.height} to ${outputWidth}x${outputHeight}`);
       }
 
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = outputWidth;
-      outputCanvas.height = outputHeight;
-      const ctx = outputCanvas.getContext('2d');
+      // 1. Original image (no alpha modification - preserve RGB values)
+      const imageCanvas = document.createElement('canvas');
+      imageCanvas.width = outputWidth;
+      imageCanvas.height = outputHeight;
+      const imageCtx = imageCanvas.getContext('2d');
+      imageCtx.drawImage(inpaintImage, 0, 0, outputWidth, outputHeight);
 
-      // Draw original image (scaled if needed)
-      ctx.drawImage(inpaintImage, 0, 0, outputWidth, outputHeight);
+      // 2. Mask image (white=inpaint, black=keep)
+      const maskOutputCanvas = document.createElement('canvas');
+      maskOutputCanvas.width = outputWidth;
+      maskOutputCanvas.height = outputHeight;
+      const maskCtx = maskOutputCanvas.getContext('2d');
 
-      // Create scaled mask canvas
+      // Start with black (keep everything)
+      maskCtx.fillStyle = '#000000';
+      maskCtx.fillRect(0, 0, outputWidth, outputHeight);
+
+      // Scale the painted mask
       const scaledMaskCanvas = document.createElement('canvas');
       scaledMaskCanvas.width = outputWidth;
       scaledMaskCanvas.height = outputHeight;
       const scaledMaskCtx = scaledMaskCanvas.getContext('2d');
       scaledMaskCtx.drawImage(maskCanvas, 0, 0, outputWidth, outputHeight);
 
-      // Get image data and mask data
-      const imageData = ctx.getImageData(0, 0, outputWidth, outputHeight);
+      // Get mask strokes and create white where painted
       const maskData = scaledMaskCtx.getImageData(0, 0, outputWidth, outputHeight);
+      const outputMaskData = maskCtx.getImageData(0, 0, outputWidth, outputHeight);
 
-      // Set alpha to 0 where mask is painted
       for (let i = 0; i < maskData.data.length; i += 4) {
-        // Check if this pixel has mask color (any non-zero alpha in mask)
         if (maskData.data[i + 3] > 0) {
-          // Set alpha to 0 (transparent) for masked areas
-          imageData.data[i + 3] = 0;
+          // White = inpaint this area
+          outputMaskData.data[i] = 255;     // R
+          outputMaskData.data[i + 1] = 255; // G
+          outputMaskData.data[i + 2] = 255; // B
+          outputMaskData.data[i + 3] = 255; // A
         }
       }
+      maskCtx.putImageData(outputMaskData, 0, 0);
 
-      ctx.putImageData(imageData, 0, 0);
-      return outputCanvas.toDataURL('image/png').split(',')[1];
+      return {
+        image: imageCanvas.toDataURL('image/png').split(',')[1],
+        mask: maskOutputCanvas.toDataURL('image/png').split(',')[1]
+      };
     }
 
     // Poll async inpaint job until completion
@@ -13555,9 +13567,9 @@
 
       console.log('🖌️ Inpaint generation:', { prompt: inpaintPrompt, loras, mode: inpaintMode, count: numGenerations });
 
-      // Create masked image with alpha channel
-      const maskedImageBase64 = createMaskedImage();
-      console.log('🖌️ Image size:', Math.round(maskedImageBase64.length / 1024), 'KB');
+      // Create original image and separate mask (white=inpaint, black=keep)
+      const { image: imageBase64, mask: maskBase64 } = createMaskedImage();
+      console.log('🖌️ Image:', Math.round(imageBase64.length / 1024), 'KB, Mask:', Math.round(maskBase64.length / 1024), 'KB');
 
       // Show loading
       document.getElementById('inpaintGenerateBtn').disabled = true;
@@ -13577,7 +13589,8 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                image: maskedImageBase64,
+                image: imageBase64,
+                mask: maskBase64,
                 prompt: inpaintPrompt,
                 loras: loras
               })
