@@ -331,6 +331,7 @@ async function pollRunPodJob(jobId) {
         }
       } else if (data.status === 'FAILED') {
         console.error(`❌ Job failed:`, data.error);
+        console.error(`   Full failed response:`, JSON.stringify(data, null, 2).substring(0, 1000));
         return { success: false, error: data.error || 'Job failed', fullResponse: data };
       } else if (data.status === 'CANCELLED') {
         return { success: false, error: 'Job was cancelled' };
