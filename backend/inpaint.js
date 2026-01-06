@@ -120,12 +120,13 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
 };
 
 // ============================================================================
-// NSFW INPAINT WORKFLOW (SDXL-based)
+// NSFW INPAINT WORKFLOW (SDXL-based) - Simplified for RunPod compatibility
 // ============================================================================
-const getNsfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = null, loras = [] }) => {
+const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [] }) => {
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'nsfw');
 
+  // Simple SDXL-based inpaint workflow using standard nodes
   return {
     "1": {
       "inputs": {
@@ -144,37 +145,16 @@ const getNsfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = nul
         "scheduler": "karras",
         "denoise": 0.3,
         "model": ["9", 0],
-        "positive": ["3", 0],
-        "negative": ["3", 1],
-        "latent_image": ["3", 2]
+        "positive": ["12", 0],
+        "negative": ["5", 0],
+        "latent_image": ["14", 0]
       },
       "class_type": "KSampler",
       "_meta": { "title": "KSampler" }
     },
-    "3": {
-      "inputs": {
-        "noise_mask": true,
-        "positive": ["12", 0],
-        "negative": ["5", 0],
-        "vae": ["13", 2],
-        "pixels": ["6", 0],
-        "mask": ["4", 0]
-      },
-      "class_type": "InpaintModelConditioning",
-      "_meta": { "title": "InpaintModelConditioning" }
-    },
-    "4": {
-      "inputs": {
-        "kernel_size": 10,
-        "sigma": 10,
-        "mask": ["6", 1]
-      },
-      "class_type": "ImpactGaussianBlurMask",
-      "_meta": { "title": "Gaussian Blur Mask" }
-    },
     "5": {
       "inputs": {
-        "text": negativePrompt,
+        "text": negativePrompt || "ugly, blurry, low quality",
         "clip": ["9", 1]
       },
       "class_type": "CLIPTextEncode",
@@ -182,18 +162,10 @@ const getNsfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = nul
     },
     "6": {
       "inputs": {
-        "image": image,
-        "resize": false,
-        "width": 1152,
-        "height": 1536,
-        "repeat": 1,
-        "keep_proportion": false,
-        "divisible_by": 2,
-        "mask_channel": "alpha",
-        "background_color": ""
+        "image": "input_image.png"
       },
-      "class_type": "LoadAndResizeImage",
-      "_meta": { "title": "Load & Resize Image" }
+      "class_type": "LoadImage",
+      "_meta": { "title": "Load Image" }
     },
     "9": {
       "inputs": {
@@ -208,7 +180,7 @@ const getNsfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = nul
     },
     "10": {
       "inputs": {
-        "filename_prefix": "Inpainting/%date:yyyy-MM-dd%/%date:yyyy-MM-dd%",
+        "filename_prefix": "Inpaint_NSFW",
         "images": ["1", 0]
       },
       "class_type": "SaveImage",
@@ -223,9 +195,18 @@ const getNsfwInpaintWorkflow = ({ image, prompt, negativePrompt = '', seed = nul
       "_meta": { "title": "Positive Prompt" }
     },
     "13": {
-      "inputs": { "ckpt_name": "pornmaster_proSDXLV7.safetensors" },
+      "inputs": { "ckpt_name": "pornmaster-v7real.safetensors" },
       "class_type": "CheckpointLoaderSimple",
       "_meta": { "title": "Load Checkpoint" }
+    },
+    "14": {
+      "inputs": {
+        "pixels": ["6", 0],
+        "vae": ["13", 2],
+        "mask": ["6", 1]
+      },
+      "class_type": "VAEEncodeForInpaint",
+      "_meta": { "title": "VAE Encode (for Inpainting)" }
     }
   };
 };
@@ -528,16 +509,27 @@ router.post('/inpaint-nsfw', async (req, res) => {
     console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
     console.log(`   Image size: ${Math.round(image.length / 1024)}KB`);
 
-    // Build workflow
+    // Strip data URL prefix if present
+    let base64Image = image;
+    if (image.startsWith('data:')) {
+      base64Image = image.split(',')[1];
+    }
+
+    // Build workflow (image is passed separately)
     const workflow = getNsfwInpaintWorkflow({
-      image,
       prompt,
       negativePrompt: '',
       loras
     });
 
-    // Submit to RunPod
-    const jobId = await submitToRunPod(workflow, 'NSFW');
+    // Prepare images array for RunPod
+    const images = [{
+      name: 'input_image.png',
+      image: base64Image
+    }];
+
+    // Submit to RunPod with images
+    const jobId = await submitToRunPod(workflow, 'NSFW', images);
 
     // Poll for completion
     const result = await pollRunPodJob(jobId);
