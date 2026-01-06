@@ -276,14 +276,40 @@ router.get('/status/:jobId', async (req, res) => {
       // Extract image URL from output
       // RunPod ComfyUI worker can return images in different formats
       if (data.output.images && data.output.images.length > 0) {
+        const firstImage = data.output.images[0];
         console.log('   → Found images array with', data.output.images.length, 'items');
-        console.log('   → First image type:', typeof data.output.images[0]);
-        console.log('   → First image preview:', String(data.output.images[0]).substring(0, 100));
-        result.imageUrl = data.output.images[0];
-        result.images = data.output.images;
+        console.log('   → First image type:', typeof firstImage);
+
+        // Handle different image formats
+        let base64Data;
+        if (typeof firstImage === 'string') {
+          // Direct string format
+          base64Data = firstImage;
+        } else if (firstImage && typeof firstImage === 'object' && firstImage.data) {
+          // Object format: { data: "base64string" }
+          console.log('   → Image is object with data property');
+          base64Data = firstImage.data;
+        } else if (firstImage && typeof firstImage === 'object' && firstImage.image) {
+          // Object format: { image: "base64string" }
+          base64Data = firstImage.image;
+        }
+
+        if (base64Data) {
+          console.log('   → Base64 data length:', base64Data.length);
+          console.log('   → Base64 preview:', base64Data.substring(0, 50));
+          result.imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+          result.images = [result.imageUrl];
+        } else {
+          console.log('   → Could not extract base64 from image object:', JSON.stringify(firstImage).substring(0, 200));
+          result.output = data.output;
+        }
       } else if (data.output.image) {
         console.log('   → Found single image');
-        result.imageUrl = data.output.image;
+        const imageData = typeof data.output.image === 'object' && data.output.image.data
+          ? data.output.image.data
+          : data.output.image;
+        result.imageUrl = imageData.startsWith('data:') ? imageData : `data:image/png;base64,${imageData}`;
+        result.images = [result.imageUrl];
       } else if (data.output.message && typeof data.output.message === 'string') {
         // Base64 output format from ComfyUI worker
         const base64Data = data.output.message;
