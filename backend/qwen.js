@@ -133,11 +133,23 @@ function buildLoraConfig(userLoras = []) {
   if (userLoras && userLoras.length > 0) {
     userLoras.forEach((lora, index) => {
       const loraKey = `lora_${index + 1}`;
-      defaultLoras[loraKey] = {
-        "on": lora.enabled !== false,
-        "lora": lora.name,
-        "strength": lora.strength ?? 1
-      };
+
+      // Handle both string format ("lora.safetensors") and object format ({ name: "lora.safetensors", strength: 1 })
+      if (typeof lora === 'string') {
+        console.log(`   → LoRA ${index + 1}: ${lora} (string format)`);
+        defaultLoras[loraKey] = {
+          "on": true,
+          "lora": lora,
+          "strength": 1
+        };
+      } else {
+        console.log(`   → LoRA ${index + 1}: ${lora.name} (object format, strength: ${lora.strength ?? 1})`);
+        defaultLoras[loraKey] = {
+          "on": lora.enabled !== false,
+          "lora": lora.name,
+          "strength": lora.strength ?? 1
+        };
+      }
     });
   }
 
