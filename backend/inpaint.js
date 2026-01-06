@@ -10,13 +10,13 @@ const POLL_INTERVAL = 3000; // Poll every 3 seconds
 const MAX_POLL_ATTEMPTS = 200; // Max ~10 minutes of polling
 
 // ============================================================================
-// SFW INPAINT WORKFLOW (Qwen-based) - Uses separate image and mask
+// SFW INPAINT WORKFLOW (Qwen-based) - Uses alpha channel from image as mask
 // ============================================================================
 const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [] }) => {
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'sfw');
 
-  // Use separate LoadImage nodes for image and mask
+  // LoadImage extracts alpha channel as mask (output index 1)
   return {
     "3": {
       "inputs": {
@@ -33,13 +33,6 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
       },
       "class_type": "KSampler",
       "_meta": { "title": "KSampler" }
-    },
-    "4": {
-      "inputs": {
-        "image": "mask_image.png"
-      },
-      "class_type": "LoadImage",
-      "_meta": { "title": "Load Mask" }
     },
     "5": {
       "inputs": {
@@ -124,7 +117,7 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
     "16": {
       "inputs": {
         "samples": ["12", 0],
-        "mask": ["4", 1]
+        "mask": ["5", 1]
       },
       "class_type": "SetLatentNoiseMask",
       "_meta": { "title": "Set Latent Noise Mask" }
@@ -133,13 +126,13 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
 };
 
 // ============================================================================
-// NSFW INPAINT WORKFLOW (SDXL-based) - Uses separate image and mask
+// NSFW INPAINT WORKFLOW (SDXL-based) - Uses alpha channel with InvertMask
 // ============================================================================
 const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [] }) => {
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'nsfw');
 
-  // Use separate LoadImage nodes for image and mask
+  // LoadImage extracts alpha as mask, InvertMask flips it for proper inpainting
   return {
     "1": {
       "inputs": {
@@ -156,7 +149,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
         "cfg": 7,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
-        "denoise": 0.85,
+        "denoise": 0.75,
         "model": ["9", 0],
         "positive": ["12", 0],
         "negative": ["5", 0],
@@ -179,13 +172,6 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
       },
       "class_type": "LoadImage",
       "_meta": { "title": "Load Image" }
-    },
-    "7": {
-      "inputs": {
-        "image": "mask_image.png"
-      },
-      "class_type": "LoadImage",
-      "_meta": { "title": "Load Mask" }
     },
     "9": {
       "inputs": {
@@ -230,10 +216,17 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
     "16": {
       "inputs": {
         "samples": ["14", 0],
-        "mask": ["7", 1]
+        "mask": ["17", 0]
       },
       "class_type": "SetLatentNoiseMask",
       "_meta": { "title": "Set Latent Noise Mask" }
+    },
+    "17": {
+      "inputs": {
+        "mask": ["6", 1]
+      },
+      "class_type": "InvertMask",
+      "_meta": { "title": "Invert Mask" }
     }
   };
 };
@@ -453,14 +446,10 @@ router.get('/proxy-image', async (req, res) => {
 // ============================================================================
 router.post('/inpaint-sfw', async (req, res) => {
   try {
-    const { image, mask, prompt, loras = [] } = req.body;
+    const { image, prompt, loras = [] } = req.body;
 
     if (!image) {
-      return res.status(400).json({ error: 'Image is required' });
-    }
-
-    if (!mask) {
-      return res.status(400).json({ error: 'Mask is required (white=inpaint, black=keep)' });
+      return res.status(400).json({ error: 'Image is required (base64 PNG with alpha mask)' });
     }
 
     if (!prompt) {
@@ -471,7 +460,6 @@ router.post('/inpaint-sfw', async (req, res) => {
     console.log(`   Prompt: ${prompt}`);
     console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
     console.log(`   Image size: ${Math.round(image.length / 1024)}KB`);
-    console.log(`   Mask size: ${Math.round(mask.length / 1024)}KB`);
 
     // Strip data URL prefix if present
     let base64Image = image;
@@ -479,23 +467,15 @@ router.post('/inpaint-sfw', async (req, res) => {
       base64Image = image.split(',')[1];
     }
 
-    let base64Mask = mask;
-    if (mask.startsWith('data:')) {
-      base64Mask = mask.split(',')[1];
-    }
-
-    // Build workflow (images are passed separately)
+    // Build workflow (image is passed separately, mask extracted from alpha)
     const workflow = getSfwInpaintWorkflow({
       prompt,
       negativePrompt: '',
       loras
     });
 
-    // Prepare images array for RunPod (image + mask)
-    const images = [
-      { name: 'input_image.png', image: base64Image },
-      { name: 'mask_image.png', image: base64Mask }
-    ];
+    // Prepare images array for RunPod
+    const images = [{ name: 'input_image.png', image: base64Image }];
 
     // Submit to RunPod with images
     const jobId = await submitToRunPod(workflow, 'SFW', images);
@@ -532,14 +512,10 @@ router.post('/inpaint-sfw', async (req, res) => {
 // ============================================================================
 router.post('/inpaint-nsfw', async (req, res) => {
   try {
-    const { image, mask, prompt, loras = [] } = req.body;
+    const { image, prompt, loras = [] } = req.body;
 
     if (!image) {
-      return res.status(400).json({ error: 'Image is required' });
-    }
-
-    if (!mask) {
-      return res.status(400).json({ error: 'Mask is required (white=inpaint, black=keep)' });
+      return res.status(400).json({ error: 'Image is required (base64 PNG with alpha mask)' });
     }
 
     if (!prompt) {
@@ -550,7 +526,6 @@ router.post('/inpaint-nsfw', async (req, res) => {
     console.log(`   Prompt: ${prompt}`);
     console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
     console.log(`   Image size: ${Math.round(image.length / 1024)}KB`);
-    console.log(`   Mask size: ${Math.round(mask.length / 1024)}KB`);
 
     // Strip data URL prefix if present
     let base64Image = image;
@@ -558,23 +533,15 @@ router.post('/inpaint-nsfw', async (req, res) => {
       base64Image = image.split(',')[1];
     }
 
-    let base64Mask = mask;
-    if (mask.startsWith('data:')) {
-      base64Mask = mask.split(',')[1];
-    }
-
-    // Build workflow (images are passed separately)
+    // Build workflow (image is passed separately, mask extracted from alpha + inverted)
     const workflow = getNsfwInpaintWorkflow({
       prompt,
       negativePrompt: '',
       loras
     });
 
-    // Prepare images array for RunPod (image + mask)
-    const images = [
-      { name: 'input_image.png', image: base64Image },
-      { name: 'mask_image.png', image: base64Mask }
-    ];
+    // Prepare images array for RunPod
+    const images = [{ name: 'input_image.png', image: base64Image }];
 
     // Submit to RunPod with images
     const jobId = await submitToRunPod(workflow, 'NSFW', images);
