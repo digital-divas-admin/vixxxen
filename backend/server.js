@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const seedreamRouter = require('./seedream');
@@ -84,6 +85,21 @@ app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/inpaint', inpaintRouter);
 
+// Serve static files from the parent directory (frontend)
+app.use(express.static(path.join(__dirname, '..')));
+
+// Serve content directory for educational modules
+app.use('/content', express.static(path.join(__dirname, '..', 'content')));
+
+// SPA fallback - serve index.html for non-API routes
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/') || req.path === '/health') {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -93,14 +109,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// 404 handler for API routes
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`\n🚀 DivaForge Backend running on http://localhost:${PORT}`);
+  console.log(`\n🚀 Vixxxen Backend running on http://localhost:${PORT}`);
   console.log('\n📋 API Status:');
   console.log(`   Seedream 4.5: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
   console.log(`   Nano Banana Pro: ${process.env.GOOGLE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);

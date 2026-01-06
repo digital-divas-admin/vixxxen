@@ -1,7 +1,7 @@
 {
-  "name": "divaforge-backend",
+  "name": "vixxxen-backend",
   "version": "1.0.0",
-  "description": "DivaForge Backend - AI Image Generation Server",
+  "description": "Vixxxen Backend - AI Content Generation Server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -33,6 +33,6 @@
     "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }

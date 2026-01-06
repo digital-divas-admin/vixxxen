@@ -4,6 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vixxxen - AI Image Generator</title>
+
+  <!-- Resource hints for faster loading -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.socket.io">
+
+  <!-- Critical loading splash (inline to show immediately) -->
+  <style id="splash-styles">
+    .loading-splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.3s ease-out;
+    }
+    .loading-splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-splash-logo {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+    .loading-splash-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 46, 187, 0.2);
+      border-top-color: #ff2ebb;
+      border-radius: 50%;
+      animation: splash-spin 1s linear infinite;
+    }
+    .loading-splash-text {
+      color: #888;
+      margin-top: 16px;
+      font-size: 0.9rem;
+    }
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
   <style>
     * {
       margin: 0;
@@ -1141,6 +1194,25 @@
     .content {
       padding: 20px;
       flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Video tab specific - ensure generate button stays visible */
+    #videoSection .left-panel {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 100px); /* Account for footer */
+      overflow: hidden;
+    }
+
+    #videoSection .left-panel .header {
+      flex-shrink: 0;
+    }
+
+    #videoSection .content {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 30px;
     }
 
     /* Placeholder for empty tabs */
@@ -4055,7 +4127,7 @@
     }
 
     .inpaint-canvas-area {
-      flex: 1;
+      flex: 0 0 400px;
       display: flex;
       flex-direction: column;
       padding: 24px;
@@ -4137,7 +4209,7 @@
     }
 
     .inpaint-sidebar {
-      width: 320px;
+      flex: 0 0 320px;
       background: #111;
       border-left: 1px solid #2a2a2a;
       padding: 24px;
@@ -4392,8 +4464,10 @@
       flex: 1;
       background: var(--bg-primary);
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 20px;
       transition: background 0.3s;
+      min-width: 300px;
     }
 
     .inpaint-result-header {
@@ -4414,7 +4488,7 @@
 
     .inpaint-results-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--grid-item-size, 200px), 1fr));
       gap: 16px;
     }
 
@@ -4440,58 +4514,9 @@
       line-height: 1.5;
     }
 
-    .inpaint-result-item {
-      position: relative;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .inpaint-result-item:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
-
-    .inpaint-result-item img {
-      width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
-      display: block;
-      cursor: pointer;
-    }
-
-    .inpaint-result-item-actions {
-      display: flex;
-      gap: 8px;
-      padding: 12px;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-    }
-
-    .inpaint-result-item-actions button {
-      padding: 8px 16px;
-      font-size: 0.85rem;
-      border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .inpaint-result-item-actions button:hover {
-      background: rgba(255,255,255,0.2);
-    }
-
-    .inpaint-result-item-actions button.primary {
-      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
-      border: none;
-    }
-
-    .inpaint-result-item-actions button.primary:hover {
-      opacity: 0.9;
+    /* Inpaint output items inherit from .output-item styles */
+    .inpaint-results-grid .output-item:hover .output-item-overlay {
+      opacity: 1;
     }
 
     .chat-typing {
@@ -5506,6 +5531,22 @@
       opacity: 0.9;
     }
 
+    /* Video grid - consistent 16:9 containers for clean layout */
+    #videoOutputGrid .output-item {
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+
+    #videoOutputGrid .output-item video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
     /* Edit tab output cards */
     .output-card {
       position: relative;
@@ -6126,6 +6167,87 @@
 
     .image-modal-close:hover {
       background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    /* Video Modal */
+    .video-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .video-modal.active {
+      display: flex;
+    }
+
+    .video-modal video {
+      max-width: 90%;
+      max-height: 85%;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .video-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+    }
+
+    .video-modal-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    /* Video expand button overlay */
+    #videoOutputGrid .output-item .video-expand-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 36px;
+      height: 36px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+
+    #videoOutputGrid .output-item:hover .video-expand-btn {
+      opacity: 1;
+    }
+
+    #videoOutputGrid .output-item .video-expand-btn:hover {
+      background: rgba(255, 46, 187, 0.8);
       transform: scale(1.1);
     }
 
@@ -7163,21 +7285,6 @@
       color: #999 !important;
     }
 
-    .light-theme .inpaint-result-item {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .inpaint-result-item-actions {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .inpaint-result-item-actions button {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
     .light-theme .chat-input-area {
       background: #ffffff !important;
       border-color: #d1d1d6 !important;
@@ -7471,6 +7578,51 @@
     .light-theme .membership-btn {
       color: #ffffff !important;
     }
+
+    /* Cold Start Banner */
+    .cold-start-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #ff9500, #ff6b00);
+      color: #fff;
+      padding: 12px 20px;
+      text-align: center;
+      z-index: 10001;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+      font-size: 0.9rem;
+    }
+
+    .cold-start-banner.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .cold-start-banner .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .cold-start-banner.ready {
+      background: linear-gradient(135deg, #00c853, #00a844);
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -7482,6 +7634,19 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
+  <!-- Loading splash (shown while page loads) -->
+  <div class="loading-splash" id="loadingSplash">
+    <div class="loading-splash-logo">Vixxxen</div>
+    <div class="loading-splash-spinner"></div>
+    <div class="loading-splash-text">Loading...</div>
+  </div>
+
+  <!-- Cold Start Banner (shown when server is waking up) -->
+  <div class="cold-start-banner" id="coldStartBanner">
+    <div class="spinner"></div>
+    <span id="coldStartText">Waking up server... This may take up to 50 seconds on first visit.</span>
+  </div>
+
   <div class="container">
     <!-- Main Navigation Sidebar -->
     <div class="main-nav">
@@ -9662,6 +9827,15 @@
     <img id="modalImage" src="" alt="Full size preview">
   </div>
 
+  <!-- Video Modal -->
+  <div class="video-modal" id="videoModal" onclick="closeVideoModal(event)">
+    <button class="video-modal-close" onclick="closeVideoModal(event)">✕</button>
+    <video id="modalVideo" controls autoplay>
+      <source id="modalVideoSource" src="" type="video/mp4">
+      Your browser does not support video playback.
+    </video>
+  </div>
+
   <script>
     // ===========================================
     // SUPABASE CONFIGURATION
@@ -9895,10 +10069,22 @@
 
     // Create video item HTML
     function createVideoItemHTML(video) {
-      const isNsfw = video.is_nsfw || false;
+      // Use pre-computed NSFW flag if available, otherwise check model
+      const modelName = video.model || '';
+      const isNsfw = video._computedNsfw !== undefined
+        ? video._computedNsfw
+        : (video.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase()));
       return `
         <div class="select-checkbox" onclick="toggleVideoSelection(event, this)"></div>
         ${isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
+        <button class="video-expand-btn" onclick="event.stopPropagation(); showVideoModal('${video.public_url}')" title="Expand video">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
         <video controls preload="metadata" style="width: 100%; display: block; background: #000;">
           <source src="${video.public_url}" type="video/mp4">
           Your browser does not support video playback.
@@ -9957,7 +10143,10 @@
           return;
         }
 
-        const isNsfw = video.is_nsfw || false;
+        // Check NSFW: use DB flag OR check if model is NSFW-only (fixes old records)
+        const modelName = video.model || '';
+        const isNsfw = video.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase());
+        video._computedNsfw = isNsfw; // Pass to createVideoItemHTML
         const videoItem = document.createElement('div');
         videoItem.className = 'output-item';
         videoItem.dataset.videoId = video.id || '';
@@ -10064,22 +10253,23 @@
 
     // Display video history in the video output grid (initial load)
     async function displayVideoHistory() {
+      const videoOutputGrid = document.getElementById('videoOutputGrid');
+      if (!videoOutputGrid) return;
+
+      // Check for existing session videos - skip reload to prevent duplicates
+      const existingItems = videoOutputGrid.querySelectorAll('.output-item').length;
+      if (existingItems > 0) {
+        console.log('🎬 Skipping history load - session videos already present');
+        return;
+      }
+
       // Reset pagination state
       videoHistoryOffset = 0;
       videoHistoryHasMore = true;
       videoHistoryLoading = false;
 
-      const videoOutputGrid = document.getElementById('videoOutputGrid');
-      if (!videoOutputGrid) return;
-
-      // Check for existing session videos
-      const existingItems = videoOutputGrid.querySelectorAll('.output-item').length;
-
-      // Only clear if this is initial load (no existing session videos)
-      if (existingItems === 0) {
-        videoOutputGrid.innerHTML = '';
-        generatedVideos.length = 0;
-      }
+      videoOutputGrid.innerHTML = '';
+      generatedVideos.length = 0;
 
       // Load first batch
       const videos = await loadVideoHistory(0, VIDEO_PAGE_SIZE);
@@ -10158,15 +10348,19 @@
           return;
         }
 
+        // Check NSFW: use DB flag OR check if model is NSFW-only (fixes old records)
+        const modelName = img.model || 'Unknown';
+        const isNsfwContent = img.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase());
+
         const imageData = {
           url: img.public_url,
           prompt: img.prompt,
-          model: img.model || 'Unknown',
+          model: modelName,
           aspectRatio: img.aspect_ratio || 'Square',
           timestamp: new Date(img.created_at).getTime(),
           fromHistory: true,
           id: img.id,
-          isNsfw: img.is_nsfw || false
+          isNsfw: isNsfwContent
         };
         generatedImages.push(imageData);
 
@@ -10328,22 +10522,23 @@
 
     // Display image history in the grid (initial load)
     async function displayImageHistory() {
+      const outputGrid = document.getElementById('outputGrid');
+      if (!outputGrid) return;
+
+      // Check for existing session images - skip reload to prevent duplicates
+      const existingItems = outputGrid.querySelectorAll('.output-item').length;
+      if (existingItems > 0) {
+        console.log('📁 Skipping history load - session images already present');
+        return;
+      }
+
       // Reset pagination state
       imageHistoryOffset = 0;
       imageHistoryHasMore = true;
       imageHistoryLoading = false;
 
-      const outputGrid = document.getElementById('outputGrid');
-      if (!outputGrid) return;
-
-      // Check for existing session images
-      const existingItems = outputGrid.querySelectorAll('.output-item').length;
-
-      // Only clear if this is initial load (no existing session images)
-      if (existingItems === 0) {
-        outputGrid.innerHTML = '';
-        generatedImages.length = 0;
-      }
+      outputGrid.innerHTML = '';
+      generatedImages.length = 0;
 
       // Load first batch
       const history = await loadImageHistory(0, IMAGE_PAGE_SIZE);
@@ -10396,15 +10591,22 @@
 
     // Display edit history in the grid
     async function displayEditHistory() {
+      // Get the edit output grid
+      const outputGrid = document.getElementById('editOutputGrid');
+      if (!outputGrid) return;
+
+      // Check for existing session items - skip reload to prevent duplicates
+      const existingItems = outputGrid.querySelectorAll('.output-item').length;
+      if (existingItems > 0) {
+        console.log('✂️ Skipping history load - session edits already present');
+        return;
+      }
+
       const history = await loadEditHistory();
       if (history.length === 0) {
         console.log('✂️ No edit history to display');
         return;
       }
-
-      // Get the edit output grid
-      const outputGrid = document.getElementById('editOutputGrid');
-      if (!outputGrid) return;
 
       // Clear placeholder if it exists
       const placeholder = outputGrid.querySelector('.output-placeholder');
@@ -10415,7 +10617,9 @@
       // Add history images to the grid (newest first, so we reverse)
       history.reverse().forEach(img => {
         const metadata = img.metadata || {};
-        const isNsfw = img.is_nsfw || false;
+        // Check NSFW: use DB flag OR check if model is NSFW-only (fixes old records)
+        const modelName = img.model || metadata.model || '';
+        const isNsfw = img.is_nsfw || NSFW_ONLY_MODELS.includes(modelName.toLowerCase());
         const editType = metadata.type || 'Edit';
         const typeLabel = editType.charAt(0).toUpperCase() + editType.slice(1);
 
@@ -10502,13 +10706,116 @@
     const isLocal = window.location.hostname === 'localhost'
       || window.location.hostname === '127.0.0.1'
       || window.location.protocol === 'file:';
-    const API_BASE_URL = isLocal ? 'http://localhost:3002' : 'https://genva.onrender.com';
-    console.log(`🔗 API URL: ${API_BASE_URL} (${isLocal ? 'local' : 'production'})`);
+    // In production, use empty string for same-origin API calls
+    const API_BASE_URL = isLocal ? 'http://localhost:3002' : '';
+    console.log(`🔗 API URL: ${API_BASE_URL || window.location.origin} (${isLocal ? 'local' : 'production'})`);
     let currentModel = 'nano-banana';
     let generatedImages = [];
     let referenceImages = [];
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
+
+    // NSFW-only models - always tag output as NSFW regardless of content mode
+    const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
+
+    // Helper to check if content should be tagged NSFW (based on mode OR model)
+    function isNsfwContent(model) {
+      return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
+    }
+
+    // Cold start check - detect slow server response on Render free tier
+    let serverReady = false;
+
+    async function checkServerHealth() {
+      const banner = document.getElementById('coldStartBanner');
+      const bannerText = document.getElementById('coldStartText');
+      if (!banner || isLocal) return; // Skip on localhost
+
+      const startTime = Date.now();
+      let showBannerTimeout;
+
+      // Show banner after 3 seconds if still waiting
+      showBannerTimeout = setTimeout(() => {
+        banner.classList.add('active');
+        bannerText.textContent = 'Waking up server... This may take up to 50 seconds on first visit.';
+      }, 3000);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(60000) // 60 second timeout
+        });
+
+        clearTimeout(showBannerTimeout);
+        const elapsed = Date.now() - startTime;
+
+        if (response.ok) {
+          serverReady = true;
+          // If banner was shown, briefly show success message
+          if (banner.classList.contains('active')) {
+            banner.classList.add('ready');
+            bannerText.textContent = `Server ready! (took ${Math.round(elapsed / 1000)}s)`;
+            setTimeout(() => {
+              banner.classList.remove('active', 'ready');
+            }, 2000);
+          }
+          console.log(`✅ Server health check passed in ${elapsed}ms`);
+        }
+      } catch (error) {
+        clearTimeout(showBannerTimeout);
+        console.error('❌ Server health check failed:', error);
+        banner.classList.add('active');
+        bannerText.textContent = 'Server unavailable. Please refresh or try again later.';
+      }
+    }
+
+    // Run health check on page load
+    document.addEventListener('DOMContentLoaded', checkServerHealth);
+
+    // Hide loading splash when page is ready
+    function hideLoadingSplash() {
+      const splash = document.getElementById('loadingSplash');
+      if (splash) {
+        splash.classList.add('hidden');
+        // Remove from DOM after animation
+        setTimeout(() => splash.remove(), 300);
+      }
+    }
+
+    // Hide splash when DOM is ready (most content loaded)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small delay to ensure styles are applied
+      setTimeout(hideLoadingSplash, 100);
+    });
+
+    // Check if session is still valid before starting generation
+    async function checkSessionValid() {
+      try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error || !session) {
+          console.warn('⚠️ Session check failed - user may need to re-login');
+          return false;
+        }
+
+        // Check if session is about to expire (within 5 minutes)
+        const expiresAt = session.expires_at;
+        if (expiresAt) {
+          const expiresIn = (expiresAt * 1000) - Date.now();
+          if (expiresIn < 5 * 60 * 1000) { // Less than 5 minutes
+            console.warn('⚠️ Session expiring soon, attempting refresh...');
+            const { error: refreshError } = await supabaseClient.auth.refreshSession();
+            if (refreshError) {
+              console.error('❌ Session refresh failed:', refreshError);
+              return false;
+            }
+          }
+        }
+        return true;
+      } catch (err) {
+        console.error('❌ Session check error:', err);
+        return false;
+      }
+    }
 
     // Active generation jobs tracking (persisted to survive tab switches)
     let activeGenerationJobs = {};
@@ -11512,16 +11819,48 @@
     async function generateVideo() {
       if (isGeneratingVideo) return;
 
+      // Debounce rapid clicks (prevent accidental double-clicks)
+      const now = Date.now();
+      if (now - lastVideoGenClick < CLICK_DEBOUNCE_MS) {
+        console.log('⏳ Ignoring rapid click - please wait');
+        return;
+      }
+      lastVideoGenClick = now;
+
+      // Show immediate visual feedback
+      const btn = document.getElementById('videoGenerateBtn');
+      const btnText = document.getElementById('videoGenerateText');
+      const originalText = btnText.textContent;
+      btnText.textContent = '⏳ Starting...';
+      btn.disabled = true;
+
+      // Helper to reset button on early return
+      const resetButton = () => {
+        btnText.textContent = originalText;
+        btn.disabled = false;
+      };
+
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
         alert('Please log in to generate videos.');
         openSubscriptionPage();
+        resetButton();
+        return;
+      }
+
+      // Verify session is still valid (prevents mid-generation expiry issues)
+      const sessionValid = await checkSessionValid();
+      if (!sessionValid) {
+        alert('Your session has expired. Please log in again.');
+        openSubscriptionPage();
+        resetButton();
         return;
       }
 
       const prompt = document.getElementById('videoPromptInput').value.trim();
       if (!prompt) {
         showVideoError('Please enter a prompt first!');
+        resetButton();
         return;
       }
 
@@ -11544,6 +11883,7 @@
 
       if (!hasEnoughCredits(cost)) {
         showInsufficientCreditsError(cost);
+        resetButton();
         return;
       }
 
@@ -11551,12 +11891,15 @@
       const deducted = await deductCredits(cost, `Video generation (${currentVideoModel})`);
       if (!deducted) {
         showInsufficientCreditsError(cost);
+        resetButton();
         return;
       }
 
       isGeneratingVideo = true;
-      const btn = document.getElementById('videoGenerateBtn');
-      const btnText = document.getElementById('videoGenerateText');
+
+      // Capture model and NSFW flag at START of generation (before any async operations)
+      const capturedVideoModel = currentVideoModel;
+      const isNsfwAtStart = isNsfwContent(capturedVideoModel);
 
       btn.classList.add('generating');
       btnText.textContent = '⏳ Generating...';
@@ -11578,7 +11921,7 @@
       try {
         let endpoint, payload, modelName;
 
-        if (currentVideoModel === 'kling') {
+        if (capturedVideoModel === 'kling') {
           // Kling model
           const aspectRatio = document.getElementById('videoAspectRatio').value;
           const duration = parseInt(document.getElementById('videoDuration').value);
@@ -11603,7 +11946,7 @@
 
           modelName = 'kling-2.5-turbo-pro';
 
-        } else if (currentVideoModel === 'wan') {
+        } else if (capturedVideoModel === 'wan') {
           // Wan model
           const resolution = document.getElementById('wanResolution').value;
           const numFrames = parseInt(document.getElementById('wanNumFrames').value);
@@ -11689,19 +12032,19 @@
 
         console.log('Video generation successful:', data);
 
-        // Create new video object
+        // Create new video object (use NSFW flag captured at start)
         const newVideo = {
           url: data.videoUrl,
           model: modelName,
           timestamp: Date.now(),
-          isNsfw: contentMode === 'nsfw'
+          isNsfw: isNsfwAtStart
         };
 
         // Add model-specific metadata
-        if (currentVideoModel === 'kling') {
+        if (capturedVideoModel === 'kling') {
           newVideo.aspectRatio = payload.aspectRatio;
           newVideo.duration = payload.duration;
-        } else if (currentVideoModel === 'wan') {
+        } else if (capturedVideoModel === 'wan') {
           newVideo.resolution = payload.resolution;
           newVideo.frames = payload.numFrames;
           newVideo.fps = payload.framesPerSecond;
@@ -11721,11 +12064,11 @@
           prompt: prompt,
           model: modelName,
           duration: newVideo.duration || null,
-          isNsfw: contentMode === 'nsfw'
+          isNsfw: isNsfwAtStart
         });
 
         // Log generation for 2257 compliance
-        logGeneration('video', modelName, prompt, contentMode === 'nsfw', 1, data.videoUrl);
+        logGeneration('video', modelName, prompt, isNsfwAtStart, 1, data.videoUrl);
 
       } catch (error) {
         console.error('Video generation failed:', error);
@@ -11799,6 +12142,14 @@
       placeholder.innerHTML = `
         <div class="select-checkbox" onclick="toggleVideoSelection(event, this)"></div>
         ${video.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
+        <button class="video-expand-btn" onclick="event.stopPropagation(); showVideoModal('${video.url}')" title="Expand video">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
         <video controls autoplay style="width: 100%; display: block; background: #000;">
           <source src="${video.url}" type="video/mp4">
           Your browser does not support the video tag.
@@ -12855,7 +13206,7 @@
         ctx.drawImage(img, 0, 0);
 
         // Clear mask
-        const maskCtx = maskCanvas.getContext('2d');
+        const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
         maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
 
         // Hide placeholder
@@ -12876,7 +13227,7 @@
     }
 
     function setupInpaintDrawing(canvas, maskCanvas) {
-      const maskCtx = maskCanvas.getContext('2d');
+      const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
       maskCtx.strokeStyle = 'rgba(255, 46, 187, 0.7)';
       maskCtx.lineCap = 'round';
       maskCtx.lineJoin = 'round';
@@ -12976,12 +13327,14 @@
     }
 
     function createMaskedImage() {
-      // Create a canvas with the original image and alpha mask
+      // Create TWO separate images:
+      // 1. Original image (full RGB, no alpha modification)
+      // 2. Mask image (white=inpaint, black=keep)
       const canvas = document.getElementById('inpaintCanvas');
       const maskCanvas = document.getElementById('inpaintMaskCanvas');
 
-      // Calculate resize dimensions (max 512px to avoid 413 errors - PNG with alpha is large)
-      const MAX_DIMENSION = 512;
+      // Calculate resize dimensions (max 2048px to preserve quality)
+      const MAX_DIMENSION = 2048;
       let outputWidth = canvas.width;
       let outputHeight = canvas.height;
       const scale = Math.min(MAX_DIMENSION / outputWidth, MAX_DIMENSION / outputHeight, 1);
@@ -12989,41 +13342,52 @@
       if (scale < 1) {
         outputWidth = Math.round(outputWidth * scale);
         outputHeight = Math.round(outputHeight * scale);
-        console.log(`📐 Resizing image from ${canvas.width}x${canvas.height} to ${outputWidth}x${outputHeight}`);
-      } else {
-        console.log(`📐 Image already small enough: ${outputWidth}x${outputHeight}`);
+        console.log(`📐 Resizing from ${canvas.width}x${canvas.height} to ${outputWidth}x${outputHeight}`);
       }
 
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = outputWidth;
-      outputCanvas.height = outputHeight;
-      const ctx = outputCanvas.getContext('2d');
+      // 1. Original image (no alpha modification - preserve RGB values)
+      const imageCanvas = document.createElement('canvas');
+      imageCanvas.width = outputWidth;
+      imageCanvas.height = outputHeight;
+      const imageCtx = imageCanvas.getContext('2d');
+      imageCtx.drawImage(inpaintImage, 0, 0, outputWidth, outputHeight);
 
-      // Draw original image (scaled if needed)
-      ctx.drawImage(inpaintImage, 0, 0, outputWidth, outputHeight);
+      // 2. Mask image (white=inpaint, black=keep)
+      const maskOutputCanvas = document.createElement('canvas');
+      maskOutputCanvas.width = outputWidth;
+      maskOutputCanvas.height = outputHeight;
+      const maskCtx = maskOutputCanvas.getContext('2d');
 
-      // Create scaled mask canvas
+      // Start with black (keep everything)
+      maskCtx.fillStyle = '#000000';
+      maskCtx.fillRect(0, 0, outputWidth, outputHeight);
+
+      // Scale the painted mask
       const scaledMaskCanvas = document.createElement('canvas');
       scaledMaskCanvas.width = outputWidth;
       scaledMaskCanvas.height = outputHeight;
       const scaledMaskCtx = scaledMaskCanvas.getContext('2d');
       scaledMaskCtx.drawImage(maskCanvas, 0, 0, outputWidth, outputHeight);
 
-      // Get image data and mask data
-      const imageData = ctx.getImageData(0, 0, outputWidth, outputHeight);
+      // Get mask strokes and create white where painted
       const maskData = scaledMaskCtx.getImageData(0, 0, outputWidth, outputHeight);
+      const outputMaskData = maskCtx.getImageData(0, 0, outputWidth, outputHeight);
 
-      // Set alpha to 0 where mask is painted
       for (let i = 0; i < maskData.data.length; i += 4) {
-        // Check if this pixel has mask color (any non-zero alpha in mask)
         if (maskData.data[i + 3] > 0) {
-          // Set alpha to 0 (transparent) for masked areas
-          imageData.data[i + 3] = 0;
+          // White = inpaint this area
+          outputMaskData.data[i] = 255;     // R
+          outputMaskData.data[i + 1] = 255; // G
+          outputMaskData.data[i + 2] = 255; // B
+          outputMaskData.data[i + 3] = 255; // A
         }
       }
+      maskCtx.putImageData(outputMaskData, 0, 0);
 
-      ctx.putImageData(imageData, 0, 0);
-      return outputCanvas.toDataURL('image/png').split(',')[1];
+      return {
+        image: imageCanvas.toDataURL('image/png').split(',')[1],
+        mask: maskOutputCanvas.toDataURL('image/png').split(',')[1]
+      };
     }
 
     // Poll async inpaint job until completion
@@ -13141,12 +13505,25 @@
 
       console.log('🖌️ Inpaint generation:', { prompt: inpaintPrompt, loras, mode: inpaintMode, count: numGenerations });
 
-      // Create masked image with alpha channel
-      const maskedImageBase64 = createMaskedImage();
+      // Create original image and separate mask (white=inpaint, black=keep)
+      const { image: imageBase64, mask: maskBase64 } = createMaskedImage();
+      console.log('🖌️ Image:', Math.round(imageBase64.length / 1024), 'KB, Mask:', Math.round(maskBase64.length / 1024), 'KB');
 
       // Show loading
       document.getElementById('inpaintGenerateBtn').disabled = true;
       document.getElementById('inpaintLoading').style.display = 'flex';
+
+      // Add loading placeholders
+      const grid = document.getElementById('inpaintResultsGrid');
+      const emptyPlaceholder = document.getElementById('inpaintResultPlaceholder');
+      if (emptyPlaceholder) emptyPlaceholder.style.display = 'none';
+
+      const loadingPlaceholders = [];
+      for (let i = 0; i < numGenerations; i++) {
+        const placeholder = createInpaintLoadingPlaceholder();
+        loadingPlaceholders.push(placeholder);
+        grid.insertBefore(placeholder, grid.firstChild);
+      }
 
       const endpoint = inpaintMode === 'sfw' ? '/api/inpaint/inpaint-sfw' : '/api/inpaint/inpaint-nsfw';
       const results = [];
@@ -13162,7 +13539,8 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                image: maskedImageBase64,
+                image: imageBase64,
+                mask: maskBase64,
                 prompt: inpaintPrompt,
                 loras: loras
               })
@@ -13177,47 +13555,119 @@
             }
 
             // Check if this is an async job response (has statusUrl)
+            let imageUrl = null;
             if (data.statusUrl || data.jobId) {
               console.log(`🖌️ Async job started, polling for completion...`);
-              const finalResult = await pollInpaintJob(data.statusUrl, data.jobId);
-              if (finalResult) {
-                results.push(finalResult);
-                successCount++;
-              }
+              imageUrl = await pollInpaintJob(data.statusUrl, data.jobId);
             } else {
               // Direct response with image
-              const imageUrl = data.image || data.imageUrl || data.output || data.url || data.result || (data.images && data.images[0]) || (data.outputs && data.outputs[0]);
-              if (imageUrl) {
-                results.push(imageUrl);
-                successCount++;
-              } else {
-                console.warn(`Generation ${i + 1}: No image URL found in response. Keys:`, Object.keys(data));
-              }
+              imageUrl = data.image || data.imageUrl || data.output || data.url || data.result || (data.images && data.images[0]) || (data.outputs && data.outputs[0]);
+            }
+
+            if (imageUrl) {
+              results.push(imageUrl);
+              successCount++;
+              // Replace placeholder with actual result
+              replaceInpaintPlaceholder(loadingPlaceholders[i], imageUrl);
+            } else {
+              console.warn(`Generation ${i + 1}: No image URL found in response. Keys:`, Object.keys(data));
+              // Remove failed placeholder
+              loadingPlaceholders[i].remove();
             }
           } catch (err) {
             console.error(`Generation ${i + 1} error:`, err);
+            // Remove failed placeholder
+            loadingPlaceholders[i].remove();
           }
         }
 
-        if (results.length === 0) {
-          throw new Error('No images were generated');
+        // Store first result for backward compatibility
+        if (results.length > 0) {
+          inpaintResultUrl = results[0];
         }
 
-        // Store first result for backward compatibility
-        inpaintResultUrl = results[0];
-
-        // Display all results in grid
-        displayInpaintResults(results);
+        // Show empty placeholder if no results
+        if (results.length === 0) {
+          const emptyPlaceholder = document.getElementById('inpaintResultPlaceholder');
+          if (emptyPlaceholder && grid.querySelectorAll('.output-item:not(.inpaint-loading-placeholder)').length === 0) {
+            emptyPlaceholder.style.display = '';
+          }
+          throw new Error('No images were generated');
+        }
 
         console.log(`✅ Inpaint complete: ${successCount}/${numGenerations} images generated`);
 
       } catch (error) {
         console.error('Inpaint error:', error);
         showError(error.message || 'Inpaint failed');
+        // Remove any remaining loading placeholders on error
+        loadingPlaceholders.forEach(p => p.remove());
       } finally {
         document.getElementById('inpaintGenerateBtn').disabled = false;
         document.getElementById('inpaintLoading').style.display = 'none';
+        // Clean up any remaining loading placeholders
+        document.querySelectorAll('.inpaint-loading-placeholder').forEach(p => p.remove());
       }
+    }
+
+    function createInpaintLoadingPlaceholder() {
+      const placeholderDiv = document.createElement('div');
+      placeholderDiv.className = 'output-item inpaint-loading-placeholder';
+      placeholderDiv.innerHTML = `
+        <div class="output-placeholder-loading">
+          <div class="loading-static-overlay"></div>
+          <div class="loading-text">Inpainting...</div>
+        </div>
+      `;
+      return placeholderDiv;
+    }
+
+    function replaceInpaintPlaceholder(placeholder, imageUrl) {
+      const timestamp = Date.now();
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'output-item inpaint-output-item';
+      resultDiv.dataset.imageUrl = imageUrl;
+      resultDiv.dataset.timestamp = timestamp;
+      resultDiv.innerHTML = `
+        <img src="${imageUrl}" alt="Inpaint result" onclick="showImageModal('${imageUrl}')" title="Click to view full size">
+        <div class="output-item-overlay">
+          <div class="output-item-info">
+            Inpaint Result
+          </div>
+          <div class="output-item-actions">
+            <button class="icon-btn" onclick="downloadInpaintResultUrl('${imageUrl}', ${timestamp})" title="Download">
+              <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            <div class="send-to-container">
+              <button class="icon-btn" onclick="toggleSendToMenu(event, this)" title="Send to...">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+              <div class="send-to-menu">
+                <button class="send-to-option" onclick="sendToVideo('${imageUrl}', event)">📹 Send to Video</button>
+                <button class="send-to-option" onclick="sendToEdit('${imageUrl}', event)">✂️ Send to Edit</button>
+                <button class="send-to-option" onclick="sendToCaption('${imageUrl}', event)">💬 Send to Caption</button>
+                <button class="send-to-option" onclick="sendToInpaint('${imageUrl}', event)">🖌️ Send to Inpaint</button>
+              </div>
+            </div>
+            <button class="icon-btn delete-btn" onclick="deleteInpaintResult(this.closest('.output-item'))" title="Delete">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      placeholder.replaceWith(resultDiv);
     }
 
     function displayInpaintResults(results) {
@@ -13229,54 +13679,78 @@
         placeholder.style.display = 'none';
       }
 
-      // Generate result items HTML
-      const resultsHtml = results.map((url, index) => `
-        <div class="inpaint-result-item">
-          <img src="${url}" alt="Inpaint result ${index + 1}" onclick="openImagePreview('${url}')">
-          <div class="inpaint-result-item-actions">
-            <button onclick="sendInpaintResultToEdit('${url}')">Edit</button>
-            <button onclick="sendInpaintResultToVideo('${url}')">Video</button>
-            <button class="primary" onclick="downloadInpaintResultUrl('${url}', ${index + 1})">Save</button>
+      // Generate result items HTML (matching image output format)
+      const timestamp = Date.now();
+      results.forEach((url, index) => {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'output-item inpaint-output-item';
+        resultDiv.dataset.imageUrl = url;
+        resultDiv.dataset.timestamp = timestamp + index;
+        resultDiv.innerHTML = `
+          <img src="${url}" alt="Inpaint result" onclick="showImageModal('${url}')" title="Click to view full size">
+          <div class="output-item-overlay">
+            <div class="output-item-info">
+              Inpaint Result
+            </div>
+            <div class="output-item-actions">
+              <button class="icon-btn" onclick="downloadInpaintResultUrl('${url}', ${timestamp + index})" title="Download">
+                <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </button>
+              <div class="send-to-container">
+                <button class="icon-btn" onclick="toggleSendToMenu(event, this)" title="Send to...">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+                <div class="send-to-menu">
+                  <button class="send-to-option" onclick="sendToVideo('${url}', event)">📹 Send to Video</button>
+                  <button class="send-to-option" onclick="sendToEdit('${url}', event)">✂️ Send to Edit</button>
+                  <button class="send-to-option" onclick="sendToCaption('${url}', event)">💬 Send to Caption</button>
+                  <button class="send-to-option" onclick="sendToInpaint('${url}', event)">🖌️ Send to Inpaint</button>
+                </div>
+              </div>
+              <button class="icon-btn delete-btn" onclick="deleteInpaintResult(this.closest('.output-item'))" title="Delete">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
-      `).join('');
-
-      // Keep placeholder in DOM but hidden, add results
-      grid.innerHTML = resultsHtml + (placeholder ? '<div id="inpaintResultPlaceholder" class="inpaint-result-placeholder" style="display:none;"></div>' : '');
+        `;
+        // Prepend new results (newest first)
+        grid.insertBefore(resultDiv, grid.firstChild);
+      });
     }
 
-    function sendInpaintToEdit() {
-      if (!inpaintResultUrl) return;
-      switchMainTab('edit');
-      loadEditImageFromUrl(inpaintResultUrl);
-    }
-
-    function sendInpaintResultToEdit(url) {
-      switchMainTab('edit');
-      loadEditImageFromUrl(url);
-    }
-
-    function sendInpaintToVideo() {
-      if (!inpaintResultUrl) return;
-      switchMainTab('video');
-      loadVideoImageFromUrl(inpaintResultUrl);
-    }
-
-    function sendInpaintResultToVideo(url) {
-      switchMainTab('video');
-      loadVideoImageFromUrl(url);
-    }
-
-    function downloadInpaintResult() {
-      if (!inpaintResultUrl) return;
-      downloadInpaintResultUrl(inpaintResultUrl, 1);
-    }
 
     function downloadInpaintResultUrl(url, index) {
       const a = document.createElement('a');
       a.href = url;
       a.download = `inpaint-result-${index}.png`;
       a.click();
+    }
+
+    function deleteInpaintResult(element) {
+      if (element) {
+        element.remove();
+        // Show placeholder if no results left
+        const grid = document.getElementById('inpaintResultsGrid');
+        const remainingResults = grid.querySelectorAll('.output-item');
+        if (remainingResults.length === 0) {
+          const placeholder = document.getElementById('inpaintResultPlaceholder');
+          if (placeholder) {
+            placeholder.style.display = '';
+          }
+        }
+      }
     }
 
     // Send image to inpaint from other tabs
@@ -13529,9 +14003,13 @@
     }
 
     // Async Qwen generation that runs in background
-    async function runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, contentMode, costPerImage, batchId) {
+    async function runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, capturedContentMode, costPerImage, batchId) {
       const btn = document.getElementById('generateBtn');
       const btnText = document.getElementById('generateText');
+
+      // Capture NSFW flag at START of generation (not when response arrives)
+      const isNsfwAtStart = capturedContentMode === 'nsfw' || NSFW_ONLY_MODELS.includes('qwen');
+      const totalCost = costPerImage * numOutputs;
 
       try {
         // Get selected character/LoRA
@@ -13652,14 +14130,26 @@
 
           // Extract image from result
           let imageUrl = null;
-          if (resultData.output?.message && typeof resultData.output.message === 'string') {
-            const base64Data = resultData.output.message;
-            imageUrl = `data:image/png;base64,${base64Data}`;
-            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete`);
+          console.log(`🔍 [Batch ${batchId}] Result data keys:`, Object.keys(resultData));
+          console.log(`🔍 [Batch ${batchId}] Full resultData:`, JSON.stringify(resultData).substring(0, 500));
+          if (resultData.imageUrl) {
+            // Backend already extracted and formatted the image URL
+            imageUrl = resultData.imageUrl;
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (imageUrl)`);
+            console.log(`   imageUrl length: ${imageUrl.length}`);
+            console.log(`   imageUrl preview: ${imageUrl.substring(0, 100)}`);
           } else if (resultData.images?.[0]) {
             imageUrl = resultData.images[0];
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (images array)`);
+          } else if (resultData.output?.message && typeof resultData.output.message === 'string') {
+            // Fallback: handle raw base64 from output.message
+            const base64Data = resultData.output.message;
+            // Check if data already has prefix to avoid double-prefix
+            imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (output.message)`);
           } else if (resultData.output?.images?.[0]) {
             imageUrl = resultData.output.images[0];
+            console.log(`✅ [Batch ${batchId}] ComfyUI generation ${genIndex + 1} complete (output.images)`);
           }
 
           if (!imageUrl) {
@@ -13668,14 +14158,13 @@
             continue;
           }
 
-          // Process this image
-          const isNsfwMode = contentMode === 'nsfw';
+          // Process this image - use NSFW flag captured at start, not current mode
           const newImage = {
             url: imageUrl,
             model: 'qwen-comfyui',
             aspectRatio: aspectRatio,
             timestamp: Date.now() + genIndex,
-            isNsfw: isNsfwMode
+            isNsfw: isNsfwAtStart
           };
           generatedImages.push(newImage);
           replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
@@ -13684,7 +14173,7 @@
           uploadImageToStorage(imageUrl, {
             prompt: qwenPrompt,
             model: 'qwen',
-            isNsfw: contentMode === 'nsfw',
+            isNsfw: isNsfwAtStart,
             aspectRatio: aspectRatio,
             resolution: resolution,
             creditsUsed: costPerImage
@@ -13697,12 +14186,15 @@
         }
 
         // Log generation for compliance
-        logGeneration('image', 'qwen', qwenPrompt, contentMode === 'nsfw', numOutputs);
+        logGeneration('image', 'qwen', qwenPrompt, isNsfwAtStart, numOutputs);
         console.log(`✅ [Batch ${batchId}] Qwen generation complete`);
 
       } catch (error) {
         console.error(`❌ [Batch ${batchId}] Qwen generation error:`, error);
         showError(error.message || 'Generation failed');
+
+        // Refund credits on failure
+        await refundCredits(totalCost, `Qwen generation failed: ${error.message || 'Unknown error'}`);
       } finally {
         // Decrement batch counter and update button
         activeGenerationBatches--;
@@ -13711,19 +14203,54 @@
       }
     }
 
+    // Debounce tracking to prevent rapid double-clicks
+    let lastImageGenClick = 0;
+    let lastVideoGenClick = 0;
+    const CLICK_DEBOUNCE_MS = 1000; // 1 second between clicks
+
     async function generateImages() {
-      // Allow concurrent generations - removed blocking check
+      // Debounce rapid clicks (prevent accidental double-clicks)
+      const now = Date.now();
+      if (now - lastImageGenClick < CLICK_DEBOUNCE_MS) {
+        console.log('⏳ Ignoring rapid click - please wait');
+        return;
+      }
+      lastImageGenClick = now;
+
+      // Show immediate visual feedback
+      const btn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('generateText');
+      const originalText = btnText.textContent;
+      btnText.textContent = '⏳ Starting...';
+      btn.disabled = true;
+
+      // Helper to reset button on early return
+      const resetButton = () => {
+        btnText.textContent = originalText;
+        btn.disabled = false;
+      };
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
         alert('Please log in to generate images.');
         openSubscriptionPage();
+        resetButton();
+        return;
+      }
+
+      // Verify session is still valid (prevents mid-generation expiry issues)
+      const sessionValid = await checkSessionValid();
+      if (!sessionValid) {
+        alert('Your session has expired. Please log in again.');
+        openSubscriptionPage();
+        resetButton();
         return;
       }
 
       const prompt = document.getElementById('promptInput').value.trim();
       if (!prompt) {
         showError('Please enter a prompt first!');
+        resetButton();
         return;
       }
 
@@ -13743,6 +14270,7 @@
 
       if (!hasEnoughCredits(totalCost)) {
         showInsufficientCreditsError(totalCost);
+        resetButton();
         return;
       }
 
@@ -13750,6 +14278,7 @@
       const deducted = await deductCredits(totalCost, `Image generation (${currentModel})`);
       if (!deducted) {
         showInsufficientCreditsError(totalCost);
+        resetButton();
         return;
       }
 
@@ -13757,11 +14286,9 @@
       activeGenerationBatches++;
       const batchId = Date.now();
 
-      const btn = document.getElementById('generateBtn');
-      const btnText = document.getElementById('generateText');
-
-      // Show generating state but keep button enabled for new generations
+      // Show generating state - re-enable button for concurrent generations
       btn.classList.add('generating');
+      btn.disabled = false;
       updateGenerateButtonState();
 
       // Clear placeholder if it's first generation (no images yet)
@@ -13784,8 +14311,12 @@
         placeholders.unshift(placeholderEl); // Add to beginning of array
       }
 
+      // Capture model and NSFW flag at START of generation (before any async operations)
+      const capturedModel = currentModel;
+      const isNsfwAtStart = isNsfwContent(capturedModel);
+
       // For Qwen, run generation in background and return immediately
-      if (currentModel === 'qwen') {
+      if (capturedModel === 'qwen') {
         // Start Qwen generation asynchronously (non-blocking)
         runQwenGeneration(placeholders, prompt, numOutputs, aspectRatio, resolution, contentMode, costPerImage, batchId);
         return; // Return immediately - button is re-enabled
@@ -13794,7 +14325,7 @@
       try {
         let endpoint, payload;
 
-        if (currentModel === 'seedream') {
+        if (capturedModel === 'seedream') {
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
@@ -13847,7 +14378,7 @@
         console.log('Generation successful:', data);
 
         // Log generation for 2257 compliance
-        logGeneration('image', currentModel, prompt, contentMode === 'nsfw', data.images?.length || 1);
+        logGeneration('image', capturedModel, prompt, isNsfwAtStart, data.images?.length || 1);
 
         // Replace placeholders with actual images
         let imageIndex = 0;
@@ -13856,27 +14387,26 @@
         // Update each placeholder - first with successful images, then with failures
         for (let i = 0; i < numOutputs; i++) {
           if (imageIndex < data.images.length) {
-            // This image succeeded - replace with actual image
-            const isNsfwMode = contentMode === 'nsfw';
+            // This image succeeded - replace with actual image (use NSFW flag captured at start)
             const newImage = {
               url: data.images[imageIndex],
               model: data.model,
               aspectRatio: aspectRatio,
               timestamp: Date.now() + imageIndex,
-              isNsfw: isNsfwMode
+              isNsfw: isNsfwAtStart
             };
-            console.log('🔞 Image generated with NSFW flag:', isNsfwMode);
+            console.log('🔞 Image generated with NSFW flag:', isNsfwAtStart);
             generatedImages.push(newImage);
             replacePlaceholderWithImage(placeholders[i], newImage);
 
             // Upload to Supabase Storage (async, don't block UI)
             uploadImageToStorage(data.images[imageIndex], {
               prompt: prompt,
-              model: currentModel,
+              model: capturedModel,
               aspectRatio: aspectRatio,
               resolution: resolution,
               creditsUsed: costPerImage,
-              isNsfw: contentMode === 'nsfw'
+              isNsfw: isNsfwAtStart
             }).then(storedUrl => {
               if (storedUrl) {
                 newImage.storedUrl = storedUrl;
@@ -13948,17 +14478,20 @@
         placeholder.dataset.nsfw = 'true';
         console.log('🔞 Setting data-nsfw=true on placeholder');
       }
+      // Store image data on placeholder for click handlers (avoids inline URL issues with base64)
+      placeholder.dataset.imageUrl = image.url;
+      placeholder.dataset.timestamp = image.timestamp;
 
       placeholder.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
           </div>
           <div class="output-item-actions">
-            <button class="icon-btn" onclick="downloadImage('${image.url}', ${image.timestamp})" title="Download">
+            <button class="icon-btn" onclick="downloadImageFromParent(this)" title="Download">
               <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -13973,13 +14506,13 @@
                 </svg>
               </button>
               <div class="send-to-menu">
-                <button class="send-to-option" onclick="sendToVideo('${image.url}', event)">📹 Send to Video</button>
-                <button class="send-to-option" onclick="sendToEdit('${image.url}', event)">✂️ Send to Edit</button>
-                <button class="send-to-option" onclick="sendToCaption('${image.url}', event)">💬 Send to Caption</button>
-                <button class="send-to-option" onclick="sendToInpaint('${image.url}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="sendToVideoFromParent(this, event)">📹 Send to Video</button>
+                <button class="send-to-option" onclick="sendToEditFromParent(this, event)">✂️ Send to Edit</button>
+                <button class="send-to-option" onclick="sendToCaptionFromParent(this, event)">💬 Send to Caption</button>
+                <button class="send-to-option" onclick="sendToInpaintFromParent(this, event)">🖌️ Send to Inpaint</button>
               </div>
             </div>
-            <button class="report-btn" onclick="event.stopPropagation(); openReportModal('image', '${image.timestamp}', '${image.url}')" title="Report">
+            <button class="report-btn" onclick="event.stopPropagation(); openReportModalFromParent(this)" title="Report">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
                 <line x1="4" y1="22" x2="4" y2="15"></line>
@@ -13997,6 +14530,7 @@
       imageDiv.className = 'output-item';
       imageDiv.dataset.imageId = image.id || '';
       imageDiv.dataset.imageUrl = image.url;
+      imageDiv.dataset.timestamp = image.timestamp;
 
       // Set NSFW flag if present
       if (image.isNsfw) {
@@ -14006,13 +14540,13 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
           </div>
           <div class="output-item-actions">
-            <button class="icon-btn" onclick="downloadImage('${image.url}', ${image.timestamp})" title="Download">
+            <button class="icon-btn" onclick="downloadImageFromParent(this)" title="Download">
               <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -14027,13 +14561,13 @@
                 </svg>
               </button>
               <div class="send-to-menu">
-                <button class="send-to-option" onclick="sendToVideo('${image.url}', event)">📹 Send to Video</button>
-                <button class="send-to-option" onclick="sendToEdit('${image.url}', event)">✂️ Send to Edit</button>
-                <button class="send-to-option" onclick="sendToCaption('${image.url}', event)">💬 Send to Caption</button>
-                <button class="send-to-option" onclick="sendToInpaint('${image.url}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="sendToVideoFromParent(this, event)">📹 Send to Video</button>
+                <button class="send-to-option" onclick="sendToEditFromParent(this, event)">✂️ Send to Edit</button>
+                <button class="send-to-option" onclick="sendToCaptionFromParent(this, event)">💬 Send to Caption</button>
+                <button class="send-to-option" onclick="sendToInpaintFromParent(this, event)">🖌️ Send to Inpaint</button>
               </div>
             </div>
-            <button class="report-btn" onclick="event.stopPropagation(); openReportModal('image', '${image.timestamp}', '${image.url}')" title="Report">
+            <button class="report-btn" onclick="event.stopPropagation(); openReportModalFromParent(this)" title="Report">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
                 <line x1="4" y1="22" x2="4" y2="15"></line>
@@ -14082,6 +14616,45 @@
           console.error('Download failed:', err);
           showError('Failed to download image');
         });
+    }
+
+    // Helper functions that get URL from parent data attributes (avoids base64 in onclick)
+    function getImageDataFromParent(element) {
+      const container = element.closest('.output-item');
+      return {
+        url: container.dataset.imageUrl,
+        timestamp: container.dataset.timestamp
+      };
+    }
+
+    function downloadImageFromParent(element) {
+      const data = getImageDataFromParent(element);
+      downloadImage(data.url, data.timestamp);
+    }
+
+    function sendToVideoFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToVideo(data.url, event);
+    }
+
+    function sendToEditFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToEdit(data.url, event);
+    }
+
+    function sendToCaptionFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToCaption(data.url, event);
+    }
+
+    function sendToInpaintFromParent(element, event) {
+      const data = getImageDataFromParent(element);
+      sendToInpaint(data.url, event);
+    }
+
+    function openReportModalFromParent(element) {
+      const data = getImageDataFromParent(element);
+      openReportModal('image', data.timestamp, data.url);
     }
 
     // ===========================================
@@ -14545,6 +15118,8 @@
     }
 
     function showImageModal(url) {
+      console.log('🖼️ Opening lightbox with URL:', url ? url.substring(0, 100) + '...' : 'EMPTY');
+      console.log('   URL length:', url ? url.length : 0);
       const modal = document.getElementById('imageModal');
       const modalImage = document.getElementById('modalImage');
       modalImage.src = url;
@@ -14557,6 +15132,26 @@
       const modal = document.getElementById('imageModal');
       modal.classList.remove('active');
       // Re-enable body scroll
+      document.body.style.overflow = 'auto';
+    }
+
+    function showVideoModal(url) {
+      const modal = document.getElementById('videoModal');
+      const video = document.getElementById('modalVideo');
+      const source = document.getElementById('modalVideoSource');
+      source.src = url;
+      video.load();
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeVideoModal(event) {
+      // Only close if clicking the backdrop or close button, not the video
+      if (event && event.target.tagName === 'VIDEO') return;
+      const modal = document.getElementById('videoModal');
+      const video = document.getElementById('modalVideo');
+      video.pause();
+      modal.classList.remove('active');
       document.body.style.overflow = 'auto';
     }
 
@@ -15332,6 +15927,21 @@
         loadMarketplaceCharacters();
       } else {
         console.log('🔐 No user in session, logging out...');
+
+        // Check if there were active generations - warn user
+        const hadActiveGenerations = Object.keys(activeGenerationJobs).length > 0 ||
+                                      isGenerating || isGeneratingVideo;
+
+        if (hadActiveGenerations) {
+          console.warn('⚠️ Session expired during active generation');
+          alert('Your session has expired. Any in-progress generations may not be saved. Please log in again.');
+          // Clear generation state since user is logged out
+          activeGenerationJobs = {};
+          isGenerating = false;
+          isGeneratingVideo = false;
+          clearGenerationState();
+        }
+
         currentUser = null;
         isUserLoggedIn = false;
         userCredits = 0;
