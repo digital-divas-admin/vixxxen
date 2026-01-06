@@ -628,6 +628,12 @@
       object-fit: cover;
       border-radius: 12px;
       background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .character-modal-image:hover {
+      opacity: 0.9;
     }
 
     .character-modal-info {
@@ -833,16 +839,6 @@
       font-size: 0.9rem;
       backdrop-filter: blur(10px);
       z-index: 10001;
-    }
-
-    /* Make modal main image clickable */
-    .character-modal-image {
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
-    .character-modal-image:hover {
-      opacity: 0.9;
     }
 
     /* Make gallery items clickable */
