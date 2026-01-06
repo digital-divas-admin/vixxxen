@@ -149,7 +149,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
         "cfg": 7,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
-        "denoise": 0.75,
+        "denoise": 0.85,
         "model": ["9", 0],
         "positive": ["12", 0],
         "negative": ["5", 0],
@@ -216,10 +216,17 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
     "16": {
       "inputs": {
         "samples": ["14", 0],
-        "mask": ["6", 1]
+        "mask": ["17", 0]
       },
       "class_type": "SetLatentNoiseMask",
       "_meta": { "title": "Set Latent Noise Mask" }
+    },
+    "17": {
+      "inputs": {
+        "mask": ["6", 1]
+      },
+      "class_type": "InvertMask",
+      "_meta": { "title": "Invert Mask" }
     }
   };
 };
