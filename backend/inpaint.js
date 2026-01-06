@@ -235,21 +235,13 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
 // LORA CONFIG BUILDER
 // ============================================================================
 function buildLoraConfig(userLoras = [], mode = 'sfw') {
-  // Default LoRAs for SFW (Qwen-based) - all slots need valid LoRAs
-  const sfwDefaults = {
-    "lora_1": { "on": true, "lora": "qwen-boreal-portraits-portraits-high-rank.safetensors", "strength": 0.7 },
-    "lora_2": { "on": true, "lora": "Qwen-Image-Lightning-4steps-V2.0.safetensors", "strength": 1 },
-    "lora_3": { "on": false, "lora": "None", "strength": 1 }
-  };
-
-  // Default LoRAs for NSFW (SDXL-based) - none enabled by default
-  const nsfwDefaults = {
+  // Default: all LoRAs disabled - use "None" to avoid empty string issues with Power Lora Loader
+  // When no LoRA is selected, the base model is used directly
+  const defaults = {
     "lora_1": { "on": false, "lora": "None", "strength": 1 },
-    "lora_2": { "on": false, "lora": "None", "strength": 0.8 },
+    "lora_2": { "on": false, "lora": "None", "strength": 1 },
     "lora_3": { "on": false, "lora": "None", "strength": 1 }
   };
-
-  const defaults = mode === 'nsfw' ? nsfwDefaults : sfwDefaults;
 
   // Override with user-provided LoRAs if any
   if (userLoras && userLoras.length > 0) {
