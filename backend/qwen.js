@@ -1,88 +1,229 @@
 const express = require('express');
 const router = express.Router();
 
-const COMFY_API_BASE = 'http://comfy-api-env.eba-jy7gqi2w.us-east-1.elasticbeanstalk.com';
-const REQUEST_TIMEOUT = 10 * 60 * 1000; // 10 minutes for cold starts
+// RunPod Configuration
+const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
+const RUNPOD_ENDPOINT_ID = process.env.RUNPOD_ENDPOINT_ID;
+const RUNPOD_BASE_URL = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}`;
 
-// POST /api/qwen/generate - Submit a generation job to ComfyUI
+// Base workflow template for Qwen txt2img
+const getWorkflowTemplate = ({ prompt, negativePrompt = '', width = 1152, height = 1536, seed = null, loras = [] }) => {
+  // Generate random seed if not provided
+  const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
+
+  // Build LoRA configuration
+  const loraConfig = buildLoraConfig(loras);
+
+  return {
+    "3": {
+      "inputs": {
+        "seed": actualSeed,
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1,
+        "model": ["66", 0],
+        "positive": ["6", 0],
+        "negative": ["7", 0],
+        "latent_image": ["58", 0]
+      },
+      "class_type": "KSampler",
+      "_meta": { "title": "KSampler" }
+    },
+    "6": {
+      "inputs": {
+        "text": prompt,
+        "clip": ["38", 0]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": { "title": "CLIP Text Encode (Positive Prompt)" }
+    },
+    "7": {
+      "inputs": {
+        "text": negativePrompt,
+        "clip": ["38", 0]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": { "title": "CLIP Text Encode (Negative Prompt)" }
+    },
+    "8": {
+      "inputs": {
+        "samples": ["3", 0],
+        "vae": ["39", 0]
+      },
+      "class_type": "VAEDecode",
+      "_meta": { "title": "VAE Decode" }
+    },
+    "37": {
+      "inputs": {
+        "unet_name": "qwen_image_bf16.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": { "title": "Load Diffusion Model" }
+    },
+    "38": {
+      "inputs": {
+        "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "type": "qwen_image",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": { "title": "Load CLIP" }
+    },
+    "39": {
+      "inputs": {
+        "vae_name": "qwen_image_vae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": { "title": "Load VAE" }
+    },
+    "58": {
+      "inputs": {
+        "width": width,
+        "height": height,
+        "batch_size": 1
+      },
+      "class_type": "EmptySD3LatentImage",
+      "_meta": { "title": "EmptySD3LatentImage" }
+    },
+    "60": {
+      "inputs": {
+        "filename_prefix": "txt2img/%date:yyyy-MM-dd%/%date:yyyy-MM-dd%",
+        "images": ["8", 0]
+      },
+      "class_type": "SaveImage",
+      "_meta": { "title": "Save Image" }
+    },
+    "66": {
+      "inputs": {
+        "shift": 2,
+        "model": ["76", 0]
+      },
+      "class_type": "ModelSamplingAuraFlow",
+      "_meta": { "title": "ModelSamplingAuraFlow" }
+    },
+    "76": {
+      "inputs": {
+        "PowerLoraLoaderHeaderWidget": { "type": "PowerLoraLoaderHeaderWidget" },
+        ...loraConfig,
+        "➕ Add Lora": "",
+        "model": ["37", 0]
+      },
+      "class_type": "Power Lora Loader (rgthree)",
+      "_meta": { "title": "Power Lora Loader (rgthree)" }
+    }
+  };
+};
+
+// Build LoRA configuration from user input
+function buildLoraConfig(userLoras = []) {
+  // Default LoRAs that are always included
+  const defaultLoras = {
+    // Character LoRA slot - will be set by user selection
+    "lora_1": { "on": false, "lora": "character", "strength": 1 },
+    // Boreal portraits - good quality
+    "lora_2": { "on": true, "lora": "qwen-boreal-portraits-portraits-high-rank.safetensors", "strength": 0.6 },
+    // Lightning LoRA for fast 4-step generation
+    "lora_3": { "on": true, "lora": "Qwen-Image-Lightning-4steps-V2.0.safetensors", "strength": 1 }
+  };
+
+  // If user provided LoRAs, merge them in
+  if (userLoras && userLoras.length > 0) {
+    userLoras.forEach((lora, index) => {
+      const loraKey = `lora_${index + 1}`;
+      defaultLoras[loraKey] = {
+        "on": lora.enabled !== false,
+        "lora": lora.name,
+        "strength": lora.strength ?? 1
+      };
+    });
+  }
+
+  return defaultLoras;
+}
+
+// POST /api/qwen/generate - Submit a generation job to RunPod
 router.post('/generate', async (req, res) => {
   try {
-    const { prompt, loras, width, height } = req.body;
+    const { prompt, negativePrompt, loras, width, height, seed } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    console.log('🎨 Qwen generation request:', { prompt: prompt.substring(0, 100), loras, width, height });
+    if (!RUNPOD_API_KEY || !RUNPOD_ENDPOINT_ID) {
+      console.error('❌ RunPod configuration missing');
+      return res.status(500).json({
+        error: 'RunPod not configured',
+        message: 'RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID must be set'
+      });
+    }
 
-    // Build request body
-    const requestBody = {
+    console.log('🎨 Qwen generation request:', {
+      prompt: prompt.substring(0, 100),
+      loras,
+      width,
+      height
+    });
+
+    // Build the workflow
+    const workflow = getWorkflowTemplate({
       prompt,
-      loras: loras || []
+      negativePrompt,
+      width: width || 1152,
+      height: height || 1536,
+      seed,
+      loras
+    });
+
+    // RunPod request body
+    const requestBody = {
+      input: {
+        workflow
+      }
     };
 
-    // Add dimensions if provided (defaults to 1152x1536 on server)
-    if (width) requestBody.width = width;
-    if (height) requestBody.height = height;
+    console.log('\n📤 Submitting job to RunPod:');
+    console.log(`   Endpoint: ${RUNPOD_BASE_URL}/run`);
+    console.log(`   Prompt: ${prompt.substring(0, 100)}...`);
 
-    // Log full request details
-    const endpoint = `${COMFY_API_BASE}/api/v1/generate`;
-    console.log('\n📤 FULL REQUEST TO COMFYUI:');
-    console.log(`   URL: ${endpoint}`);
-    console.log(`   Method: POST`);
-    console.log(`   Headers: { "Content-Type": "application/json" }`);
-    console.log(`   Body: ${JSON.stringify(requestBody, null, 2)}`);
-    console.log('\n   Equivalent curl command:');
-    console.log(`   curl -X POST "${endpoint}" \\`);
-    console.log(`     -H "Content-Type: application/json" \\`);
-    console.log(`     -d '${JSON.stringify(requestBody)}'`);
-    console.log('');
+    // Submit job to RunPod
+    const response = await fetch(`${RUNPOD_BASE_URL}/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RUNPOD_API_KEY}`
+      },
+      body: JSON.stringify(requestBody)
+    });
 
-    // Create abort controller for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
-    try {
-      // Submit job to ComfyUI
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ RunPod error:', errorText);
+      return res.status(response.status).json({
+        error: 'Failed to submit job to RunPod',
+        details: errorText
       });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('ComfyUI error:', errorData);
-        return res.status(response.status).json({
-          error: errorData.error || 'Failed to submit job to ComfyUI'
-        });
-      }
-
-      const data = await response.json();
-      console.log('📋 ComfyUI job submitted:', data);
-
-      res.json(data);
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        console.error('❌ Qwen generation request timed out after 10 minutes');
-        return res.status(504).json({
-          error: 'Request timed out',
-          message: 'The server took too long to respond. It may be warming up - please try again.'
-        });
-      }
-      throw fetchError;
     }
+
+    const data = await response.json();
+    console.log('📋 RunPod job submitted:', data);
+
+    // Return job ID for status polling
+    res.json({
+      jobId: data.id,
+      status: data.status
+    });
+
   } catch (error) {
-    console.error('Qwen generate error:', error);
+    console.error('❌ Qwen generate error:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// GET /api/qwen/status/:jobId - Check job status
+// GET /api/qwen/status/:jobId - Check job status on RunPod
 router.get('/status/:jobId', async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -91,34 +232,79 @@ router.get('/status/:jobId', async (req, res) => {
       return res.status(400).json({ error: 'Job ID is required' });
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    if (!RUNPOD_API_KEY || !RUNPOD_ENDPOINT_ID) {
+      return res.status(500).json({ error: 'RunPod not configured' });
+    }
 
-    const response = await fetch(`${COMFY_API_BASE}/api/v1/status/${jobId}`, {
-      signal: controller.signal
+    const response = await fetch(`${RUNPOD_BASE_URL}/status/${jobId}`, {
+      headers: {
+        'Authorization': `Bearer ${RUNPOD_API_KEY}`
+      }
     });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorText = await response.text();
       return res.status(response.status).json({
-        error: errorData.error || 'Failed to get job status'
+        error: 'Failed to get job status',
+        details: errorText
       });
     }
 
     const data = await response.json();
 
-    // Log completed job response to see structure
-    if (data.status === 'completed' || data.status === 'success' || data.state === 'completed') {
-      console.log('✅ ComfyUI job completed. Response keys:', Object.keys(data));
-      console.log('✅ Full response:', JSON.stringify(data, null, 2).substring(0, 2000));
+    // Map RunPod status to our expected format
+    const statusMap = {
+      'IN_QUEUE': 'queued',
+      'IN_PROGRESS': 'processing',
+      'COMPLETED': 'completed',
+      'FAILED': 'failed',
+      'CANCELLED': 'cancelled'
+    };
+
+    const result = {
+      jobId: data.id,
+      status: statusMap[data.status] || data.status,
+      rawStatus: data.status
+    };
+
+    // If completed, include the output
+    if (data.status === 'COMPLETED' && data.output) {
+      console.log('✅ RunPod job completed. Output:', JSON.stringify(data.output, null, 2).substring(0, 500));
+
+      // Extract image URL from output
+      // RunPod ComfyUI worker typically returns images in output.images array
+      if (data.output.images && data.output.images.length > 0) {
+        result.imageUrl = data.output.images[0];
+        result.images = data.output.images;
+      } else if (data.output.image) {
+        result.imageUrl = data.output.image;
+      } else {
+        // Pass through raw output for debugging
+        result.output = data.output;
+      }
     }
 
-    res.json(data);
+    // Include error info if failed
+    if (data.status === 'FAILED') {
+      console.error('❌ RunPod job failed:', data.error);
+      result.error = data.error;
+    }
+
+    res.json(result);
+
   } catch (error) {
-    console.error('Qwen status error:', error);
+    console.error('❌ Qwen status error:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
+});
+
+// GET /api/qwen/health - Health check
+router.get('/health', (req, res) => {
+  res.json({
+    service: 'qwen',
+    status: RUNPOD_API_KEY && RUNPOD_ENDPOINT_ID ? 'configured' : 'not configured',
+    endpoint: RUNPOD_ENDPOINT_ID ? `...${RUNPOD_ENDPOINT_ID.slice(-6)}` : 'not set'
+  });
 });
 
 module.exports = router;
