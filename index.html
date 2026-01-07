@@ -12785,6 +12785,12 @@
     }
 
     async function generateCaption() {
+      // Require login for caption generation
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       if (isCaptioning) return;
 
       const input = document.getElementById('captionInput');
