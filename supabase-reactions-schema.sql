@@ -22,17 +22,23 @@ CREATE INDEX idx_message_reactions_user_id ON message_reactions(user_id);
 -- Enable RLS
 ALTER TABLE message_reactions ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can view all reactions
-CREATE POLICY "Anyone can view reactions" ON message_reactions
-  FOR SELECT USING (true);
+-- Policy: Authenticated users can view all reactions
+CREATE POLICY "Authenticated users can view reactions" ON message_reactions
+  FOR SELECT
+  TO authenticated
+  USING (true);
 
 -- Policy: Authenticated users can add reactions
 CREATE POLICY "Authenticated users can add reactions" ON message_reactions
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
 
 -- Policy: Users can remove their own reactions
 CREATE POLICY "Users can remove own reactions" ON message_reactions
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
 
 -- Function to get reaction counts for a message
 CREATE OR REPLACE FUNCTION get_message_reactions(p_message_id UUID)

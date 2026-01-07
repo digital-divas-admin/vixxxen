@@ -6,12 +6,17 @@ create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
   full_name text,
+  display_name text,
   avatar_url text,
   credits integer default 1250 not null,
   plan text default 'free' check (plan in ('free', 'basic', 'pro', 'ultimate')),
+  role text default 'user' check (role in ('user', 'admin', 'moderator')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Index for role lookups (admin checks)
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role) WHERE role = 'admin';
 
 -- 2. USER_CHARACTERS TABLE (owned AI characters)
 create table public.user_characters (
@@ -204,3 +209,55 @@ end;
 $$ language plpgsql security definer;
 
 -- Done! Your DivaForge database is ready.
+
+-- ===========================================
+-- MIGRATION: Add role and display_name columns
+-- ===========================================
+-- Run this if the profiles table already exists without these columns
+
+-- Add role column if not exists
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
+
+-- Add display_name column if not exists
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS display_name TEXT;
+
+-- Add constraint for role if not exists (may need to run separately)
+-- ALTER TABLE profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('user', 'admin', 'moderator'));
+
+-- Create index for role lookups
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role) WHERE role = 'admin';
+
+-- ===========================================
+-- ADMIN POLICIES
+-- ===========================================
+
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles" ON profiles
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.id = auth.uid()
+      AND p.role = 'admin'
+    )
+  );
+
+-- Admins can view all transactions
+CREATE POLICY "Admins can view all transactions" ON transactions
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'admin'
+    )
+  );
+
+-- Service role can manage user_characters (for purchases via backend)
+CREATE POLICY "Service role can manage character ownership" ON user_characters
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
