@@ -628,6 +628,12 @@
       object-fit: cover;
       border-radius: 12px;
       background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .character-modal-image:hover {
+      opacity: 0.9;
     }
 
     .character-modal-info {
@@ -730,6 +736,248 @@
 
     .character-gallery-image:hover {
       transform: scale(1.05);
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .lightbox-image {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+      user-select: none;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      z-index: 40001;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
+    }
+
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 64px;
+      height: 64px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 48px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      z-index: 40001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .lightbox-nav:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .lightbox-nav:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .lightbox-prev {
+      left: 20px;
+    }
+
+    .lightbox-next {
+      right: 20px;
+    }
+
+    .lightbox-counter {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 0.9rem;
+      backdrop-filter: blur(10px);
+      z-index: 40001;
+    }
+
+    /* Make gallery items clickable */
+    .character-gallery-item {
+      cursor: pointer;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .character-gallery-item img {
+      transition: transform 0.2s;
+    }
+
+    .character-gallery-item:hover img {
+      transform: scale(1.05);
+    }
+
+    /* Payment Modals */
+    .payment-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 50000;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .payment-modal.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .payment-modal-content {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 48px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+      border: 2px solid;
+    }
+
+    .payment-modal-content.success {
+      border-color: #00ff88;
+      animation: successPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .payment-modal-content.failure {
+      border-color: #ff4444;
+      animation: jiggle 0.5s ease-in-out;
+    }
+
+    @keyframes successPop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes jiggle {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-10px) rotate(-2deg); }
+      20%, 40%, 60%, 80% { transform: translateX(10px) rotate(2deg); }
+    }
+
+    .payment-modal-icon {
+      font-size: 80px;
+      margin-bottom: 24px;
+      line-height: 1;
+    }
+
+    .payment-modal-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .payment-modal-message {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .payment-modal-button {
+      padding: 16px 48px;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .payment-modal-button.success {
+      background: linear-gradient(135deg, #00ff88, #00cc88);
+      color: #0f0f0f;
+    }
+
+    .payment-modal-button.success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+    }
+
+    .payment-modal-button.failure {
+      background: linear-gradient(135deg, #ff4444, #cc3333);
+      color: white;
+    }
+
+    .payment-modal-button.failure:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 68, 68, 0.3);
+    }
+
+    /* Confetti */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #00ff88;
+      animation: confetti-fall 3s linear forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
     }
 
     /* My Characters Library */
@@ -9272,6 +9520,63 @@
       </div>
     </div>
 
+    <!-- Image Lightbox Modal -->
+    <div class="lightbox-modal" id="imageLightbox">
+      <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+      <button class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)">‹</button>
+      <button class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)">›</button>
+      <img id="lightboxImage" class="lightbox-image" src="" alt="">
+      <div class="lightbox-counter" id="lightboxCounter">1 / 1</div>
+    </div>
+
+    <!-- Payment Success Modal -->
+    <div class="payment-modal" id="paymentSuccessModal">
+      <div class="payment-modal-content success">
+        <div class="payment-modal-icon">🎉</div>
+        <h2 class="payment-modal-title">Payment Successful!</h2>
+        <p class="payment-modal-message" id="paymentSuccessMessage">
+          Your subscription is now active!
+        </p>
+        <button class="payment-modal-button success" onclick="closePaymentModal()">Start Creating</button>
+      </div>
+    </div>
+
+    <!-- Payment Failure Modal -->
+    <div class="payment-modal" id="paymentFailureModal">
+      <div class="payment-modal-content failure">
+        <div class="payment-modal-icon">⚠️</div>
+        <h2 class="payment-modal-title">Payment Failed</h2>
+        <p class="payment-modal-message">
+          Your payment could not be processed. Please try again or contact support if the problem persists.
+        </p>
+        <button class="payment-modal-button failure" onclick="closePaymentModal()">Try Again</button>
+      </div>
+    </div>
+
+    <!-- Payment Modal Test Panel -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 60000; background: rgba(0,0,0,0.9); padding: 16px; border-radius: 12px; border: 1px solid #333; display: none; max-height: 80vh; overflow-y: auto;" id="paymentTestPanel">
+      <div style="color: white; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">🧪 Payment Modal Tests</div>
+      <div style="color: #666; font-size: 0.75rem; margin-bottom: 12px;">Press 'p' 3 times to toggle</div>
+
+      <div style="color: #888; font-size: 0.8rem; margin-bottom: 8px; font-weight: 600;">Subscriptions:</div>
+      <button onclick="showPaymentSuccess('starter')" style="display: block; width: 100%; margin-bottom: 6px; padding: 6px 12px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Starter Plan</button>
+      <button onclick="showPaymentSuccess('creator')" style="display: block; width: 100%; margin-bottom: 6px; padding: 6px 12px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Creator Plan</button>
+      <button onclick="showPaymentSuccess('pro')" style="display: block; width: 100%; margin-bottom: 6px; padding: 6px 12px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Pro Plan</button>
+      <button onclick="showPaymentSuccess('supernova')" style="display: block; width: 100%; margin-bottom: 6px; padding: 6px 12px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Supernova Membership</button>
+      <button onclick="showPaymentSuccess('mentorship')" style="display: block; width: 100%; margin-bottom: 12px; padding: 6px 12px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Mentorship Program</button>
+
+      <div style="color: #888; font-size: 0.8rem; margin-bottom: 8px; font-weight: 600;">Credit Packages:</div>
+      <button onclick="showPaymentSuccess('credits_500')" style="display: block; width: 100%; margin-bottom: 6px; padding: 6px 12px; background: #00b2ff; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem;">500 Credits</button>
+      <button onclick="showPaymentSuccess('credits_1000')" style="display: block; width: 100%; margin-bottom: 6px; padding: 6px 12px; background: #00b2ff; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem;">1,000 Credits</button>
+      <button onclick="showPaymentSuccess('credits_2500')" style="display: block; width: 100%; margin-bottom: 12px; padding: 6px 12px; background: #00b2ff; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem;">2,500 Credits</button>
+
+      <div style="color: #888; font-size: 0.8rem; margin-bottom: 8px; font-weight: 600;">Marketplace:</div>
+      <button onclick="showPaymentSuccess('character')" style="display: block; width: 100%; margin-bottom: 12px; padding: 6px 12px; background: #ff2ebb; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Character Purchase</button>
+
+      <button onclick="showPaymentFailure()" style="display: block; width: 100%; margin-bottom: 8px; padding: 8px 16px; background: #ff4444; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">Test Failure</button>
+      <button onclick="document.getElementById('paymentTestPanel').style.display='none'" style="display: block; width: 100%; padding: 6px 12px; background: #333; border: none; border-radius: 6px; color: #888; font-size: 0.8rem; cursor: pointer;">Close</button>
+    </div>
+
     <!-- Character Form Modal (Add/Edit) -->
     <div class="resource-form-modal" id="characterFormModal">
       <div class="resource-form-content" style="max-width: 700px;">
@@ -9384,82 +9689,82 @@
         </div>
 
         <div class="pricing-cards">
-          <!-- Basic Plan -->
+          <!-- Starter Plan -->
           <div class="pricing-card">
             <div class="pricing-tier">Starter</div>
             <div class="pricing-name">Basic</div>
-            <div class="pricing-price">$1.25<span>/mo</span></div>
+            <div class="pricing-price">$20<span>/mo</span></div>
             <div class="pricing-period">Billed monthly</div>
 
             <div class="pricing-credits">
-              <div class="pricing-credits-amount">5,000</div>
+              <div class="pricing-credits-amount">1,000</div>
               <div class="pricing-credits-label">Credits per month</div>
             </div>
 
             <ul class="pricing-features">
-              <li class="pricing-feature">All AI Models Access</li>
-              <li class="pricing-feature">Image Generation</li>
-              <li class="pricing-feature">Video Generation</li>
+              <li class="pricing-feature">166 Qwen HD Images (1152x1536)</li>
+              <li class="pricing-feature">166 Seedream Images</li>
+              <li class="pricing-feature">142 Qwen Inpaints</li>
+              <li class="pricing-feature">76 Nano Banana Images</li>
               <li class="pricing-feature">Image Editing Tools</li>
               <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
               <li class="pricing-feature">Standard Support</li>
               <li class="pricing-feature disabled">Priority Processing</li>
-              <li class="pricing-feature disabled">API Access</li>
             </ul>
 
-            <button class="pricing-cta" onclick="selectPlan('basic', 1.25)">Get Started</button>
+            <button class="pricing-cta" onclick="selectPlan('starter', 20)">Get Started</button>
           </div>
 
-          <!-- Pro Plan (Featured) -->
+          <!-- Creator Plan (Featured) -->
           <div class="pricing-card featured">
-            <div class="pricing-tier">Professional</div>
-            <div class="pricing-name">Pro</div>
-            <div class="pricing-price">$1.75<span>/mo</span></div>
+            <div class="pricing-tier">Most Popular</div>
+            <div class="pricing-name">Creator</div>
+            <div class="pricing-price">$50<span>/mo</span></div>
             <div class="pricing-period">Billed monthly</div>
 
             <div class="pricing-credits">
-              <div class="pricing-credits-amount">20,000</div>
+              <div class="pricing-credits-amount">3,000</div>
               <div class="pricing-credits-label">Credits per month</div>
             </div>
 
             <ul class="pricing-features">
-              <li class="pricing-feature">All AI Models Access</li>
-              <li class="pricing-feature">Image Generation</li>
-              <li class="pricing-feature">Video Generation</li>
-              <li class="pricing-feature">Image Editing Tools</li>
-              <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
+              <li class="pricing-feature">500 Qwen HD Images (1152x1536)</li>
+              <li class="pricing-feature">500 Seedream Images</li>
+              <li class="pricing-feature">428 Qwen Inpaints</li>
+              <li class="pricing-feature">230 Nano Banana Images</li>
+              <li class="pricing-feature">25 Veo Videos (720p/1080p)</li>
               <li class="pricing-feature">Priority Support</li>
               <li class="pricing-feature">Priority Processing</li>
-              <li class="pricing-feature disabled">API Access</li>
+              <li class="pricing-feature">All AI Models Access</li>
             </ul>
 
-            <button class="pricing-cta" onclick="selectPlan('pro', 1.75)">Get Pro</button>
+            <button class="pricing-cta" onclick="selectPlan('creator', 50)">Get Creator</button>
           </div>
 
-          <!-- Ultimate Plan -->
+          <!-- Pro Plan -->
           <div class="pricing-card">
-            <div class="pricing-tier">Enterprise</div>
-            <div class="pricing-name">Ultimate</div>
-            <div class="pricing-price">$2.25<span>/mo</span></div>
+            <div class="pricing-tier">Professional</div>
+            <div class="pricing-name">Pro</div>
+            <div class="pricing-price">$95<span>/mo</span></div>
             <div class="pricing-period">Billed monthly</div>
 
             <div class="pricing-credits">
-              <div class="pricing-credits-amount">100,000</div>
+              <div class="pricing-credits-amount">6,500</div>
               <div class="pricing-credits-label">Credits per month</div>
             </div>
 
             <ul class="pricing-features">
-              <li class="pricing-feature">All AI Models Access</li>
-              <li class="pricing-feature">Image Generation</li>
-              <li class="pricing-feature">Video Generation</li>
-              <li class="pricing-feature">Image Editing Tools</li>
-              <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
+              <li class="pricing-feature">1,083 Qwen HD Images (1152x1536)</li>
+              <li class="pricing-feature">1,083 Seedream Images</li>
+              <li class="pricing-feature">928 Qwen Inpaints</li>
+              <li class="pricing-feature">500 Nano Banana Images</li>
+              <li class="pricing-feature">54 Veo Videos (720p/1080p)</li>
               <li class="pricing-feature">24/7 Premium Support</li>
               <li class="pricing-feature">Priority Processing</li>
-              <li class="pricing-feature">Full API Access</li>
+              <li class="pricing-feature">All AI Models + API Access</li>
             </ul>
 
-            <button class="pricing-cta" onclick="selectPlan('ultimate', 2.25)">Go Ultimate</button>
+            <button class="pricing-cta" onclick="selectPlan('pro', 95)">Go Pro</button>
           </div>
         </div>
 
@@ -15341,18 +15646,18 @@
       // Image generation costs
       image: {
         'nano-banana': {
-          base: 10,
-          '1:1': 10,
-          '16:9': 15,
-          '9:16': 15,
-          '4:3': 12,
-          '3:4': 12
+          base: 13,
+          '1:1': 13,
+          '16:9': 13,
+          '9:16': 13,
+          '4:3': 13,
+          '3:4': 13
         },
         'seedream': {
-          base: 25,
-          '1K': 25,
-          '2K': 35,
-          '4K': 50
+          base: 6,
+          '1K': 6,
+          '2K': 6,
+          '4K': 6
         },
         'flux': {
           base: 20,
@@ -15363,35 +15668,35 @@
           '3:4': 22
         },
         'qwen': {
-          base: 18,
-          '1:1': 18,
-          '16:9': 23,
-          '9:16': 23,
-          '4:3': 20,
-          '3:4': 20
+          base: 6,
+          '1:1': 6,
+          '16:9': 6,
+          '9:16': 6,
+          '4:3': 6,
+          '3:4': 6
         },
-        'qwen-image-edit': 30
+        'qwen-image-edit': 7
       },
       // Video generation costs (more expensive)
       video: {
         'kling': {
-          '5s': 100,
-          '10s': 200
+          '5s': 35,
+          '10s': 70
         },
         'wan': {
-          '5s': 150,
-          '10s': 300
+          '5s': 40,
+          '10s': 80
         },
         'veo': {
-          '4s': 150,
-          '8s': 250,
-          '12s': 350
+          '4s': 120,
+          '8s': 120,
+          '12s': 120
         }
       },
       // Editing costs
       edit: {
-        'object-eraser': 20,
-        'bg-remover': 15
+        'object-eraser': 4,
+        'bg-remover': 1
       },
       // Caption/AI chat costs (cheapest)
       caption: {
@@ -15639,6 +15944,105 @@
 
     // Call on page load
     document.addEventListener('DOMContentLoaded', applySavedTheme);
+
+    // Payment Modal Functions
+    function closePaymentModal() {
+      document.getElementById('paymentSuccessModal').classList.remove('active');
+      document.getElementById('paymentFailureModal').classList.remove('active');
+      // Clean up URL by removing payment parameters
+      const url = new URL(window.location);
+      url.searchParams.delete('payment');
+      url.searchParams.delete('tier');
+      window.history.replaceState({}, '', url);
+    }
+
+    function createConfetti() {
+      const colors = ['#00ff88', '#ff2ebb', '#00b2ff', '#ffaa00'];
+      const confettiCount = 50;
+
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+
+        document.getElementById('paymentSuccessModal').appendChild(confetti);
+
+        // Remove after animation
+        setTimeout(() => confetti.remove(), 3500);
+      }
+    }
+
+    function showPaymentSuccess(tier) {
+      const modal = document.getElementById('paymentSuccessModal');
+      const message = document.getElementById('paymentSuccessMessage');
+
+      // Update message based on tier/transaction type
+      const messages = {
+        'starter': 'You\'re now subscribed to the Starter Plan! Your credits have been added to your account.',
+        'creator': 'You\'re now subscribed to the Creator Plan! Your credits have been added to your account.',
+        'pro': 'You\'re now subscribed to the Pro Plan! Your credits have been added to your account.',
+        'supernova': 'Welcome to Supernova Membership! You now have access to exclusive community channels.',
+        'mentorship': 'Welcome to the Mentorship Program! You now have access to 1-on-1 guidance and private channels.',
+        'credits_500': 'Successfully purchased 500 credits! Your credits have been added to your account.',
+        'credits_1000': 'Successfully purchased 1,000 credits! Your credits have been added to your account.',
+        'credits_2500': 'Successfully purchased 2,500 credits! Your credits have been added to your account.',
+        'character': 'Character purchased successfully! The character is now available in your Flux and Qwen dropdowns.'
+      };
+
+      message.textContent = messages[tier] || 'Purchase successful! Your payment has been processed.';
+
+      modal.classList.add('active');
+      createConfetti();
+
+      // Reload user profile to show new credits
+      if (typeof bootstrapUser === 'function') {
+        setTimeout(() => bootstrapUser(), 1000);
+      }
+    }
+
+    function showPaymentFailure() {
+      document.getElementById('paymentFailureModal').classList.add('active');
+    }
+
+    // Check for payment status in URL on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const tier = urlParams.get('tier');
+
+      if (paymentStatus === 'success') {
+        setTimeout(() => showPaymentSuccess(tier), 500);
+      } else if (paymentStatus === 'failed') {
+        setTimeout(() => showPaymentFailure(), 500);
+      }
+    });
+
+    // Triple-tap 'p' to toggle payment test panel
+    let pKeyPressCount = 0;
+    let pKeyTimer = null;
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Ignore if user is typing in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        pKeyPressCount++;
+
+        if (pKeyPressCount === 3) {
+          const panel = document.getElementById('paymentTestPanel');
+          panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+          pKeyPressCount = 0;
+          clearTimeout(pKeyTimer);
+        } else {
+          clearTimeout(pKeyTimer);
+          pKeyTimer = setTimeout(() => {
+            pKeyPressCount = 0;
+          }, 500);
+        }
+      }
+    });
 
     function toggleUserMenu() {
       const userMenu = document.getElementById('userMenu');
@@ -15991,15 +16395,15 @@
       }
 
       const planNames = {
-        'basic': 'Basic Plan',
-        'pro': 'Pro Plan',
-        'ultimate': 'Ultimate Plan'
+        'starter': 'Starter Plan',
+        'creator': 'Creator Plan',
+        'pro': 'Pro Plan'
       };
 
       const credits = {
-        'basic': '5,000',
-        'pro': '20,000',
-        'ultimate': '100,000'
+        'starter': '1,000',
+        'creator': '3,000',
+        'pro': '6,500'
       };
 
       if (!confirm(`Subscribe to ${planNames[plan]}?\n\nPrice: $${price}/month\nCredits: ${credits[plan]} per month\n\nYou'll be redirected to pay with cryptocurrency.`)) {
@@ -16722,16 +17126,28 @@
         `<span class="character-tag">${tag}</span>`
       ).join('');
 
-      // Render gallery images
-      const galleryContainer = document.getElementById('modalCharacterGallery');
+      // Prepare all images for lightbox (main image + gallery images)
       const galleryImages = character.galleryImages || [];
+      const allImages = [character.image, ...galleryImages];
+
+      // Make main image clickable to open lightbox
+      const mainImage = document.getElementById('modalCharacterImage');
+      mainImage.onclick = () => openLightbox(allImages, 0);
+
+      // Render gallery images with lightbox functionality
+      const galleryContainer = document.getElementById('modalCharacterGallery');
       if (galleryImages.length > 0) {
         galleryContainer.innerHTML = galleryImages.map((url, index) => `
-          <div class="character-gallery-item">
+          <div class="character-gallery-item" data-image-index="${index + 1}">
             <img src="${url}" alt="Example ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
           </div>
         `).join('');
         galleryContainer.parentElement.style.display = 'block';
+
+        // Add click handlers to gallery items
+        galleryContainer.querySelectorAll('.character-gallery-item').forEach((item, index) => {
+          item.onclick = () => openLightbox(allImages, index + 1);
+        });
       } else {
         galleryContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No example images yet</div>';
         galleryContainer.parentElement.style.display = 'block';
@@ -16760,6 +17176,57 @@
       document.getElementById('characterModal').classList.remove('active');
       currentCharacterModal = null;
     }
+
+    // Lightbox functionality
+    let lightboxImages = [];
+    let currentLightboxIndex = 0;
+
+    function openLightbox(images, startIndex = 0) {
+      lightboxImages = images;
+      currentLightboxIndex = startIndex;
+      updateLightboxImage();
+      document.getElementById('imageLightbox').classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+
+    function closeLightbox() {
+      document.getElementById('imageLightbox').classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
+      lightboxImages = [];
+      currentLightboxIndex = 0;
+    }
+
+    function navigateLightbox(direction) {
+      currentLightboxIndex = (currentLightboxIndex + direction + lightboxImages.length) % lightboxImages.length;
+      updateLightboxImage();
+    }
+
+    function updateLightboxImage() {
+      document.getElementById('lightboxImage').src = lightboxImages[currentLightboxIndex];
+      document.getElementById('lightboxCounter').textContent = `${currentLightboxIndex + 1} / ${lightboxImages.length}`;
+    }
+
+    // Keyboard navigation for lightbox
+    document.addEventListener('keydown', (e) => {
+      const lightbox = document.getElementById('imageLightbox');
+      if (lightbox.classList.contains('active')) {
+        if (e.key === 'Escape') {
+          closeLightbox();
+        } else if (e.key === 'ArrowLeft') {
+          navigateLightbox(-1);
+        } else if (e.key === 'ArrowRight') {
+          navigateLightbox(1);
+        }
+      }
+    });
+
+    // Close lightbox when clicking on background
+    document.addEventListener('click', (e) => {
+      const lightbox = document.getElementById('imageLightbox');
+      if (e.target === lightbox) {
+        closeLightbox();
+      }
+    });
 
     async function purchaseCharacter() {
       if (!currentCharacterModal) return;
