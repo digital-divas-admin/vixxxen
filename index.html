@@ -10860,8 +10860,7 @@
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
-        alert('Please log in to generate videos.');
-        openSubscriptionPage();
+        showLoginRequiredModal();
         resetButton();
         return;
       }
@@ -13188,8 +13187,7 @@
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
-        alert('Please log in to generate images.');
-        openSubscriptionPage();
+        showLoginRequiredModal();
         resetButton();
         return;
       }
