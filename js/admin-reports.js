@@ -229,6 +229,7 @@ function renderBlockedWordsList(words) {
 
   const categoryColors = {
     explicit: '#ff2ebb',
+    celebrities: '#00b2ff',
     violence: '#ff4444',
     other: '#ffa500'
   };
