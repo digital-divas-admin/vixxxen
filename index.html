@@ -14441,11 +14441,12 @@
         const isAdmin = userId && await checkIfUserIsAdmin(userId);
 
         // Admins get all characters (including inactive), others get only active
+        // Use authFetch to include JWT token - backend gets user from token, not query param
         const endpoint = isAdmin
-          ? `${API_BASE_URL}/api/characters/all?user_id=${userId}`
-          : `${API_BASE_URL}/api/characters${userId ? `?user_id=${userId}` : ''}`;
+          ? `${API_BASE_URL}/api/characters/all`
+          : `${API_BASE_URL}/api/characters`;
 
-        const response = await fetch(endpoint);
+        const response = await authFetch(endpoint);
         if (!response.ok) throw new Error('Failed to fetch characters');
 
         const data = await response.json();
@@ -15026,12 +15027,11 @@
         };
 
         const url = isEdit
-          ? `${API_BASE_URL}/api/characters/${characterId}?user_id=${currentUser.id}`
-          : `${API_BASE_URL}/api/characters?user_id=${currentUser.id}`;
+          ? `${API_BASE_URL}/api/characters/${characterId}`
+          : `${API_BASE_URL}/api/characters`;
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: isEdit ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(characterData)
         });
 
@@ -16418,12 +16418,11 @@
       try {
         const isEditing = !!editingGuideId;
         const url = isEditing
-          ? `${API_BASE_URL}/api/starthere/${editingGuideId}?user_id=${user.id}`
-          : `${API_BASE_URL}/api/starthere?user_id=${user.id}`;
+          ? `${API_BASE_URL}/api/starthere/${editingGuideId}`
+          : `${API_BASE_URL}/api/starthere`;
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: isEditing ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(guideData)
         });
 
@@ -17087,12 +17086,11 @@
       try {
         const isEditing = !!editingResourceId;
         const url = isEditing
-          ? `${API_BASE_URL}/api/resources/${editingResourceId}?user_id=${user.id}`
-          : `${API_BASE_URL}/api/resources?user_id=${user.id}`;
+          ? `${API_BASE_URL}/api/resources/${editingResourceId}`
+          : `${API_BASE_URL}/api/resources`;
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: isEditing ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(resourceData)
         });
 
@@ -17133,8 +17131,8 @@
       deleteBtn.textContent = 'Deleting...';
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/resources/${editingResourceId}?user_id=${user.id}`,
+        const response = await authFetch(
+          `${API_BASE_URL}/api/resources/${editingResourceId}`,
           { method: 'DELETE' }
         );
 
