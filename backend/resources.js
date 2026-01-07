@@ -935,9 +935,9 @@ router.get('/bootstrap/:userId', async (req, res) => {
       'rising_star': 'Rising Star',
       'supernova': 'Supernova',
       'mentorship': 'Mentorship',
-      'basic': 'Basic Plan',
-      'pro': 'Pro Plan',
-      'ultimate': 'Ultimate Plan'
+      'starter': 'Starter Plan',
+      'creator': 'Creator Plan',
+      'pro': 'Pro Plan'
     };
 
     if (membership && membership.is_active && membership.tier) {

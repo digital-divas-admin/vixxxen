@@ -13,60 +13,60 @@ const supabase = createClient(
 const PLISIO_API_KEY = process.env.PLISIO_API_KEY;
 const PLISIO_SECRET_KEY = process.env.PLISIO_SECRET_KEY;
 
-// Pricing configuration (TEST PRICES)
+// Pricing configuration
 const TIERS = {
-  basic: {
-    name: 'Basic Subscription',
+  starter: {
+    name: 'Starter Plan',
     description: 'Access to all AI models and basic features',
-    price: 1.25,
-    credits: 5000,
+    price: 20.00,
+    credits: 1000,
+    duration_days: 30
+  },
+  creator: {
+    name: 'Creator Plan',
+    description: 'Priority processing and more credits',
+    price: 50.00,
+    credits: 3000,
     duration_days: 30
   },
   pro: {
-    name: 'Pro Subscription',
-    description: 'Priority processing and more credits',
-    price: 1.75,
-    credits: 20000,
-    duration_days: 30
-  },
-  ultimate: {
-    name: 'Ultimate Subscription',
+    name: 'Pro Plan',
     description: 'Full access with API and premium support',
-    price: 2.25,
-    credits: 100000,
+    price: 95.00,
+    credits: 6500,
     duration_days: 30
   },
   supernova: {
     name: 'Supernova Membership',
     description: 'Access to Supernova community channels and resources',
-    price: 2.00,
+    price: 25.00,
     duration_days: 30
   },
   mentorship: {
     name: 'Mentorship Program',
     description: 'Full access including private mentorship channels and 1-on-1 guidance',
-    price: 3.00,
+    price: 100.00,
     duration_days: 30
   },
   // Credit packages (one-time purchases)
   credits_500: {
     name: '500 Credits',
     description: 'One-time credit top-up',
-    price: 0.50,
+    price: 12.00,
     credits: 500,
     is_credit_package: true
   },
   credits_1000: {
     name: '1,000 Credits',
     description: 'One-time credit top-up',
-    price: 0.75,
+    price: 22.00,
     credits: 1000,
     is_credit_package: true
   },
   credits_2500: {
     name: '2,500 Credits',
     description: 'One-time credit top-up',
-    price: 1.00,
+    price: 50.00,
     credits: 2500,
     is_credit_package: true
   }
@@ -77,8 +77,14 @@ router.post('/create-charge', async (req, res) => {
   try {
     const { tier, userId } = req.body;
 
+    if (!PLISIO_API_KEY) {
+      console.error('PLISIO_API_KEY is not set');
+      return res.status(500).json({ error: 'Payment provider not configured' });
+    }
+
     if (!tier || !TIERS[tier]) {
-      return res.status(400).json({ error: 'Invalid tier' });
+      console.error('Invalid tier requested:', tier);
+      return res.status(400).json({ error: `Invalid tier: ${tier}` });
     }
 
     if (!userId) {
@@ -91,6 +97,7 @@ router.post('/create-charge', async (req, res) => {
     const orderNumber = `${tier}-${userId.substring(0, 8)}-${Date.now()}`;
 
     // Build Plisio API URL with query parameters
+    // IMPORTANT: json=true is required for Node.js webhooks to receive JSON data
     const params = new URLSearchParams({
       source_currency: 'USD',
       source_amount: tierConfig.price.toString(),
@@ -98,7 +105,7 @@ router.post('/create-charge', async (req, res) => {
       currency: 'BTC,ETH,LTC,USDT,USDC,DOGE',
       email: '', // Optional - user can enter on Plisio page
       order_name: tierConfig.name,
-      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio`,
+      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio?json=true`,
       success_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=success&tier=${tier}`,
       fail_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=failed`,
       api_key: PLISIO_API_KEY
@@ -107,9 +114,23 @@ router.post('/create-charge', async (req, res) => {
     const response = await fetch(`https://plisio.net/api/v1/invoices/new?${params.toString()}`);
     const data = await response.json();
 
+    console.log('Plisio API response:', JSON.stringify(data, null, 2));
+
     if (data.status !== 'success') {
-      console.error('Plisio error:', data);
-      return res.status(500).json({ error: data.data?.message || 'Failed to create invoice' });
+      console.error('Plisio error response:', JSON.stringify(data, null, 2));
+      const errorMessage = data.data?.message || data.message || 'Failed to create invoice';
+      return res.status(500).json({
+        error: errorMessage,
+        details: data
+      });
+    }
+
+    if (!data.data || !data.data.txn_id || !data.data.invoice_url) {
+      console.error('Invalid Plisio response structure:', JSON.stringify(data, null, 2));
+      return res.status(500).json({
+        error: 'Invalid response from payment provider',
+        details: 'Missing required fields in response'
+      });
     }
 
     // Store pending payment in database
@@ -142,7 +163,12 @@ router.post('/create-charge', async (req, res) => {
 
   } catch (error) {
     console.error('Create invoice error:', error);
-    res.status(500).json({ error: 'Failed to create payment' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      error: 'Failed to create payment',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -154,22 +180,25 @@ router.post('/webhook/plisio', async (req, res) => {
 
     // Verify webhook signature if secret key is set
     if (PLISIO_SECRET_KEY && data.verify_hash) {
-      // Plisio sends verify_hash - we need to verify it
-      const params = { ...data };
-      delete params.verify_hash;
+      // Plisio verification: stringify ordered object without verify_hash
+      const ordered = { ...data };
+      delete ordered.verify_hash;
 
-      // Sort params and create string
-      const sortedKeys = Object.keys(params).sort();
-      const values = sortedKeys.map(key => params[key]).join('');
+      // Stringify the ordered object
+      const string = JSON.stringify(ordered);
 
-      const expectedHash = crypto
-        .createHmac('sha1', PLISIO_SECRET_KEY)
-        .update(values)
-        .digest('hex');
+      // Create HMAC hash
+      const hmac = crypto.createHmac('sha1', PLISIO_SECRET_KEY);
+      hmac.update(string);
+      const expectedHash = hmac.digest('hex');
 
       if (data.verify_hash !== expectedHash) {
         console.error('Invalid webhook signature');
-        // Don't reject - Plisio might use different verification
+        console.error('Expected:', expectedHash);
+        console.error('Received:', data.verify_hash);
+        // Don't reject - log for debugging but continue processing
+      } else {
+        console.log('Webhook signature verified successfully');
       }
     }
 
