@@ -174,6 +174,112 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
+// GET /api/resources/bootstrap - Get all user data in one call
+// IMPORTANT: This route must be defined BEFORE /:id to avoid being caught by the wildcard
+// Changed from /:userId to use authenticated user - prevents IDOR vulnerability
+router.get('/bootstrap', requireAuth, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    // Use verified user ID from auth middleware (not URL param)
+    const userId = req.userId;
+
+    // Run all queries in parallel for maximum speed
+    const [profileResult, charactersResult, membershipResult, subscriptionResult] = await Promise.all([
+      // Get profile
+      supabase
+        .from('profiles')
+        .select('id, email, full_name, credits, plan, avatar_url')
+        .eq('id', userId)
+        .single(),
+
+      // Get owned characters
+      supabase
+        .from('user_characters')
+        .select('character_id')
+        .eq('user_id', userId),
+
+      // Get membership
+      supabase
+        .from('memberships')
+        .select('tier, is_active')
+        .eq('user_id', userId)
+        .single(),
+
+      // Get subscription
+      supabase
+        .from('subscriptions')
+        .select('tier, status, expires_at')
+        .eq('user_id', userId)
+        .single()
+    ]);
+
+    // Handle profile (required)
+    if (profileResult.error) {
+      console.error('Bootstrap: Profile fetch error:', profileResult.error);
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    const profile = profileResult.data;
+    const characters = charactersResult.data || [];
+    const membership = membershipResult.data;
+    const subscription = subscriptionResult.data;
+
+    // Determine user plan from membership or subscription
+    let userPlan = 'Free Plan';
+    const tierNames = {
+      'rising_star': 'Rising Star',
+      'supernova': 'Supernova',
+      'mentorship': 'Mentorship',
+      'starter': 'Starter Plan',
+      'creator': 'Creator Plan',
+      'pro': 'Pro Plan'
+    };
+
+    if (membership && membership.is_active && membership.tier) {
+      userPlan = tierNames[membership.tier] || membership.tier.charAt(0).toUpperCase() + membership.tier.slice(1);
+    } else if (subscription && subscription.status === 'active') {
+      userPlan = tierNames[subscription.tier] || subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1);
+    } else if (profile.plan) {
+      userPlan = profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan';
+    }
+
+    // Check if subscription is expired
+    let subscriptionActive = false;
+    if (subscription && subscription.status === 'active' && subscription.expires_at) {
+      subscriptionActive = new Date(subscription.expires_at) > new Date();
+    }
+
+    res.json({
+      profile: {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        credits: profile.credits || 0,
+        avatar_url: profile.avatar_url
+      },
+      plan: userPlan,
+      characters: characters.map(c => c.character_id),
+      membership: membership ? {
+        tier: membership.tier,
+        is_active: membership.is_active
+      } : null,
+      subscription: subscription ? {
+        tier: subscription.tier,
+        status: subscription.status,
+        expires_at: subscription.expires_at,
+        is_active: subscriptionActive
+      } : null
+    });
+
+  } catch (error) {
+    console.error('Bootstrap error:', error);
+    res.status(500).json({ error: 'Failed to load user data' });
+  }
+});
+
 // GET /api/resources/:id - Get single resource with full content (if authorized)
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
@@ -836,111 +942,6 @@ router.get('/earnings', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Earnings fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/resources/bootstrap - Get all user data in one call
-// Changed from /:userId to use authenticated user - prevents IDOR vulnerability
-router.get('/bootstrap', requireAuth, async (req, res) => {
-  try {
-    if (!supabase) {
-      return res.status(500).json({ error: 'Supabase not configured' });
-    }
-
-    // Use verified user ID from auth middleware (not URL param)
-    const userId = req.userId;
-
-    // Run all queries in parallel for maximum speed
-    const [profileResult, charactersResult, membershipResult, subscriptionResult] = await Promise.all([
-      // Get profile
-      supabase
-        .from('profiles')
-        .select('id, email, full_name, credits, plan, avatar_url')
-        .eq('id', userId)
-        .single(),
-
-      // Get owned characters
-      supabase
-        .from('user_characters')
-        .select('character_id')
-        .eq('user_id', userId),
-
-      // Get membership
-      supabase
-        .from('memberships')
-        .select('tier, is_active')
-        .eq('user_id', userId)
-        .single(),
-
-      // Get subscription
-      supabase
-        .from('subscriptions')
-        .select('tier, status, expires_at')
-        .eq('user_id', userId)
-        .single()
-    ]);
-
-    // Handle profile (required)
-    if (profileResult.error) {
-      console.error('Bootstrap: Profile fetch error:', profileResult.error);
-      return res.status(404).json({ error: 'User profile not found' });
-    }
-
-    const profile = profileResult.data;
-    const characters = charactersResult.data || [];
-    const membership = membershipResult.data;
-    const subscription = subscriptionResult.data;
-
-    // Determine user plan from membership or subscription
-    let userPlan = 'Free Plan';
-    const tierNames = {
-      'rising_star': 'Rising Star',
-      'supernova': 'Supernova',
-      'mentorship': 'Mentorship',
-      'starter': 'Starter Plan',
-      'creator': 'Creator Plan',
-      'pro': 'Pro Plan'
-    };
-
-    if (membership && membership.is_active && membership.tier) {
-      userPlan = tierNames[membership.tier] || membership.tier.charAt(0).toUpperCase() + membership.tier.slice(1);
-    } else if (subscription && subscription.status === 'active') {
-      userPlan = tierNames[subscription.tier] || subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1);
-    } else if (profile.plan) {
-      userPlan = profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan';
-    }
-
-    // Check if subscription is expired
-    let subscriptionActive = false;
-    if (subscription && subscription.status === 'active' && subscription.expires_at) {
-      subscriptionActive = new Date(subscription.expires_at) > new Date();
-    }
-
-    res.json({
-      profile: {
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
-        credits: profile.credits || 0,
-        avatar_url: profile.avatar_url
-      },
-      plan: userPlan,
-      characters: characters.map(c => c.character_id),
-      membership: membership ? {
-        tier: membership.tier,
-        is_active: membership.is_active
-      } : null,
-      subscription: subscription ? {
-        tier: subscription.tier,
-        status: subscription.status,
-        expires_at: subscription.expires_at,
-        is_active: subscriptionActive
-      } : null
-    });
-
-  } catch (error) {
-    console.error('Bootstrap error:', error);
-    res.status(500).json({ error: 'Failed to load user data' });
   }
 });
 
