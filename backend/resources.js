@@ -178,13 +178,16 @@ router.get('/', optionalAuth, async (req, res) => {
 // IMPORTANT: This route must be defined BEFORE /:id to avoid being caught by the wildcard
 // Changed from /:userId to use authenticated user - prevents IDOR vulnerability
 router.get('/bootstrap', requireAuth, async (req, res) => {
+  console.log('📊 Bootstrap endpoint hit, userId:', req.userId);
   try {
     if (!supabase) {
+      console.log('📊 Bootstrap: Supabase not configured');
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     // Use verified user ID from auth middleware (not URL param)
     const userId = req.userId;
+    console.log('📊 Bootstrap: Fetching data for user:', userId);
 
     // Run all queries in parallel for maximum speed
     const [profileResult, charactersResult, membershipResult, subscriptionResult] = await Promise.all([
@@ -215,6 +218,7 @@ router.get('/bootstrap', requireAuth, async (req, res) => {
         .eq('user_id', userId)
         .single()
     ]);
+    console.log('📊 Bootstrap: All queries completed');
 
     // Handle profile (required)
     if (profileResult.error) {
@@ -252,6 +256,7 @@ router.get('/bootstrap', requireAuth, async (req, res) => {
       subscriptionActive = new Date(subscription.expires_at) > new Date();
     }
 
+    console.log('📊 Bootstrap: Sending response for user:', profile.email);
     res.json({
       profile: {
         id: profile.id,

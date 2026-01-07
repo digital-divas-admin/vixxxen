@@ -29,6 +29,7 @@ function extractToken(authHeader) {
  * Returns 401 if no valid token provided
  */
 async function requireAuth(req, res, next) {
+  console.log('🔐 requireAuth: Starting for', req.path);
   try {
     if (!supabase) {
       console.error('Auth middleware: Supabase not configured');
@@ -36,13 +37,17 @@ async function requireAuth(req, res, next) {
     }
 
     const token = extractToken(req.headers.authorization);
+    console.log('🔐 requireAuth: Token extracted:', token ? 'yes' : 'no');
 
     if (!token) {
+      console.log('🔐 requireAuth: No token, returning 401');
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     // Verify token with Supabase
+    console.log('🔐 requireAuth: Verifying token with Supabase...');
     const { data: { user }, error } = await supabase.auth.getUser(token);
+    console.log('🔐 requireAuth: Supabase responded, user:', user?.email || 'none');
 
     if (error || !user) {
       console.error('Auth verification failed:', error?.message || 'No user returned');
@@ -52,6 +57,7 @@ async function requireAuth(req, res, next) {
     // Attach verified user to request
     req.user = user;
     req.userId = user.id;
+    console.log('🔐 requireAuth: Auth successful, userId:', user.id);
 
     next();
   } catch (error) {
