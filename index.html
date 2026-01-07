@@ -9134,25 +9134,18 @@
     </video>
   </div>
 
+  <!-- External JavaScript Modules (load in order) -->
+  <script src="js/config.js"></script>
+  <script src="js/zoom-controls.js"></script>
+  <script src="js/reporting.js"></script>
+
   <script>
     // ===========================================
-    // SUPABASE CONFIGURATION
+    // INLINE APPLICATION CODE
     // ===========================================
-    const SUPABASE_URL = 'https://kdgjbyfqytjtywxlekpz.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2pieWZxeXRqdHl3eGxla3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTQ5MTIsImV4cCI6MjA4MjA5MDkxMn0.2v2n2pBbKeFAzq6M6XkgTpSI4e5_ifeao7gRFQ5q6HA';
-
-    // Check if Supabase loaded
-    if (typeof window.supabase === 'undefined') {
-      console.error('❌ SUPABASE NOT LOADED! Check your internet connection.');
-    } else {
-      console.log('✅ Supabase client library loaded');
-    }
-
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✅ Supabase initialized for project:', SUPABASE_URL);
-
-    // Current user session
-    let currentUser = null;
+    // Note: Core config (Supabase, API_BASE_URL, currentUser) is in js/config.js
+    // Note: Zoom controls are in js/zoom-controls.js
+    // Note: Reporting system is in js/reporting.js
 
     // ===========================================
     // SUPABASE STORAGE FUNCTIONS
@@ -9999,22 +9992,13 @@
       setTimeout(() => element.remove(), 300);
     }
 
-    // Auto-detect local vs production environment
-    // Works for: localhost, 127.0.0.1, or file:// protocol (opening HTML directly)
-    const isLocal = window.location.hostname === 'localhost'
-      || window.location.hostname === '127.0.0.1'
-      || window.location.protocol === 'file:';
-    // In production, use empty string for same-origin API calls
-    const API_BASE_URL = isLocal ? 'http://localhost:3002' : '';
-    console.log(`🔗 API URL: ${API_BASE_URL || window.location.origin} (${isLocal ? 'local' : 'production'})`);
+    // Note: isLocal, API_BASE_URL, NSFW_ONLY_MODELS are defined in js/config.js
+
     let currentModel = 'nano-banana';
     let generatedImages = [];
     let referenceImages = [];
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
-
-    // NSFW-only models - always tag output as NSFW regardless of content mode
-    const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
 
     // Helper to check if content should be tagged NSFW (based on mode OR model)
     function isNsfwContent(model) {
@@ -10452,99 +10436,7 @@
       }
     }
 
-    // ===========================================
-    // REPORTING SYSTEM
-    // ===========================================
-
-    // Open report modal for content
-    function openReportModal(contentType, contentId, contentUrl = null, contentPreview = null, reportedUserId = null) {
-      if (!currentUser) {
-        alert('Please log in to report content');
-        return;
-      }
-
-      document.getElementById('reportContentType').value = contentType;
-      document.getElementById('reportContentId').value = contentId || '';
-      document.getElementById('reportContentUrl').value = contentUrl || '';
-      document.getElementById('reportContentPreview').value = contentPreview || '';
-      document.getElementById('reportedUserId').value = reportedUserId || '';
-
-      // Reset form
-      document.getElementById('reportForm').reset();
-      document.getElementById('reportSubmitBtn').disabled = false;
-      document.getElementById('reportSubmitBtn').textContent = 'Submit Report';
-
-      document.getElementById('reportModal').classList.add('active');
-    }
-
-    // Close report modal
-    function closeReportModal() {
-      document.getElementById('reportModal').classList.remove('active');
-    }
-
-    // Submit report
-    async function submitReport(event) {
-      event.preventDefault();
-
-      const submitBtn = document.getElementById('reportSubmitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
-
-      const reportData = {
-        reporter_user_id: currentUser?.id || null,
-        anonymous: document.getElementById('reportAnonymous').checked,
-        content_type: document.getElementById('reportContentType').value,
-        content_id: document.getElementById('reportContentId').value || null,
-        content_url: document.getElementById('reportContentUrl').value || null,
-        content_preview: document.getElementById('reportContentPreview').value || null,
-        reported_user_id: document.getElementById('reportedUserId').value || null,
-        reason: document.getElementById('reportReason').value,
-        details: document.getElementById('reportDetails').value || null
-      };
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/reports`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reportData)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (response.status === 429) {
-            alert('Rate limit exceeded. Please wait before submitting more reports.');
-          } else if (response.status === 409) {
-            alert('You have already reported this content.');
-          } else {
-            throw new Error(data.error || 'Failed to submit report');
-          }
-          return;
-        }
-
-        alert('Thank you for your report. Our team will review it.');
-        closeReportModal();
-
-      } catch (error) {
-        console.error('Error submitting report:', error);
-        alert('Error submitting report. Please try again.');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Report';
-      }
-    }
-
-    // Report button for generated content
-    function getReportButton(contentType, contentId, contentUrl = null, reportedUserId = null) {
-      return `
-        <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${contentType}', '${contentId}', '${contentUrl || ''}', '', '${reportedUserId || ''}')" title="Report content">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-            <line x1="4" y1="22" x2="4" y2="15"></line>
-          </svg>
-        </button>
-      `;
-    }
+    // Note: Reporting system functions are in js/reporting.js
 
     // ===========================================
     // ADMIN REPORTS DASHBOARD
@@ -10707,51 +10599,7 @@
       }
     }
 
-    // ===========================================
-    // ZOOM SLIDER FUNCTIONS
-    // ===========================================
-    function updateImageGridZoom(value) {
-      const outputGrid = document.getElementById('outputGrid');
-      if (outputGrid) {
-        outputGrid.style.setProperty('--grid-item-size', value + 'px');
-      }
-      // Save preference
-      localStorage.setItem('imageGridZoom', value);
-    }
-
-    function updateVideoGridZoom(value) {
-      const videoOutputGrid = document.getElementById('videoOutputGrid');
-      if (videoOutputGrid) {
-        videoOutputGrid.style.setProperty('--grid-item-size', value + 'px');
-      }
-      // Save preference
-      localStorage.setItem('videoGridZoom', value);
-    }
-
-    // Load saved zoom preferences on page load
-    function loadZoomPreferences() {
-      const savedImageZoom = localStorage.getItem('imageGridZoom');
-      const savedVideoZoom = localStorage.getItem('videoGridZoom');
-
-      if (savedImageZoom) {
-        const imageSlider = document.getElementById('imageZoomSlider');
-        if (imageSlider) {
-          imageSlider.value = savedImageZoom;
-          updateImageGridZoom(savedImageZoom);
-        }
-      }
-
-      if (savedVideoZoom) {
-        const videoSlider = document.getElementById('videoZoomSlider');
-        if (videoSlider) {
-          videoSlider.value = savedVideoZoom;
-          updateVideoGridZoom(savedVideoZoom);
-        }
-      }
-    }
-
-    // Initialize zoom preferences when DOM is ready
-    document.addEventListener('DOMContentLoaded', loadZoomPreferences);
+    // Note: Zoom slider functions are in js/zoom-controls.js
 
     // Initialize content mode when DOM is ready
     document.addEventListener('DOMContentLoaded', initContentMode);
