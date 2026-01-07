@@ -57,336 +57,14 @@
     }
   </style>
 
+  <!-- External CSS - Organized styles -->
+  <link rel="stylesheet" href="css/main.css">
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    /* Theme CSS Variables */
-    :root {
-      /* Dark theme (default) */
-      --bg-primary: #0f0f0f;
-      --bg-secondary: #0a0a0a;
-      --bg-tertiary: #1a1a1a;
-      --bg-card: #1a1a1a;
-      --bg-input: #0a0a0a;
-      --bg-hover: #2a2a2a;
-      --border-color: #2a2a2a;
-      --border-light: #3a3a3a;
-      --text-primary: #ffffff;
-      --text-secondary: #888888;
-      --text-muted: #666666;
-      --accent-primary: #ff2ebb;
-      --accent-secondary: #00b2ff;
-      --accent-gradient: linear-gradient(135deg, #ff2ebb, #00b2ff);
-      --success: #00ff88;
-      --error: #ff4444;
-      --warning: #ffaa00;
-      --overlay: rgba(0, 0, 0, 0.8);
-    }
-
-    /* Light theme */
-    .light-theme {
-      --bg-primary: #f5f5f7;
-      --bg-secondary: #ffffff;
-      --bg-tertiary: #e8e8ed;
-      --bg-card: #ffffff;
-      --bg-input: #f0f0f5;
-      --bg-hover: #e0e0e5;
-      --border-color: #d1d1d6;
-      --border-light: #c7c7cc;
-      --text-primary: #1d1d1f;
-      --text-secondary: #6e6e73;
-      --text-muted: #8e8e93;
-      --accent-primary: #e91e9c;
-      --accent-secondary: #007aff;
-      --accent-gradient: linear-gradient(135deg, #e91e9c, #007aff);
-      --success: #30d158;
-      --error: #ff3b30;
-      --warning: #ff9500;
-      --overlay: rgba(255, 255, 255, 0.9);
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      height: 100vh;
-      overflow: hidden;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    .container {
-      display: flex;
-      height: 100vh;
-      padding-bottom: 50px; /* Space for fixed footer */
-    }
-
-    /* Main Navigation Sidebar */
-    .main-nav {
-      width: 90px;
-      background: var(--bg-secondary);
-      border-right: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 20px 0;
-      transition: background 0.3s, border-color 0.3s;
-    }
-
-    .nav-tabs-container {
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* User Area */
-    .user-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px 8px;
-      border-top: 1px solid var(--border-color);
-      gap: 8px;
-    }
-
-    .user-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: var(--accent-gradient);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      cursor: pointer;
-      transition: all 0.3s;
-      position: relative;
-    }
-
-    .user-avatar:hover {
-      transform: scale(1.1);
-      box-shadow: 0 0 20px rgba(255, 46, 187, 0.5);
-    }
-
-    .user-avatar.logged-out {
-      background: var(--bg-hover);
-      border: 2px dashed var(--border-light);
-    }
-
-    .user-status-dot {
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      width: 12px;
-      height: 12px;
-      background: #00ff88;
-      border: 2px solid var(--bg-secondary);
-      border-radius: 50%;
-    }
-
-    /* Theme Toggle Button */
-    .theme-toggle {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--bg-hover);
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .theme-toggle:hover {
-      background: var(--bg-tertiary);
-      transform: scale(1.1);
-    }
-
-    .theme-icon {
-      font-size: 1.1rem;
-      transition: transform 0.3s;
-    }
-
-    .theme-toggle:hover .theme-icon {
-      transform: rotate(20deg);
-    }
-
-    .user-credits {
-      font-size: 0.65rem;
-      color: var(--accent-secondary);
-      font-weight: 600;
-      text-align: center;
-      line-height: 1.2;
-    }
-
-    /* User Dropdown Menu */
-    .user-menu {
-      position: fixed;
-      bottom: 20px;
-      left: 90px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 12px;
-      min-width: 240px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-      display: none;
-      z-index: 10000;
-    }
-
-    .user-menu.active {
-      display: block;
-      animation: fadeIn 0.2s ease-out;
-    }
-
-    .user-menu-header {
-      padding: 12px;
-      border-bottom: 1px solid #2a2a2a;
-      margin-bottom: 12px;
-    }
-
-    .user-menu-name {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 4px;
-    }
-
-    .user-menu-email {
-      font-size: 0.8rem;
-      color: #888;
-    }
-
-    .user-menu-section {
-      padding: 12px;
-      margin: 8px 0;
-    }
-
-    .user-menu-label {
-      font-size: 0.7rem;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .user-menu-value {
-      font-size: 0.95rem;
-      color: #fff;
-      margin-bottom: 4px;
-    }
-
-    .user-menu-value.highlight {
-      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-
-    .user-menu-subscription {
-      display: inline-block;
-      padding: 4px 12px;
-      background: rgba(255, 46, 187, 0.1);
-      border: 1px solid rgba(255, 46, 187, 0.3);
-      border-radius: 6px;
-      color: #ff2ebb;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .user-menu-btn {
-      width: 100%;
-      padding: 12px;
-      background: rgba(255, 46, 187, 0.1);
-      border: 1px solid rgba(255, 46, 187, 0.2);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-top: 8px;
-    }
-
-    .user-menu-btn:hover {
-      background: rgba(255, 46, 187, 0.2);
-      border-color: rgba(255, 46, 187, 0.4);
-    }
-
-    .user-menu-btn.primary {
-      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
-      border: none;
-      font-weight: 600;
-    }
-
-    .user-menu-btn.primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 46, 187, 0.3);
-    }
-
-    /* Login Modal */
-    .login-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      z-index: 20000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .login-modal.active {
-      display: flex;
-    }
-
-    .login-modal-content {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 16px;
-      padding: 32px;
-      max-width: 400px;
-      width: 90%;
-    }
-
-    .login-modal-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 8px;
-    }
-
-    .login-modal-subtitle {
-      color: #888;
-      font-size: 0.9rem;
-      margin-bottom: 24px;
-    }
-
-    .login-input {
-      width: 100%;
-      padding: 12px;
-      background: #0a0a0a;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.95rem;
-      margin-bottom: 12px;
-    }
-
-    .login-input:focus {
-      outline: none;
-      border-color: #ff2ebb;
-    }
+    /* ===========================================
+       PAGE & FEATURE SPECIFIC STYLES
+       Base styles are now in external css/main.css
+       =========================================== */
 
     /* Marketplace Page */
     .marketplace-page {
@@ -7107,6 +6785,8 @@
     /* Transaction Table Styles */
     .transaction-table-container {
       overflow-x: auto;
+      overflow-y: auto;
+      max-height: 400px;
     }
 
     .transaction-table {
@@ -7185,692 +6865,7 @@
       padding: 30px;
     }
 
-    /* ==================== COMPREHENSIVE LIGHT THEME OVERRIDES ==================== */
-    .light-theme {
-      /* Body and main containers */
-      background: #f5f5f7 !important;
-      color: #1d1d1f !important;
-    }
-
-    /* Main navigation */
-    .light-theme .main-nav {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .nav-tab {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .nav-tab:hover,
-    .light-theme .nav-tab.active {
-      background: #e8e8ed !important;
-      color: #1d1d1f !important;
-    }
-
-    /* Control panels and sidebars */
-    .light-theme .control-panel,
-    .light-theme .control-section,
-    .light-theme .video-controls,
-    .light-theme .marketplace-sidebar,
-    .light-theme .edit-sidebar,
-    .light-theme .channel-sidebar {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .control-panel-header,
-    .light-theme .section-header {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Cards and containers */
-    .light-theme .character-card,
-    .light-theme .marketplace-card,
-    .light-theme .resource-card,
-    .light-theme .starthere-card,
-    .light-theme .credit-card,
-    .light-theme .policy-card,
-    .light-theme .member-item,
-    .light-theme .channel-manage-item,
-    .light-theme .transaction-row {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .character-card:hover,
-    .light-theme .marketplace-card:hover,
-    .light-theme .resource-card:hover {
-      background: #f5f5f7 !important;
-      border-color: #c7c7cc !important;
-    }
-
-    /* Inputs and textareas */
-    .light-theme input,
-    .light-theme textarea,
-    .light-theme select,
-    .light-theme .prompt-input,
-    .light-theme .prompt-textarea,
-    .light-theme .login-input,
-    .light-theme .chat-input,
-    .light-theme .search-input,
-    .light-theme .giphy-search-input {
-      background: #f0f0f5 !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme input::placeholder,
-    .light-theme textarea::placeholder {
-      color: #8e8e93 !important;
-    }
-
-    .light-theme input:focus,
-    .light-theme textarea:focus,
-    .light-theme select:focus {
-      border-color: #007aff !important;
-    }
-
-    /* Modals */
-    .light-theme .login-modal-content,
-    .light-theme .modal-content,
-    .light-theme .settings-modal-content,
-    .light-theme .age-modal-content,
-    .light-theme .character-modal-content,
-    .light-theme .resource-modal-content,
-    .light-theme .policies-modal-content,
-    .light-theme .rules-modal-content,
-    .light-theme .crop-modal-content,
-    .light-theme .giphy-modal-content,
-    .light-theme .channel-manage-content,
-    .light-theme .starthere-modal-content,
-    .light-theme .starthere-form-container,
-    .light-theme .resource-form-container {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .modal-header,
-    .light-theme .settings-modal-header,
-    .light-theme .character-modal-header,
-    .light-theme .resource-modal-header,
-    .light-theme .channel-manage-header {
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .modal-title,
-    .light-theme .settings-modal-title,
-    .light-theme .login-modal-title {
-      color: #1d1d1f !important;
-    }
-
-    /* Image output areas and grids */
-    .light-theme .output-area,
-    .light-theme .video-preview-container,
-    .light-theme .main-content,
-    .light-theme .marketplace-main,
-    .light-theme .image-history-grid,
-    .light-theme .video-history-grid,
-    .light-theme .edit-history-grid {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .output-placeholder,
-    .light-theme .video-placeholder {
-      background: #e8e8ed !important;
-      color: #6e6e73 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* History items */
-    .light-theme .history-item,
-    .light-theme .video-history-item,
-    .light-theme .edit-history-item {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Buttons - secondary/outline styles */
-    .light-theme .btn-secondary,
-    .light-theme .filter-btn,
-    .light-theme .tab-btn,
-    .light-theme .subtab-btn,
-    .light-theme .resource-filter-btn,
-    .light-theme .education-subtab {
-      background: #e8e8ed !important;
-      color: #1d1d1f !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .filter-btn:hover,
-    .light-theme .tab-btn:hover,
-    .light-theme .filter-btn.active,
-    .light-theme .tab-btn.active,
-    .light-theme .education-subtab.active {
-      background: #d1d1d6 !important;
-    }
-
-    /* Close buttons */
-    .light-theme .modal-close,
-    .light-theme .settings-modal-close,
-    .light-theme .members-panel-close,
-    .light-theme .channel-manage-close {
-      background: #e8e8ed !important;
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .modal-close:hover,
-    .light-theme .settings-modal-close:hover {
-      background: #ff3b30 !important;
-      color: #ffffff !important;
-    }
-
-    /* Settings sections */
-    .light-theme .settings-section,
-    .light-theme .settings-item,
-    .light-theme .credit-purchase-section {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .settings-section-title,
-    .light-theme .settings-label {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .settings-input {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    /* Chat and community */
-    .light-theme .chat-area,
-    .light-theme .chat-messages,
-    .light-theme .education-chat {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .chat-header {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .chat-message {
-      background: #ffffff !important;
-    }
-
-    .light-theme .chat-message-content {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .chat-message-author {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .reaction-pill {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .reaction-pill:hover {
-      background: #e8e8ed !important;
-    }
-
-    .light-theme .reaction-pill.active {
-      background: rgba(255, 46, 187, 0.15) !important;
-      border-color: #ff2ebb !important;
-    }
-
-    .light-theme .reaction-pill .reaction-count {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .add-reaction-btn {
-      border-color: #d1d1d6 !important;
-      color: #8e8e93 !important;
-    }
-
-    .light-theme .add-reaction-btn:hover {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .emoji-picker-popup {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    .light-theme .emoji-picker-popup button:hover {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .mention {
-      background: rgba(255, 46, 187, 0.15) !important;
-    }
-
-    .light-theme .chat-message.mentioned {
-      background: rgba(255, 46, 187, 0.06) !important;
-    }
-
-    .light-theme .mention-autocomplete {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    .light-theme .mention-autocomplete-item:hover,
-    .light-theme .mention-autocomplete-item.selected {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .mention-autocomplete-name {
-      color: #1d1d1f !important;
-    }
-
-    /* Inpaint light theme */
-    .light-theme .inpaint-canvas-wrapper {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .inpaint-sidebar {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .inpaint-header h2 {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .inpaint-control-label {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .inpaint-textarea,
-    .light-theme .inpaint-select {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .inpaint-btn.secondary {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .inpaint-btn.secondary:hover {
-      background: #e8e8ed !important;
-    }
-
-    .light-theme .inpaint-mode-toggle {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .inpaint-mode-btn {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .inpaint-divider {
-      background: #d1d1d6 !important;
-    }
-
-    .light-theme .inpaint-result-section {
-      background: #f5f5f7 !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .inpaint-result-header h3 {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .inpaint-result-placeholder {
-      color: #999 !important;
-    }
-
-    .light-theme .chat-input-area {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .channel-item {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .channel-item:hover,
-    .light-theme .channel-item.active {
-      background: #e8e8ed !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .channel-section-title {
-      color: #8e8e93 !important;
-    }
-
-    /* Members panel */
-    .light-theme .members-panel {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .members-panel-header {
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .member-stat {
-      background: #f5f5f7 !important;
-    }
-
-    /* User menu dropdown */
-    .light-theme .user-menu {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
-    }
-
-    .light-theme .user-menu-item {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .user-menu-item:hover {
-      background: #e8e8ed !important;
-    }
-
-    /* Dropdowns and selects */
-    .light-theme .model-dropdown,
-    .light-theme .aspect-dropdown,
-    .light-theme .character-dropdown,
-    .light-theme .dropdown-content {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .dropdown-option,
-    .light-theme .model-option,
-    .light-theme .aspect-option {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .dropdown-option:hover,
-    .light-theme .model-option:hover,
-    .light-theme .aspect-option:hover {
-      background: #e8e8ed !important;
-    }
-
-    /* Sliders */
-    .light-theme .slider-container {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme input[type="range"] {
-      background: #d1d1d6 !important;
-    }
-
-    /* Text colors */
-    .light-theme .section-title,
-    .light-theme .control-label,
-    .light-theme h1, .light-theme h2, .light-theme h3, .light-theme h4 {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .subtitle,
-    .light-theme .description,
-    .light-theme .helper-text,
-    .light-theme .login-modal-subtitle {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme p,
-    .light-theme span,
-    .light-theme label {
-      color: #1d1d1f;
-    }
-
-    /* Muted text */
-    .light-theme .text-muted,
-    .light-theme .muted,
-    .light-theme small {
-      color: #8e8e93 !important;
-    }
-
-    /* Tier badge in channel header */
-    .light-theme .channel-tier-badge {
-      background: #e8e8ed !important;
-      border-color: #d1d1d6 !important;
-      color: #1d1d1f !important;
-    }
-
-    /* Admin buttons */
-    .light-theme .admin-members-toggle,
-    .light-theme .admin-channels-toggle {
-      background: rgba(0, 122, 255, 0.1) !important;
-      border-color: rgba(0, 122, 255, 0.3) !important;
-    }
-
-    /* No access screens */
-    .light-theme .no-access-container {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .membership-card {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Resource library */
-    .light-theme .resource-library,
-    .light-theme .starthere-container {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .resource-filters {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Edit tools */
-    .light-theme .edit-tool-btn {
-      background: #e8e8ed !important;
-      color: #1d1d1f !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .edit-tool-btn:hover,
-    .light-theme .edit-tool-btn.active {
-      background: #d1d1d6 !important;
-    }
-
-    /* Caption tab */
-    .light-theme .caption-container,
-    .light-theme .caption-chat-area {
-      background: #f5f5f7 !important;
-    }
-
-    .light-theme .caption-message {
-      background: #ffffff !important;
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .caption-message.assistant {
-      background: #e8e8ed !important;
-    }
-
-    /* Scrollbars for light theme */
-    .light-theme ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    .light-theme ::-webkit-scrollbar-track {
-      background: #f0f0f5;
-    }
-
-    .light-theme ::-webkit-scrollbar-thumb {
-      background: #c7c7cc;
-      border-radius: 4px;
-    }
-
-    .light-theme ::-webkit-scrollbar-thumb:hover {
-      background: #a0a0a5;
-    }
-
-    /* Policy pages */
-    .light-theme .policies-admin-container,
-    .light-theme .policy-admin-card {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* FAQ sections */
-    .light-theme .faq-section {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Video controls */
-    .light-theme .video-control-group {
-      background: #f5f5f7 !important;
-    }
-
-    /* Character details in modal */
-    .light-theme .character-modal-body {
-      color: #1d1d1f !important;
-    }
-
-    /* Tab systems */
-    .light-theme .tabs-container,
-    .light-theme .subtabs-container {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Tooltips */
-    .light-theme .tooltip {
-      background: #1d1d1f !important;
-      color: #ffffff !important;
-    }
-
-    /* Age verification modal */
-    .light-theme .age-modal-content {
-      background: #ffffff !important;
-    }
-
-    .light-theme .age-modal h2,
-    .light-theme .age-modal p {
-      color: #1d1d1f !important;
-    }
-
-    /* Welcome message in chat */
-    .light-theme .chat-welcome {
-      color: #6e6e73 !important;
-    }
-
-    .light-theme .chat-welcome-title {
-      color: #1d1d1f !important;
-    }
-
-    /* Online users */
-    .light-theme .online-user {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .channel-online {
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Module viewer */
-    .light-theme .module-viewer,
-    .light-theme .module-content {
-      background: #ffffff !important;
-      color: #1d1d1f !important;
-    }
-
-    /* Send to menu */
-    .light-theme .send-to-menu {
-      background: #ffffff !important;
-      border-color: #d1d1d6 !important;
-    }
-
-    .light-theme .send-to-option {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .send-to-option:hover {
-      background: #e8e8ed !important;
-    }
-
-    /* Stats and counts */
-    .light-theme .stat-value {
-      color: #1d1d1f !important;
-    }
-
-    .light-theme .stat-label {
-      color: #6e6e73 !important;
-    }
-
-    /* Border overrides for common elements */
-    .light-theme [style*="border-color: #2a2a2a"],
-    .light-theme [style*="border: 1px solid #2a2a2a"] {
-      border-color: #d1d1d6 !important;
-    }
-
-    /* Ensure white text on gradient buttons stays white */
-    .light-theme .generate-btn,
-    .light-theme .primary-btn,
-    .light-theme .resource-upgrade-btn,
-    .light-theme .membership-btn {
-      color: #ffffff !important;
-    }
-
-    /* Cold Start Banner */
-    .cold-start-banner {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(135deg, #ff9500, #ff6b00);
-      color: #fff;
-      padding: 12px 20px;
-      text-align: center;
-      z-index: 10001;
-      display: none;
-      animation: slideDown 0.3s ease-out;
-      font-size: 0.9rem;
-    }
-
-    .cold-start-banner.active {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    .cold-start-banner .spinner {
-      width: 18px;
-      height: 18px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .cold-start-banner.ready {
-      background: linear-gradient(135deg, #00c853, #00a844);
-    }
-
-    @keyframes slideDown {
-      from { transform: translateY(-100%); }
-      to { transform: translateY(0); }
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    /* Light theme overrides and cold-start banner now in external css/main.css */
   </style>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -7969,13 +6964,19 @@
     <div class="login-modal" id="loginModal">
       <div class="login-modal-content">
         <div class="login-modal-title">Welcome to Vixxxen</div>
-        <div class="login-modal-subtitle">Sign in to continue creating amazing content</div>
+        <div class="login-modal-subtitle">Sign in or create an account to start creating</div>
 
         <input type="email" class="login-input" placeholder="Email" id="loginEmail">
-        <input type="password" class="login-input" placeholder="Password" id="loginPassword">
+        <input type="password" class="login-input" placeholder="Password (min 6 characters)" id="loginPassword">
 
-        <button class="user-menu-btn primary" onclick="handleLogin()">Sign In</button>
-        <button class="user-menu-btn" onclick="closeLoginModal()">Cancel</button>
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <button class="user-menu-btn primary" onclick="handleLogin()" style="flex: 1;">Sign In</button>
+          <button class="user-menu-btn primary" onclick="handleSignUpFromModal()" style="flex: 1; background: linear-gradient(135deg, #00b2ff, #0088cc);">Create Account</button>
+        </div>
+        <div style="font-size: 0.8rem; color: #888; text-align: center; margin-top: 8px;">
+          🎁 New accounts get <strong style="color: #00b2ff;">20 free credits</strong> to start!
+        </div>
+        <button class="user-menu-btn" onclick="closeLoginModal()" style="margin-top: 8px;">Cancel</button>
       </div>
     </div>
 
@@ -10141,25 +9142,28 @@
     </video>
   </div>
 
+  <!-- External JavaScript Modules (load in order) -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/zoom-controls.js"></script>
+  <script src="js/reporting.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/admin-reports.js"></script>
+  <script src="js/payment-modals.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/bulk-selection.js"></script>
+  <script src="js/account-page.js"></script>
+  <script src="js/billing-page.js"></script>
+  <script src="js/delete-functions.js"></script>
+
   <script>
     // ===========================================
-    // SUPABASE CONFIGURATION
+    // INLINE APPLICATION CODE
     // ===========================================
-    const SUPABASE_URL = 'https://kdgjbyfqytjtywxlekpz.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkZ2pieWZxeXRqdHl3eGxla3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTQ5MTIsImV4cCI6MjA4MjA5MDkxMn0.2v2n2pBbKeFAzq6M6XkgTpSI4e5_ifeao7gRFQ5q6HA';
-
-    // Check if Supabase loaded
-    if (typeof window.supabase === 'undefined') {
-      console.error('❌ SUPABASE NOT LOADED! Check your internet connection.');
-    } else {
-      console.log('✅ Supabase client library loaded');
-    }
-
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✅ Supabase initialized for project:', SUPABASE_URL);
-
-    // Current user session
-    let currentUser = null;
+    // External modules: config, utils, zoom-controls, reporting, theme,
+    // admin-reports, payment-modals, analytics, modals, bulk-selection,
+    // account-page, billing-page, delete-functions
 
     // ===========================================
     // SUPABASE STORAGE FUNCTIONS
@@ -11006,22 +10010,13 @@
       setTimeout(() => element.remove(), 300);
     }
 
-    // Auto-detect local vs production environment
-    // Works for: localhost, 127.0.0.1, or file:// protocol (opening HTML directly)
-    const isLocal = window.location.hostname === 'localhost'
-      || window.location.hostname === '127.0.0.1'
-      || window.location.protocol === 'file:';
-    // In production, use empty string for same-origin API calls
-    const API_BASE_URL = isLocal ? 'http://localhost:3002' : '';
-    console.log(`🔗 API URL: ${API_BASE_URL || window.location.origin} (${isLocal ? 'local' : 'production'})`);
+    // Note: isLocal, API_BASE_URL, NSFW_ONLY_MODELS are defined in js/config.js
+
     let currentModel = 'nano-banana';
     let generatedImages = [];
     let referenceImages = [];
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
-
-    // NSFW-only models - always tag output as NSFW regardless of content mode
-    const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
 
     // Helper to check if content should be tagged NSFW (based on mode OR model)
     function isNsfwContent(model) {
@@ -11241,15 +10236,15 @@
       if (mode === 'nsfw') {
         // Check if user is logged in
         if (!currentUser) {
-          alert('Please log in to access NSFW content.');
+          showLoginRequiredModal();
           return;
         }
 
         // Check if already verified
         if (!ageVerified) {
-          // Check verification status from server
+          // Check verification status from server (uses JWT auth)
           try {
-            const response = await fetch(`${API_BASE_URL}/api/age-verification/status?user_id=${currentUser.id}`);
+            const response = await authFetch(`${API_BASE_URL}/api/age-verification/status`);
             const data = await response.json();
 
             if (data.verified) {
@@ -11459,306 +10454,9 @@
       }
     }
 
-    // ===========================================
-    // REPORTING SYSTEM
-    // ===========================================
+    // Note: Reporting system functions are in js/reporting.js
 
-    // Open report modal for content
-    function openReportModal(contentType, contentId, contentUrl = null, contentPreview = null, reportedUserId = null) {
-      if (!currentUser) {
-        alert('Please log in to report content');
-        return;
-      }
-
-      document.getElementById('reportContentType').value = contentType;
-      document.getElementById('reportContentId').value = contentId || '';
-      document.getElementById('reportContentUrl').value = contentUrl || '';
-      document.getElementById('reportContentPreview').value = contentPreview || '';
-      document.getElementById('reportedUserId').value = reportedUserId || '';
-
-      // Reset form
-      document.getElementById('reportForm').reset();
-      document.getElementById('reportSubmitBtn').disabled = false;
-      document.getElementById('reportSubmitBtn').textContent = 'Submit Report';
-
-      document.getElementById('reportModal').classList.add('active');
-    }
-
-    // Close report modal
-    function closeReportModal() {
-      document.getElementById('reportModal').classList.remove('active');
-    }
-
-    // Submit report
-    async function submitReport(event) {
-      event.preventDefault();
-
-      const submitBtn = document.getElementById('reportSubmitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
-
-      const reportData = {
-        reporter_user_id: currentUser?.id || null,
-        anonymous: document.getElementById('reportAnonymous').checked,
-        content_type: document.getElementById('reportContentType').value,
-        content_id: document.getElementById('reportContentId').value || null,
-        content_url: document.getElementById('reportContentUrl').value || null,
-        content_preview: document.getElementById('reportContentPreview').value || null,
-        reported_user_id: document.getElementById('reportedUserId').value || null,
-        reason: document.getElementById('reportReason').value,
-        details: document.getElementById('reportDetails').value || null
-      };
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/reports`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reportData)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (response.status === 429) {
-            alert('Rate limit exceeded. Please wait before submitting more reports.');
-          } else if (response.status === 409) {
-            alert('You have already reported this content.');
-          } else {
-            throw new Error(data.error || 'Failed to submit report');
-          }
-          return;
-        }
-
-        alert('Thank you for your report. Our team will review it.');
-        closeReportModal();
-
-      } catch (error) {
-        console.error('Error submitting report:', error);
-        alert('Error submitting report. Please try again.');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Report';
-      }
-    }
-
-    // Report button for generated content
-    function getReportButton(contentType, contentId, contentUrl = null, reportedUserId = null) {
-      return `
-        <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${contentType}', '${contentId}', '${contentUrl || ''}', '', '${reportedUserId || ''}')" title="Report content">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-            <line x1="4" y1="22" x2="4" y2="15"></line>
-          </svg>
-        </button>
-      `;
-    }
-
-    // ===========================================
-    // ADMIN REPORTS DASHBOARD
-    // ===========================================
-
-    // Load reports for admin dashboard
-    async function loadAdminReports() {
-      if (!isUserAdmin) return;
-
-      const status = document.getElementById('reportStatusFilter')?.value || 'pending';
-      const contentType = document.getElementById('reportTypeFilter')?.value || '';
-
-      try {
-        // Load stats
-        const statsResponse = await fetch(`${API_BASE_URL}/api/reports/stats`);
-        if (statsResponse.ok) {
-          const stats = await statsResponse.json();
-          document.getElementById('pendingReportsCount').textContent = stats.by_status?.pending || 0;
-          document.getElementById('reviewingReportsCount').textContent = stats.by_status?.reviewing || 0;
-          document.getElementById('resolvedReportsCount').textContent = stats.by_status?.resolved || 0;
-          document.getElementById('autoHiddenCount').textContent = stats.auto_hidden_pending || 0;
-        }
-
-        // Load reports list
-        let url = `${API_BASE_URL}/api/reports?is_admin=true&limit=50`;
-        if (status) url += `&status=${status}`;
-        if (contentType) url += `&content_type=${contentType}`;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to load reports');
-
-        const data = await response.json();
-        renderReportsList(data.reports);
-
-      } catch (error) {
-        console.error('Error loading reports:', error);
-        document.getElementById('reportsList').innerHTML = `
-          <div style="text-align: center; padding: 40px; color: #ff4444;">
-            Failed to load reports. Please try again.
-          </div>
-        `;
-      }
-    }
-
-    // Render reports list
-    function renderReportsList(reports) {
-      const container = document.getElementById('reportsList');
-
-      if (!reports || reports.length === 0) {
-        container.innerHTML = `
-          <div class="reports-empty-state" style="text-align: center; padding: 60px 20px; background: linear-gradient(135deg, rgba(74, 222, 128, 0.05), rgba(74, 222, 128, 0.02)); border: 1px solid rgba(74, 222, 128, 0.15); border-radius: 16px;">
-            <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
-            <div style="font-size: 1.3rem; font-weight: 600; color: #4ade80; margin-bottom: 8px;">All Clear!</div>
-            <div style="color: #888; font-size: 0.95rem;">No content reports to review at this time.</div>
-          </div>
-        `;
-        return;
-      }
-
-      const reasonLabels = {
-        illegal_content: '🚨 Illegal Content',
-        underage_depiction: '⚠️ Underage Depiction',
-        non_consensual: '🚫 Non-consensual',
-        harassment: '😠 Harassment',
-        hate_speech: '🗣️ Hate Speech',
-        impersonation: '🎭 Impersonation',
-        spam: '📧 Spam',
-        other: '❓ Other'
-      };
-
-      const typeIcons = {
-        image: '🖼️',
-        video: '🎬',
-        audio: '🔊',
-        chat_message: '💬'
-      };
-
-      const statusColors = {
-        pending: '#ffa500',
-        reviewing: '#00b2ff',
-        resolved: '#4ade80',
-        dismissed: '#888'
-      };
-
-      container.innerHTML = reports.map(report => {
-        const date = new Date(report.created_at).toLocaleDateString();
-        const time = new Date(report.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        return `
-          <div class="report-item" style="background: #252525; border-radius: 12px; padding: 20px; border-left: 4px solid ${statusColors[report.status]};">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-              <div>
-                <span style="font-size: 1.1rem; margin-right: 8px;">${typeIcons[report.content_type] || '📄'}</span>
-                <span style="color: #fff; font-weight: 600;">${reasonLabels[report.reason] || report.reason}</span>
-                ${report.auto_hidden ? '<span style="background: #ff4444; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">AUTO-HIDDEN</span>' : ''}
-              </div>
-              <span style="color: #888; font-size: 0.85rem;">${date} ${time}</span>
-            </div>
-
-            ${report.details ? `<p style="color: #aaa; margin-bottom: 12px; font-size: 0.9rem;">${escapeHtml(report.details)}</p>` : ''}
-
-            ${report.content_url ? `
-              <div style="margin-bottom: 12px;">
-                ${report.content_type === 'image' ? `<img src="${report.content_url}" style="max-width: 200px; max-height: 150px; border-radius: 8px; cursor: pointer;" onclick="window.open('${report.content_url}', '_blank')">` : ''}
-                ${report.content_type === 'video' ? `<video src="${report.content_url}" style="max-width: 200px; max-height: 150px; border-radius: 8px;" controls></video>` : ''}
-              </div>
-            ` : ''}
-
-            ${report.content_preview ? `<p style="color: #888; font-size: 0.85rem; font-style: italic; margin-bottom: 12px;">"${escapeHtml(report.content_preview)}"</p>` : ''}
-
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              ${report.status === 'pending' ? `
-                <button onclick="updateReportStatus('${report.id}', 'reviewing')" style="padding: 8px 16px; background: #00b2ff; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem;">Start Review</button>
-              ` : ''}
-              ${report.status === 'reviewing' ? `
-                <button onclick="updateReportStatus('${report.id}', 'resolved', 'content_removed')" style="padding: 8px 16px; background: #ff4444; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem;">Remove Content</button>
-                <button onclick="updateReportStatus('${report.id}', 'resolved', 'warning')" style="padding: 8px 16px; background: #ffa500; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem;">Warn User</button>
-                <button onclick="updateReportStatus('${report.id}', 'dismissed', 'none')" style="padding: 8px 16px; background: #666; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem;">Dismiss</button>
-              ` : ''}
-              ${report.status === 'resolved' || report.status === 'dismissed' ? `
-                <span style="color: #888; font-size: 0.85rem;">Action: ${report.action_taken || 'None'}</span>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // Update report status
-    async function updateReportStatus(reportId, status, action = null) {
-      if (!isUserAdmin || !currentUser) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/reports/${reportId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            admin_user_id: currentUser.id,
-            status: status,
-            action_taken: action,
-            notify_reporter: status === 'resolved' || status === 'dismissed'
-          })
-        });
-
-        if (!response.ok) throw new Error('Failed to update report');
-
-        const data = await response.json();
-
-        // Show confirmation for content removal
-        if (data.content_removed) {
-          alert('Content has been removed from the database.');
-        }
-
-        // Reload reports
-        loadAdminReports();
-
-      } catch (error) {
-        console.error('Error updating report:', error);
-        alert('Failed to update report. Please try again.');
-      }
-    }
-
-    // ===========================================
-    // ZOOM SLIDER FUNCTIONS
-    // ===========================================
-    function updateImageGridZoom(value) {
-      const outputGrid = document.getElementById('outputGrid');
-      if (outputGrid) {
-        outputGrid.style.setProperty('--grid-item-size', value + 'px');
-      }
-      // Save preference
-      localStorage.setItem('imageGridZoom', value);
-    }
-
-    function updateVideoGridZoom(value) {
-      const videoOutputGrid = document.getElementById('videoOutputGrid');
-      if (videoOutputGrid) {
-        videoOutputGrid.style.setProperty('--grid-item-size', value + 'px');
-      }
-      // Save preference
-      localStorage.setItem('videoGridZoom', value);
-    }
-
-    // Load saved zoom preferences on page load
-    function loadZoomPreferences() {
-      const savedImageZoom = localStorage.getItem('imageGridZoom');
-      const savedVideoZoom = localStorage.getItem('videoGridZoom');
-
-      if (savedImageZoom) {
-        const imageSlider = document.getElementById('imageZoomSlider');
-        if (imageSlider) {
-          imageSlider.value = savedImageZoom;
-          updateImageGridZoom(savedImageZoom);
-        }
-      }
-
-      if (savedVideoZoom) {
-        const videoSlider = document.getElementById('videoZoomSlider');
-        if (videoSlider) {
-          videoSlider.value = savedVideoZoom;
-          updateVideoGridZoom(savedVideoZoom);
-        }
-      }
-    }
-
-    // Initialize zoom preferences when DOM is ready
-    document.addEventListener('DOMContentLoaded', loadZoomPreferences);
+    // Note: Admin reports dashboard functions are in js/admin-reports.js
 
     // Initialize content mode when DOM is ready
     document.addEventListener('DOMContentLoaded', initContentMode);
@@ -11942,6 +10640,13 @@
     }
 
     function handleFileUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const files = Array.from(event.target.files);
 
       if (referenceImages.length + files.length > 14) {
@@ -12042,6 +10747,13 @@
 
     // Video Tab Functions
     function handleVideoStartImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -12082,6 +10794,13 @@
     }
 
     function handleVeoLastFrameUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -12147,8 +10866,7 @@
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
-        alert('Please log in to generate videos.');
-        openSubscriptionPage();
+        showLoginRequiredModal();
         resetButton();
         return;
       }
@@ -12506,106 +11224,18 @@
         });
     }
 
-    async function deleteVideo(element) {
-      if (!confirm('Delete this video? This cannot be undone.')) return;
-
-      const videoId = element.dataset.videoId;
-      const videoUrl = element.dataset.videoUrl;
-
-      // Add deleting state
-      element.style.opacity = '0.5';
-      element.style.pointerEvents = 'none';
-
-      try {
-        // If we have an ID, delete from database and storage
-        if (videoId && currentUser) {
-          // Get the storage path from the database first
-          const { data: videoData, error: fetchError } = await supabaseClient
-            .from('generated_videos')
-            .select('storage_path')
-            .eq('id', videoId)
-            .single();
-
-          if (!fetchError && videoData?.storage_path) {
-            // Delete from storage
-            const { error: storageError } = await supabaseClient.storage
-              .from('generated-videos')
-              .remove([videoData.storage_path]);
-
-            if (storageError) {
-              console.error('Video storage delete error:', storageError);
-            }
-          }
-
-          // Delete from database
-          const { error: dbError } = await supabaseClient
-            .from('generated_videos')
-            .delete()
-            .eq('id', videoId);
-
-          if (dbError) {
-            console.error('Video database delete error:', dbError);
-            throw dbError;
-          }
-        } else if (videoUrl && currentUser) {
-          // Try to find and delete by URL if no ID (newly generated)
-          const { data: videoData, error: fetchError } = await supabaseClient
-            .from('generated_videos')
-            .select('id, storage_path')
-            .eq('public_url', videoUrl)
-            .single();
-
-          if (!fetchError && videoData) {
-            if (videoData.storage_path) {
-              await supabaseClient.storage
-                .from('generated-videos')
-                .remove([videoData.storage_path]);
-            }
-            await supabaseClient
-              .from('generated_videos')
-              .delete()
-              .eq('id', videoData.id);
-          }
-        }
-
-        // Remove from local array
-        const index = generatedVideos.findIndex(vid => vid.url === videoUrl);
-        if (index > -1) {
-          generatedVideos.splice(index, 1);
-        }
-
-        // Remove from DOM with animation
-        element.style.transition = 'opacity 0.3s, transform 0.3s';
-        element.style.opacity = '0';
-        element.style.transform = 'scale(0.8)';
-        setTimeout(() => element.remove(), 300);
-
-        console.log('🗑️ Video deleted successfully');
-      } catch (error) {
-        console.error('Error deleting video:', error);
-        alert('Failed to delete video: ' + error.message);
-        element.style.opacity = '1';
-        element.style.pointerEvents = 'auto';
-      }
-    }
-
-    function showVideoError(message, type = 'error') {
-      const errorContainer = document.getElementById('videoErrorContainer');
-      const icon = type === 'warning' ? '⚠️' : '❌';
-      errorContainer.innerHTML = `
-        <div class="error-message" style="${type === 'warning' ? 'background: rgba(255, 165, 0, 0.1); border-color: rgba(255, 165, 0, 0.3);' : ''}">
-          ${icon} ${message}
-        </div>
-      `;
-
-      // Auto-hide after 7 seconds
-      setTimeout(() => {
-        errorContainer.innerHTML = '';
-      }, 7000);
-    }
+    // deleteVideo moved to js/delete-functions.js
+    // showVideoError moved to js/utils.js
 
     // Edit/Eraser Tab Functions with Canvas Mask Drawing
     function handleEditSourceImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -12970,6 +11600,12 @@
 
     // Apply the crop and update the image
     function applyCrop() {
+      // Require login for crop
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       if (!cropperInstance) {
         showEditError('Please upload an image first');
         return;
@@ -13102,6 +11738,12 @@
     }
 
     function performEditAction() {
+      // Require login for edit actions
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       console.log('performEditAction called, currentEditTool:', currentEditTool);
       console.log('editSourceImage:', !!editSourceImage);
       console.log('maskCanvas:', !!maskCanvas);
@@ -13465,6 +12107,13 @@
     let inpaintResultUrl = null;
 
     function handleInpaintImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -13755,6 +12404,12 @@
     }
 
     async function generateInpaint() {
+      // Require login for inpaint generation
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       if (!inpaintImage) {
         showError('Please upload an image first');
         return;
@@ -14089,6 +12744,13 @@
     }
 
     function handleCaptionImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -14140,6 +12802,12 @@
     }
 
     async function generateCaption() {
+      // Require login for caption generation
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       if (isCaptioning) return;
 
       const input = document.getElementById('captionInput');
@@ -14537,8 +13205,7 @@
 
       // Check if user is logged in
       if (!isUserLoggedIn || !currentUser) {
-        alert('Please log in to generate images.');
-        openSubscriptionPage();
+        showLoginRequiredModal();
         resetButton();
         return;
       }
@@ -14962,503 +13629,9 @@
       openReportModal('image', data.timestamp, data.url);
     }
 
-    // ===========================================
-    // BULK SELECTION FUNCTIONS
-    // ===========================================
-    let imageSelectionMode = false;
-    let videoSelectionMode = false;
-    let selectedImages = new Set();
-    let selectedVideos = new Set();
-
-    // Toggle image selection mode
-    function toggleImageSelectionMode() {
-      imageSelectionMode = !imageSelectionMode;
-      const outputGrid = document.getElementById('outputGrid');
-      const toggle = document.getElementById('imageSelectionToggle');
-      const toolbar = document.getElementById('imageBulkToolbar');
-
-      if (imageSelectionMode) {
-        outputGrid.classList.add('selection-mode');
-        toggle.classList.add('active');
-        toolbar.classList.add('active');
-      } else {
-        outputGrid.classList.remove('selection-mode');
-        toggle.classList.remove('active');
-        toolbar.classList.remove('active');
-        // Clear selections when exiting selection mode
-        deselectAllImages();
-      }
-    }
-
-    // Toggle video selection mode
-    function toggleVideoSelectionMode() {
-      videoSelectionMode = !videoSelectionMode;
-      const outputGrid = document.getElementById('videoOutputGrid');
-      const toggle = document.getElementById('videoSelectionToggle');
-      const toolbar = document.getElementById('videoBulkToolbar');
-
-      if (videoSelectionMode) {
-        outputGrid.classList.add('selection-mode');
-        toggle.classList.add('active');
-        toolbar.classList.add('active');
-      } else {
-        outputGrid.classList.remove('selection-mode');
-        toggle.classList.remove('active');
-        toolbar.classList.remove('active');
-        // Clear selections when exiting selection mode
-        deselectAllVideos();
-      }
-    }
-
-    // Toggle individual image selection
-    function toggleImageSelection(event, checkbox) {
-      event.stopPropagation();
-      const item = checkbox.closest('.output-item');
-      const imageUrl = item.dataset.imageUrl;
-
-      if (selectedImages.has(imageUrl)) {
-        selectedImages.delete(imageUrl);
-        item.classList.remove('selected');
-        checkbox.classList.remove('checked');
-      } else {
-        selectedImages.add(imageUrl);
-        item.classList.add('selected');
-        checkbox.classList.add('checked');
-      }
-      updateImageSelectionCount();
-    }
-
-    // Toggle individual video selection
-    function toggleVideoSelection(event, checkbox) {
-      event.stopPropagation();
-      const item = checkbox.closest('.output-item');
-      const videoUrl = item.dataset.videoUrl;
-
-      if (selectedVideos.has(videoUrl)) {
-        selectedVideos.delete(videoUrl);
-        item.classList.remove('selected');
-        checkbox.classList.remove('checked');
-      } else {
-        selectedVideos.add(videoUrl);
-        item.classList.add('selected');
-        checkbox.classList.add('checked');
-      }
-      updateVideoSelectionCount();
-    }
-
-    // Select all images
-    function selectAllImages() {
-      const items = document.querySelectorAll('#outputGrid .output-item');
-      items.forEach(item => {
-        const imageUrl = item.dataset.imageUrl;
-        if (imageUrl) {
-          selectedImages.add(imageUrl);
-          item.classList.add('selected');
-          const checkbox = item.querySelector('.select-checkbox');
-          if (checkbox) checkbox.classList.add('checked');
-        }
-      });
-      updateImageSelectionCount();
-    }
-
-    // Deselect all images
-    function deselectAllImages() {
-      selectedImages.clear();
-      const items = document.querySelectorAll('#outputGrid .output-item');
-      items.forEach(item => {
-        item.classList.remove('selected');
-        const checkbox = item.querySelector('.select-checkbox');
-        if (checkbox) checkbox.classList.remove('checked');
-      });
-      updateImageSelectionCount();
-    }
-
-    // Select all videos
-    function selectAllVideos() {
-      const items = document.querySelectorAll('#videoOutputGrid .output-item');
-      items.forEach(item => {
-        const videoUrl = item.dataset.videoUrl;
-        if (videoUrl) {
-          selectedVideos.add(videoUrl);
-          item.classList.add('selected');
-          const checkbox = item.querySelector('.select-checkbox');
-          if (checkbox) checkbox.classList.add('checked');
-        }
-      });
-      updateVideoSelectionCount();
-    }
-
-    // Deselect all videos
-    function deselectAllVideos() {
-      selectedVideos.clear();
-      const items = document.querySelectorAll('#videoOutputGrid .output-item');
-      items.forEach(item => {
-        item.classList.remove('selected');
-        const checkbox = item.querySelector('.select-checkbox');
-        if (checkbox) checkbox.classList.remove('checked');
-      });
-      updateVideoSelectionCount();
-    }
-
-    // Update image selection count
-    function updateImageSelectionCount() {
-      const count = selectedImages.size;
-      document.getElementById('imageSelectedCount').textContent = count;
-      document.getElementById('imageBulkDownloadBtn').disabled = count === 0;
-      document.getElementById('imageBulkDeleteBtn').disabled = count === 0;
-    }
-
-    // Update video selection count
-    function updateVideoSelectionCount() {
-      const count = selectedVideos.size;
-      document.getElementById('videoSelectedCount').textContent = count;
-      document.getElementById('videoBulkDownloadBtn').disabled = count === 0;
-      document.getElementById('videoBulkDeleteBtn').disabled = count === 0;
-    }
-
-    // Bulk download images
-    async function bulkDownloadImages() {
-      const count = selectedImages.size;
-      if (count === 0) return;
-
-      const downloadBtn = document.getElementById('imageBulkDownloadBtn');
-      downloadBtn.disabled = true;
-      downloadBtn.innerHTML = `<span class="spinner"></span> Downloading...`;
-
-      let downloaded = 0;
-      for (const url of selectedImages) {
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `vixxxen-${Date.now()}-${++downloaded}.png`;
-          link.click();
-          URL.revokeObjectURL(link.href);
-          // Small delay between downloads to prevent browser blocking
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (err) {
-          console.error('Download failed for:', url, err);
-        }
-      }
-
-      downloadBtn.disabled = false;
-      downloadBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        Download
-      `;
-
-      // Deselect after download
-      deselectAllImages();
-    }
-
-    // Bulk download videos
-    async function bulkDownloadVideos() {
-      const count = selectedVideos.size;
-      if (count === 0) return;
-
-      const downloadBtn = document.getElementById('videoBulkDownloadBtn');
-      downloadBtn.disabled = true;
-      downloadBtn.innerHTML = `<span class="spinner"></span> Downloading...`;
-
-      let downloaded = 0;
-      for (const url of selectedVideos) {
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `vixxxen-video-${Date.now()}-${++downloaded}.mp4`;
-          link.click();
-          URL.revokeObjectURL(link.href);
-          // Longer delay for videos
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (err) {
-          console.error('Download failed for:', url, err);
-        }
-      }
-
-      downloadBtn.disabled = false;
-      downloadBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        Download
-      `;
-
-      // Deselect after download
-      deselectAllVideos();
-    }
-
-    // Bulk delete images
-    async function bulkDeleteImages() {
-      const count = selectedImages.size;
-      if (count === 0) return;
-
-      if (!confirm(`Delete ${count} selected image${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
-
-      const deleteBtn = document.getElementById('imageBulkDeleteBtn');
-      deleteBtn.disabled = true;
-      deleteBtn.innerHTML = `<span class="spinner"></span> Deleting...`;
-
-      let deleted = 0;
-      const errors = [];
-
-      for (const imageUrl of selectedImages) {
-        try {
-          // Find the element
-          const item = document.querySelector(`#outputGrid .output-item[data-image-url="${CSS.escape(imageUrl)}"]`);
-          if (!item) continue;
-
-          const imageId = item.dataset.imageId;
-
-          // Delete from database/storage if we have an ID
-          if (imageId && currentUser) {
-            // Get storage path
-            const { data: imageData } = await supabaseClient
-              .from('generated_images')
-              .select('storage_path')
-              .eq('id', imageId)
-              .single();
-
-            if (imageData?.storage_path) {
-              await supabaseClient.storage
-                .from('generated-images')
-                .remove([imageData.storage_path]);
-            }
-
-            // Delete from database
-            await supabaseClient
-              .from('generated_images')
-              .delete()
-              .eq('id', imageId);
-          }
-
-          // Remove from local array
-          const index = generatedImages.findIndex(img => img.url === imageUrl);
-          if (index > -1) {
-            generatedImages.splice(index, 1);
-          }
-
-          // Remove from DOM
-          item.style.opacity = '0';
-          item.style.transform = 'scale(0.8)';
-          setTimeout(() => item.remove(), 300);
-          deleted++;
-        } catch (err) {
-          console.error('Failed to delete image:', imageUrl, err);
-          errors.push(imageUrl);
-        }
-      }
-
-      deleteBtn.disabled = false;
-      deleteBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-        Delete
-      `;
-
-      // Clear selections
-      selectedImages.clear();
-      updateImageSelectionCount();
-
-      if (errors.length > 0) {
-        showError(`Failed to delete ${errors.length} image${errors.length > 1 ? 's' : ''}`);
-      }
-
-      console.log(`🗑️ Bulk deleted ${deleted} image${deleted > 1 ? 's' : ''}`);
-    }
-
-    // Bulk delete videos
-    async function bulkDeleteVideos() {
-      const count = selectedVideos.size;
-      if (count === 0) return;
-
-      if (!confirm(`Delete ${count} selected video${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
-
-      const deleteBtn = document.getElementById('videoBulkDeleteBtn');
-      deleteBtn.disabled = true;
-      deleteBtn.innerHTML = `<span class="spinner"></span> Deleting...`;
-
-      let deleted = 0;
-      const errors = [];
-
-      for (const videoUrl of selectedVideos) {
-        try {
-          // Find the element
-          const item = document.querySelector(`#videoOutputGrid .output-item[data-video-url="${CSS.escape(videoUrl)}"]`);
-          if (!item) continue;
-
-          const videoId = item.dataset.videoId;
-
-          // Delete from database/storage if we have an ID
-          if (videoId && currentUser) {
-            // Get storage path
-            const { data: videoData } = await supabaseClient
-              .from('generated_videos')
-              .select('storage_path')
-              .eq('id', videoId)
-              .single();
-
-            if (videoData?.storage_path) {
-              await supabaseClient.storage
-                .from('generated-videos')
-                .remove([videoData.storage_path]);
-            }
-
-            // Delete from database
-            await supabaseClient
-              .from('generated_videos')
-              .delete()
-              .eq('id', videoId);
-          }
-
-          // Remove from local array
-          const index = generatedVideos.findIndex(v => v.url === videoUrl);
-          if (index > -1) {
-            generatedVideos.splice(index, 1);
-          }
-
-          // Remove from DOM
-          item.style.opacity = '0';
-          item.style.transform = 'scale(0.8)';
-          setTimeout(() => item.remove(), 300);
-          deleted++;
-        } catch (err) {
-          console.error('Failed to delete video:', videoUrl, err);
-          errors.push(videoUrl);
-        }
-      }
-
-      deleteBtn.disabled = false;
-      deleteBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-        Delete
-      `;
-
-      // Clear selections
-      selectedVideos.clear();
-      updateVideoSelectionCount();
-
-      if (errors.length > 0) {
-        showVideoError(`Failed to delete ${errors.length} video${errors.length > 1 ? 's' : ''}`);
-      }
-
-      console.log(`🗑️ Bulk deleted ${deleted} video${deleted > 1 ? 's' : ''}`);
-    }
-
-    async function deleteImage(element) {
-      if (!confirm('Delete this image? This cannot be undone.')) return;
-
-      const imageId = element.dataset.imageId;
-      const imageUrl = element.dataset.imageUrl;
-
-      // Add deleting state
-      element.style.opacity = '0.5';
-      element.style.pointerEvents = 'none';
-
-      try {
-        // If we have an ID, delete from database and storage
-        if (imageId && currentUser) {
-          // Get the storage path from the database first
-          const { data: imageData, error: fetchError } = await supabaseClient
-            .from('generated_images')
-            .select('storage_path')
-            .eq('id', imageId)
-            .single();
-
-          if (!fetchError && imageData?.storage_path) {
-            // Delete from storage
-            const { error: storageError } = await supabaseClient.storage
-              .from('generated-images')
-              .remove([imageData.storage_path]);
-
-            if (storageError) {
-              console.error('Storage delete error:', storageError);
-            }
-          }
-
-          // Delete from database
-          const { error: dbError } = await supabaseClient
-            .from('generated_images')
-            .delete()
-            .eq('id', imageId);
-
-          if (dbError) {
-            console.error('Database delete error:', dbError);
-            throw dbError;
-          }
-        }
-
-        // Remove from local array
-        const index = generatedImages.findIndex(img => img.url === imageUrl);
-        if (index > -1) {
-          generatedImages.splice(index, 1);
-        }
-
-        // Remove from DOM with animation
-        element.style.transition = 'opacity 0.3s, transform 0.3s';
-        element.style.opacity = '0';
-        element.style.transform = 'scale(0.8)';
-        setTimeout(() => element.remove(), 300);
-
-        console.log('🗑️ Image deleted successfully');
-      } catch (error) {
-        console.error('Error deleting image:', error);
-        alert('Failed to delete image: ' + error.message);
-        element.style.opacity = '1';
-        element.style.pointerEvents = 'auto';
-      }
-    }
-
-    function showImageModal(url) {
-      console.log('🖼️ Opening lightbox with URL:', url ? url.substring(0, 100) + '...' : 'EMPTY');
-      console.log('   URL length:', url ? url.length : 0);
-      const modal = document.getElementById('imageModal');
-      const modalImage = document.getElementById('modalImage');
-      modalImage.src = url;
-      modal.classList.add('active');
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeImageModal() {
-      const modal = document.getElementById('imageModal');
-      modal.classList.remove('active');
-      // Re-enable body scroll
-      document.body.style.overflow = 'auto';
-    }
-
-    function showVideoModal(url) {
-      const modal = document.getElementById('videoModal');
-      const video = document.getElementById('modalVideo');
-      const source = document.getElementById('modalVideoSource');
-      source.src = url;
-      video.load();
-      modal.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeVideoModal(event) {
-      // Only close if clicking the backdrop or close button, not the video
-      if (event && event.target.tagName === 'VIDEO') return;
-      const modal = document.getElementById('videoModal');
-      const video = document.getElementById('modalVideo');
-      video.pause();
-      modal.classList.remove('active');
-      document.body.style.overflow = 'auto';
-    }
+    // Bulk selection functions moved to js/bulk-selection.js
+    // deleteImage moved to js/delete-functions.js
+    // Modal functions moved to js/modals.js
 
     // Toggle send-to dropdown menu
     function toggleSendToMenu(event, button) {
@@ -15600,27 +13773,8 @@
       }
     }
 
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        closeImageModal();
-      }
-    });
-
-    function showError(message, type = 'error') {
-      const errorContainer = document.getElementById('errorContainer');
-      const icon = type === 'warning' ? '⚠️' : '❌';
-      errorContainer.innerHTML = `
-        <div class="error-message" style="${type === 'warning' ? 'background: rgba(255, 165, 0, 0.1); border-color: rgba(255, 165, 0, 0.3);' : ''}">
-          ${icon} ${message}
-        </div>
-      `;
-
-      // Auto-hide after 7 seconds (longer for warnings so user has time to read)
-      setTimeout(() => {
-        errorContainer.innerHTML = '';
-      }, 7000);
-    }
+    // Escape key handler moved to js/modals.js
+    // showError moved to js/utils.js
 
     // Keyboard shortcut: Ctrl/Cmd + Enter to generate
     document.getElementById('promptInput').addEventListener('keydown', function(e) {
@@ -15739,8 +13893,9 @@
     // Deduct credits using Supabase
     async function deductCredits(amount, operation) {
       if (!isUserLoggedIn || !currentUser) {
-        console.warn('User not logged in, skipping credit deduction');
-        return true; // Allow operation in demo mode
+        console.warn('User not logged in, cannot deduct credits');
+        showLoginRequiredModal();
+        return false; // Block operation - login required
       }
 
       if (userCredits < amount) {
@@ -15819,9 +13974,12 @@
       }
     }
 
-    // Check if user has enough credits
+    // Check if user has enough credits (requires login)
     function hasEnoughCredits(amount) {
-      if (!isUserLoggedIn) return true; // Allow in demo mode
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return false; // Block - login required
+      }
       return userCredits >= amount;
     }
 
@@ -15915,134 +14073,8 @@
       }
     }
 
-    // Theme toggle functionality
-    function toggleTheme() {
-      const body = document.body;
-      const themeIcon = document.getElementById('themeIcon');
-      const isLight = body.classList.toggle('light-theme');
-
-      // Update icon
-      themeIcon.textContent = isLight ? '☀️' : '🌙';
-
-      // Save preference
-      localStorage.setItem('vixxxen-theme', isLight ? 'light' : 'dark');
-    }
-
-    // Apply saved theme on page load
-    function applySavedTheme() {
-      const savedTheme = localStorage.getItem('vixxxen-theme');
-      const themeIcon = document.getElementById('themeIcon');
-
-      if (savedTheme === 'light') {
-        document.body.classList.add('light-theme');
-        if (themeIcon) themeIcon.textContent = '☀️';
-      } else {
-        document.body.classList.remove('light-theme');
-        if (themeIcon) themeIcon.textContent = '🌙';
-      }
-    }
-
-    // Call on page load
-    document.addEventListener('DOMContentLoaded', applySavedTheme);
-
-    // Payment Modal Functions
-    function closePaymentModal() {
-      document.getElementById('paymentSuccessModal').classList.remove('active');
-      document.getElementById('paymentFailureModal').classList.remove('active');
-      // Clean up URL by removing payment parameters
-      const url = new URL(window.location);
-      url.searchParams.delete('payment');
-      url.searchParams.delete('tier');
-      window.history.replaceState({}, '', url);
-    }
-
-    function createConfetti() {
-      const colors = ['#00ff88', '#ff2ebb', '#00b2ff', '#ffaa00'];
-      const confettiCount = 50;
-
-      for (let i = 0; i < confettiCount; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-        confetti.style.animationDelay = Math.random() * 0.5 + 's';
-        confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
-
-        document.getElementById('paymentSuccessModal').appendChild(confetti);
-
-        // Remove after animation
-        setTimeout(() => confetti.remove(), 3500);
-      }
-    }
-
-    function showPaymentSuccess(tier) {
-      const modal = document.getElementById('paymentSuccessModal');
-      const message = document.getElementById('paymentSuccessMessage');
-
-      // Update message based on tier/transaction type
-      const messages = {
-        'starter': 'You\'re now subscribed to the Starter Plan! Your credits have been added to your account.',
-        'creator': 'You\'re now subscribed to the Creator Plan! Your credits have been added to your account.',
-        'pro': 'You\'re now subscribed to the Pro Plan! Your credits have been added to your account.',
-        'supernova': 'Welcome to Supernova Membership! You now have access to exclusive community channels.',
-        'mentorship': 'Welcome to the Mentorship Program! You now have access to 1-on-1 guidance and private channels.',
-        'credits_500': 'Successfully purchased 500 credits! Your credits have been added to your account.',
-        'credits_1000': 'Successfully purchased 1,000 credits! Your credits have been added to your account.',
-        'credits_2500': 'Successfully purchased 2,500 credits! Your credits have been added to your account.',
-        'character': 'Character purchased successfully! The character is now available in your Flux and Qwen dropdowns.'
-      };
-
-      message.textContent = messages[tier] || 'Purchase successful! Your payment has been processed.';
-
-      modal.classList.add('active');
-      createConfetti();
-
-      // Reload user profile to show new credits
-      if (typeof bootstrapUser === 'function') {
-        setTimeout(() => bootstrapUser(), 1000);
-      }
-    }
-
-    function showPaymentFailure() {
-      document.getElementById('paymentFailureModal').classList.add('active');
-    }
-
-    // Check for payment status in URL on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const paymentStatus = urlParams.get('payment');
-      const tier = urlParams.get('tier');
-
-      if (paymentStatus === 'success') {
-        setTimeout(() => showPaymentSuccess(tier), 500);
-      } else if (paymentStatus === 'failed') {
-        setTimeout(() => showPaymentFailure(), 500);
-      }
-    });
-
-    // Triple-tap 'p' to toggle payment test panel
-    let pKeyPressCount = 0;
-    let pKeyTimer = null;
-    document.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        // Ignore if user is typing in an input field
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-        pKeyPressCount++;
-
-        if (pKeyPressCount === 3) {
-          const panel = document.getElementById('paymentTestPanel');
-          panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-          pKeyPressCount = 0;
-          clearTimeout(pKeyTimer);
-        } else {
-          clearTimeout(pKeyTimer);
-          pKeyTimer = setTimeout(() => {
-            pKeyPressCount = 0;
-          }, 500);
-        }
-      }
-    });
+    // Note: Theme toggle functions are in js/theme.js
+    // Note: Payment modal functions are in js/payment-modals.js
 
     function toggleUserMenu() {
       const userMenu = document.getElementById('userMenu');
@@ -16072,6 +14104,27 @@
 
     function openLoginModal() {
       document.getElementById('loginModal').classList.add('active');
+    }
+
+    // Show login required modal with message
+    function showLoginRequiredModal() {
+      // Create a brief notification then open login
+      const notification = document.createElement('div');
+      notification.className = 'login-required-toast';
+      notification.innerHTML = `
+        <div style="background: linear-gradient(135deg, #ff6b6b, #ee5a5a); color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 12px; font-weight: 500;">
+          <span style="font-size: 24px;">🔐</span>
+          <span>Sign up to start creating! Get 20 free credits.</span>
+        </div>
+      `;
+      notification.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; animation: slideDown 0.3s ease;';
+      document.body.appendChild(notification);
+
+      // Remove notification after delay and open login
+      setTimeout(() => {
+        notification.remove();
+        openLoginModal();
+      }, 1500);
     }
 
     function closeLoginModal() {
@@ -16163,49 +14216,88 @@
       }
     }
 
+    // Handle signup from the modal directly
+    async function handleSignUpFromModal() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        alert('Please enter both email and password');
+        return;
+      }
+
+      if (password.length < 6) {
+        alert('Password must be at least 6 characters');
+        return;
+      }
+
+      // Show loading state
+      const signupBtn = document.querySelector('#loginModal button[onclick="handleSignUpFromModal()"]');
+      const originalText = signupBtn.textContent;
+      signupBtn.textContent = 'Creating...';
+      signupBtn.disabled = true;
+
+      try {
+        await handleSignUp(email, password);
+      } finally {
+        signupBtn.textContent = originalText;
+        signupBtn.disabled = false;
+      }
+    }
+
     async function handleLogout() {
       try {
         const { error } = await supabaseClient.auth.signOut();
-        if (error) throw error;
-
-        // Reset state
-        isUserLoggedIn = false;
-        currentUser = null;
-        userCredits = 0;
-        ownedCharacters = ['aika', 'jessica', 'alexis']; // Reset to defaults
-
-        // Reset UI (with null checks)
-        const userAvatar = document.getElementById('userAvatar');
-        const userStatusDot = document.getElementById('userStatusDot');
-        const userCreditsDisplay = document.getElementById('userCreditsDisplay');
-        const userMenu = document.getElementById('userMenu');
-
-        if (userAvatar) userAvatar.classList.add('logged-out');
-        if (userStatusDot) userStatusDot.style.display = 'none';
-        if (userCreditsDisplay) userCreditsDisplay.textContent = 'Login';
-        if (userMenu) userMenu.classList.remove('active');
-
-        // Clear login form
-        document.getElementById('loginEmail').value = '';
-        document.getElementById('loginPassword').value = '';
-
-        // Update dropdowns
-        updateCharacterDropdowns();
-
-        console.log('👋 Logged out');
+        // Ignore "session missing" errors - user is already logged out
+        if (error && !error.message?.includes('session')) {
+          throw error;
+        }
       } catch (err) {
-        console.error('Logout error:', err);
-        alert('An error occurred during logout');
+        // Only log non-session errors, don't alert for expected cases
+        if (!err.message?.includes('session')) {
+          console.error('Logout error:', err);
+        }
       }
+
+      // Always reset local state regardless of signOut result
+      isUserLoggedIn = false;
+      currentUser = null;
+      userCredits = 0;
+      ownedCharacters = ['aika', 'jessica', 'alexis']; // Reset to defaults
+
+      // Reset UI (with null checks)
+      const userAvatar = document.getElementById('userAvatar');
+      const userStatusDot = document.getElementById('userStatusDot');
+      const userCreditsDisplay = document.getElementById('userCreditsDisplay');
+      const userMenu = document.getElementById('userMenu');
+
+      if (userAvatar) userAvatar.classList.add('logged-out');
+      if (userStatusDot) userStatusDot.style.display = 'none';
+      if (userCreditsDisplay) userCreditsDisplay.textContent = 'Login';
+      if (userMenu) userMenu.classList.remove('active');
+
+      // Clear login form
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
+
+      // Update dropdowns
+      updateCharacterDropdowns();
+
+      console.log('👋 Logged out');
+
+      // Force page reload to ensure clean state
+      window.location.reload();
     }
 
     // Load user profile data from Supabase (with optional bootstrap optimization)
     async function loadUserProfile(userId) {
       console.log('📊 Loading profile for user:', userId);
       try {
-        // Try bootstrap endpoint first for faster loading
+        // Try bootstrap endpoint first for faster loading (uses JWT auth, not URL param)
         try {
-          const response = await fetch(`${API_BASE_URL}/api/resources/bootstrap/${userId}`);
+          console.log('📊 Calling bootstrap endpoint...');
+          const response = await authFetch(`${API_BASE_URL}/api/resources/bootstrap`);
+          console.log('📊 Bootstrap response status:', response.status);
           if (response.ok) {
             const data = await response.json();
             console.log('📊 Bootstrap data received:', data);
@@ -16239,6 +14331,10 @@
             ]);
 
             return; // Success - exit early
+          } else {
+            // Log the error response for debugging
+            const errorText = await response.text().catch(() => 'Could not read error response');
+            console.warn('📊 Bootstrap returned error:', response.status, errorText);
           }
         } catch (bootstrapErr) {
           console.warn('📊 Bootstrap unavailable, using direct queries:', bootstrapErr.message);
@@ -16305,6 +14401,9 @@
     // Listen for auth state changes
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log('🔐 Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
+
+      // Cache the session immediately for use by authFetch (avoids race condition)
+      setCachedSession(session);
 
       if (session?.user) {
         console.log('🔐 User found in session:', session.user.email);
@@ -16411,13 +14510,10 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/payments/create-charge`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/payments/create-charge`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tier: plan,
-            userId: currentUser.id
-          })
+          body: JSON.stringify({ tier: plan })
         });
 
         const data = await response.json();
@@ -16443,12 +14539,11 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/payments/create-charge`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/payments/create-charge`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tier: `credits_${credits}`,
-            userId: currentUser.id,
             credits: credits,
             price: price
           })
@@ -16464,431 +14559,8 @@
       }
     }
 
-    // ===========================================
-    // ACCOUNT PAGE FUNCTIONS
-    // ===========================================
-
-    // Open account page
-    function openAccountPage() {
-      // Close user menu
-      document.getElementById('userMenu').classList.remove('active');
-
-      // Hide all tab sections
-      document.querySelectorAll('.tab-section').forEach(section => {
-        section.classList.remove('active');
-      });
-
-      // Deactivate all nav tabs
-      document.querySelectorAll('.nav-tab').forEach(navTab => {
-        navTab.classList.remove('active');
-      });
-
-      // Show account page
-      document.getElementById('accountSection').classList.add('active');
-
-      // Load user data into form
-      loadAccountData();
-
-      console.log('📋 Opened account page');
-    }
-
-    // Load account data into form fields
-    function loadAccountData() {
-      if (!currentUser) return;
-
-      // Set display name
-      const nameInput = document.getElementById('accountName');
-      if (nameInput) {
-        nameInput.value = currentUser.full_name || currentUser.email?.split('@')[0] || '';
-      }
-
-      // Set email (disabled field)
-      const emailInput = document.getElementById('accountEmail');
-      if (emailInput) {
-        emailInput.value = currentUser.email || '';
-      }
-
-      // Set avatar text (first letter of name or email)
-      const avatarText = document.getElementById('accountAvatarText');
-      if (avatarText) {
-        const name = currentUser.full_name || currentUser.email || 'U';
-        avatarText.textContent = name.charAt(0).toUpperCase();
-      }
-
-      // Set credits - use userCredits which is loaded from profile
-      const creditsDisplay = document.getElementById('accountCredits');
-      if (creditsDisplay) {
-        creditsDisplay.textContent = userCredits?.toLocaleString() || '0';
-      }
-
-      // Set plan badge - use userPlan which includes membership tier
-      const planBadge = document.getElementById('accountPlanBadge');
-      const planName = document.getElementById('accountPlanName');
-      if (planBadge) planBadge.textContent = userPlan || 'Free Plan';
-      if (planName) planName.textContent = userPlan || 'Free Plan';
-
-      // Set member since
-      const memberSince = document.getElementById('accountMemberSince');
-      if (memberSince && currentUser.created_at) {
-        const date = new Date(currentUser.created_at);
-        memberSince.textContent = date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-
-      // Set avatar image if exists
-      const avatarImg = document.getElementById('accountAvatarImg');
-      if (currentUser.avatar_url && avatarImg) {
-        avatarImg.src = currentUser.avatar_url;
-        avatarImg.style.display = 'block';
-        if (avatarText) avatarText.style.display = 'none';
-      } else if (avatarImg) {
-        avatarImg.style.display = 'none';
-        if (avatarText) avatarText.style.display = 'block';
-      }
-    }
-
-    // Handle avatar upload
-    async function handleAvatarUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (!currentUser) {
-        alert('Please log in first');
-        return;
-      }
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
-      }
-
-      // Validate file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Image must be less than 2MB');
-        return;
-      }
-
-      const uploadBtn = document.getElementById('avatarUploadBtn');
-      const originalText = uploadBtn.textContent;
-      uploadBtn.textContent = 'Uploading...';
-      uploadBtn.disabled = true;
-
-      try {
-        // Generate unique filename
-        const timestamp = Date.now();
-        const extension = file.name.split('.').pop();
-        const fileName = `${currentUser.id}/avatar-${timestamp}.${extension}`;
-
-        // Upload to Supabase Storage (using generated-images bucket with avatars folder)
-        const { data: uploadData, error: uploadError } = await supabaseClient.storage
-          .from('generated-images')
-          .upload(`avatars/${fileName}`, file, {
-            contentType: file.type,
-            upsert: true
-          });
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data: urlData } = supabaseClient.storage
-          .from('generated-images')
-          .getPublicUrl(`avatars/${fileName}`);
-
-        const avatarUrl = urlData.publicUrl;
-
-        // Update profile in database
-        const { error: updateError } = await supabaseClient
-          .from('profiles')
-          .update({
-            avatar_url: avatarUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentUser.id);
-
-        if (updateError) throw updateError;
-
-        // Update local user object
-        currentUser.avatar_url = avatarUrl;
-
-        // Update avatar display
-        const avatarImg = document.getElementById('accountAvatarImg');
-        const avatarText = document.getElementById('accountAvatarText');
-        avatarImg.src = avatarUrl;
-        avatarImg.style.display = 'block';
-        avatarText.style.display = 'none';
-
-        // Update avatar in user menu header
-        const userMenuAvatar = document.querySelector('.user-avatar');
-        if (userMenuAvatar) {
-          userMenuAvatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        }
-
-        console.log('✅ Avatar uploaded:', avatarUrl);
-        alert('Avatar updated successfully!');
-      } catch (error) {
-        console.error('Error uploading avatar:', error);
-        alert('Failed to upload avatar: ' + error.message);
-      } finally {
-        uploadBtn.textContent = originalText;
-        uploadBtn.disabled = false;
-        // Clear file input
-        event.target.value = '';
-      }
-    }
-
-    // Update profile (display name)
-    async function updateProfile() {
-      if (!currentUser) {
-        alert('Please log in first');
-        return;
-      }
-
-      const newName = document.getElementById('accountName').value.trim();
-      if (!newName) {
-        alert('Please enter a display name');
-        return;
-      }
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('profiles')
-          .update({
-            full_name: newName,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentUser.id);
-
-        if (error) throw error;
-
-        // Update local user object
-        currentUser.full_name = newName;
-
-        // Update UI
-        const userNameDisplay = document.getElementById('userName');
-        if (userNameDisplay) {
-          userNameDisplay.textContent = newName;
-        }
-
-        // Update avatar in user menu
-        const avatarText = document.querySelector('.user-avatar');
-        if (avatarText) {
-          avatarText.textContent = newName.charAt(0).toUpperCase();
-        }
-
-        alert('Profile updated successfully!');
-        console.log('✅ Profile updated:', newName);
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        alert('Failed to update profile: ' + error.message);
-      }
-    }
-
-    // Change password
-    async function changePassword() {
-      const currentPassword = document.getElementById('currentPassword').value;
-      const newPassword = document.getElementById('newPassword').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-
-      if (!newPassword || !confirmPassword) {
-        alert('Please fill in all password fields');
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        alert('New passwords do not match');
-        return;
-      }
-
-      if (newPassword.length < 6) {
-        alert('Password must be at least 6 characters');
-        return;
-      }
-
-      try {
-        const { data, error } = await supabaseClient.auth.updateUser({
-          password: newPassword
-        });
-
-        if (error) throw error;
-
-        // Clear password fields
-        document.getElementById('currentPassword').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
-
-        alert('Password changed successfully!');
-        console.log('✅ Password changed');
-      } catch (error) {
-        console.error('Error changing password:', error);
-        alert('Failed to change password: ' + error.message);
-      }
-    }
-
-    // Confirm delete account
-    async function confirmDeleteAccount() {
-      const confirmed = confirm(
-        'Are you sure you want to delete your account?\n\n' +
-        'This action CANNOT be undone. All your data, credits, and generated content will be permanently deleted.'
-      );
-
-      if (!confirmed) return;
-
-      const doubleConfirmed = confirm(
-        'This is your final warning!\n\n' +
-        'Type DELETE in your mind and click OK to permanently delete your account.'
-      );
-
-      if (!doubleConfirmed) return;
-
-      try {
-        // Note: Full account deletion would require a server-side function
-        // For now, we'll sign out and inform the user
-        alert('Account deletion request submitted.\n\nPlease contact support@vixxxen.ai to complete the deletion process.');
-
-        await supabaseClient.auth.signOut();
-        window.location.reload();
-      } catch (error) {
-        console.error('Error deleting account:', error);
-        alert('Failed to process request: ' + error.message);
-      }
-    }
-
-    // Go back from account page
-    function goBackFromAccount() {
-      // Hide account section
-      document.getElementById('accountSection').classList.remove('active');
-
-      // Show image section (default)
-      document.getElementById('imageSection').classList.add('active');
-
-      // Activate image nav tab
-      document.querySelectorAll('.nav-tab').forEach(navTab => {
-        navTab.classList.remove('active');
-      });
-      document.querySelector('.nav-tab[onclick*="imageSection"]')?.classList.add('active');
-    }
-
-    // ===========================================
-    // BILLING PAGE FUNCTIONS
-    // ===========================================
-
-    // Open billing page
-    function openBillingPage() {
-      // Close user menu
-      document.getElementById('userMenu').classList.remove('active');
-
-      // Hide all tab sections
-      document.querySelectorAll('.tab-section').forEach(section => {
-        section.classList.remove('active');
-      });
-
-      // Deactivate all nav tabs
-      document.querySelectorAll('.nav-tab').forEach(navTab => {
-        navTab.classList.remove('active');
-      });
-
-      // Show billing page
-      document.getElementById('billingSection').classList.add('active');
-
-      // Load billing data
-      loadBillingData();
-
-      console.log('📋 Opened billing page');
-    }
-
-    // Load billing data
-    async function loadBillingData() {
-      if (!currentUser) return;
-
-      // Set credits balance
-      const creditsDisplay = document.getElementById('billingCredits');
-      if (creditsDisplay) {
-        creditsDisplay.textContent = currentUser.credits?.toLocaleString() || '0';
-      }
-
-      // Load transaction history
-      await loadTransactions();
-    }
-
-    // Load transaction history from Supabase
-    async function loadTransactions() {
-      const tableBody = document.getElementById('transactionTableBody');
-      if (!tableBody) return;
-
-      tableBody.innerHTML = '<tr class="transaction-loading"><td colspan="4">Loading transactions...</td></tr>';
-
-      if (!currentUser) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="no-transactions">Please log in to view transactions</td></tr>';
-        return;
-      }
-
-      try {
-        const { data: transactions, error } = await supabaseClient
-          .from('transactions')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (error) throw error;
-
-        if (!transactions || transactions.length === 0) {
-          tableBody.innerHTML = '<tr><td colspan="4" class="no-transactions">No transactions yet</td></tr>';
-          return;
-        }
-
-        tableBody.innerHTML = transactions.map(tx => {
-          const date = new Date(tx.created_at);
-          const dateStr = date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-
-          const isPositive = tx.amount > 0;
-          const amountClass = isPositive ? 'positive' : 'negative';
-          const amountStr = isPositive ? `+${tx.amount}` : tx.amount.toString();
-
-          const typeClass = tx.type;
-          const typeDisplay = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
-
-          return `
-            <tr>
-              <td>${dateStr}</td>
-              <td><span class="transaction-type ${typeClass}">${typeDisplay}</span></td>
-              <td><span class="transaction-amount ${amountClass}">${amountStr}</span></td>
-              <td>${tx.description || '-'}</td>
-            </tr>
-          `;
-        }).join('');
-
-        console.log(`✅ Loaded ${transactions.length} transactions`);
-      } catch (error) {
-        console.error('Error loading transactions:', error);
-        tableBody.innerHTML = '<tr><td colspan="4" class="no-transactions">Failed to load transactions</td></tr>';
-      }
-    }
-
-    // Go back from billing page
-    function goBackFromBilling() {
-      // Hide billing section
-      document.getElementById('billingSection').classList.remove('active');
-
-      // Show image section (default)
-      document.getElementById('imageSection').classList.add('active');
-
-      // Activate image nav tab
-      document.querySelectorAll('.nav-tab').forEach(navTab => {
-        navTab.classList.remove('active');
-      });
-      document.querySelector('.nav-tab[onclick*="imageSection"]')?.classList.add('active');
-    }
+    // Account page functions moved to js/account-page.js
+    // Billing page functions moved to js/billing-page.js
 
     // Marketplace Functions
     let ownedCharacters = []; // Will be populated from API based on user ownership
@@ -16902,11 +14574,12 @@
         const isAdmin = userId && await checkIfUserIsAdmin(userId);
 
         // Admins get all characters (including inactive), others get only active
+        // Use authFetch to include JWT token - backend gets user from token, not query param
         const endpoint = isAdmin
-          ? `${API_BASE_URL}/api/characters/all?user_id=${userId}`
-          : `${API_BASE_URL}/api/characters${userId ? `?user_id=${userId}` : ''}`;
+          ? `${API_BASE_URL}/api/characters/all`
+          : `${API_BASE_URL}/api/characters`;
 
-        const response = await fetch(endpoint);
+        const response = await authFetch(endpoint);
         if (!response.ok) throw new Error('Failed to fetch characters');
 
         const data = await response.json();
@@ -17487,12 +15160,11 @@
         };
 
         const url = isEdit
-          ? `${API_BASE_URL}/api/characters/${characterId}?user_id=${currentUser.id}`
-          : `${API_BASE_URL}/api/characters?user_id=${currentUser.id}`;
+          ? `${API_BASE_URL}/api/characters/${characterId}`
+          : `${API_BASE_URL}/api/characters`;
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: isEdit ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(characterData)
         });
 
@@ -17523,7 +15195,8 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/characters/${editingCharacterId}?user_id=${currentUser.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/characters/${editingCharacterId}`, {
           method: 'DELETE'
         });
 
@@ -18029,11 +15702,7 @@
       }
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+    // Note: escapeHtml is in js/utils.js
 
     // Reaction helper functions
     const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -18647,7 +16316,8 @@
       const userId = user?.id || null;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/starthere?user_id=${userId || ''}`);
+        // Uses optional JWT auth - if logged in, will track completion status
+        const response = await authFetch(`${API_BASE_URL}/api/starthere`);
         const data = await response.json();
 
         if (data.guides) {
@@ -18881,12 +16551,11 @@
       try {
         const isEditing = !!editingGuideId;
         const url = isEditing
-          ? `${API_BASE_URL}/api/starthere/${editingGuideId}?user_id=${user.id}`
-          : `${API_BASE_URL}/api/starthere?user_id=${user.id}`;
+          ? `${API_BASE_URL}/api/starthere/${editingGuideId}`
+          : `${API_BASE_URL}/api/starthere`;
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: isEditing ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(guideData)
         });
 
@@ -18922,7 +16591,8 @@
       if (!confirm('Are you sure you want to delete this guide?')) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/starthere/${editingGuideId}?user_id=${user.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/starthere/${editingGuideId}`, {
           method: 'DELETE'
         });
 
@@ -18962,7 +16632,8 @@
         const formData = new FormData();
         formData.append('thumbnail', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/resources/upload?user_id=${user.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/upload`, {
           method: 'POST',
           body: formData
         });
@@ -18989,7 +16660,8 @@
       const userId = user?.id || null;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/resources?user_id=${userId || ''}`);
+        // Uses optional JWT auth - if logged in, will show ownership status
+        const response = await authFetch(`${API_BASE_URL}/api/resources`);
         const data = await response.json();
 
         if (data.resources) {
@@ -19315,9 +16987,9 @@
       if (!resource) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/resources/purchase?user_id=${user.id}`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/purchase`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ resource_id: resourceId, use_credits: useCredits })
         });
 
@@ -19355,9 +17027,9 @@
       if (!user) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/resources/purchase/confirm?user_id=${user.id}`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/purchase/confirm`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             resource_id: resourceId,
             payment_id: 'manual_' + Date.now(), // Placeholder for actual payment ID
@@ -19547,12 +17219,11 @@
       try {
         const isEditing = !!editingResourceId;
         const url = isEditing
-          ? `${API_BASE_URL}/api/resources/${editingResourceId}?user_id=${user.id}`
-          : `${API_BASE_URL}/api/resources?user_id=${user.id}`;
+          ? `${API_BASE_URL}/api/resources/${editingResourceId}`
+          : `${API_BASE_URL}/api/resources`;
 
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: isEditing ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(resourceData)
         });
 
@@ -19593,8 +17264,8 @@
       deleteBtn.textContent = 'Deleting...';
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/resources/${editingResourceId}?user_id=${user.id}`,
+        const response = await authFetch(
+          `${API_BASE_URL}/api/resources/${editingResourceId}`,
           { method: 'DELETE' }
         );
 
@@ -19644,7 +17315,8 @@
         const formData = new FormData();
         formData.append('thumbnail', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/resources/upload?user_id=${user.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/upload`, {
           method: 'POST',
           body: formData
         });
@@ -19750,16 +17422,10 @@
         btn.textContent = 'Creating payment...';
         btn.disabled = true;
 
-        // Create Coinbase Commerce charge
-        const response = await fetch(`${API_BASE_URL}/api/payments/create-charge`, {
+        // Create payment charge (uses JWT auth)
+        const response = await authFetch(`${API_BASE_URL}/api/payments/create-charge`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            tier: tier,
-            userId: currentUser.id
-          })
+          body: JSON.stringify({ tier: tier })
         });
 
         const data = await response.json();
@@ -19840,280 +17506,7 @@
       }
     }
 
-    // ===========================================
-    // ANALYTICS DASHBOARD FUNCTIONS
-    // ===========================================
-    let generationTrendChart = null;
-    let modelUsageChart = null;
-
-    async function loadAnalyticsDashboard() {
-      if (!isUserAdmin) return;
-
-      console.log('📊 Loading analytics dashboard...');
-
-      try {
-        // Fetch all metrics in parallel
-        const [userCount, imageCount, videoCount, todayCount, trendData, modelData] = await Promise.all([
-          fetchUserCount(),
-          fetchImageCount(),
-          fetchVideoCount(),
-          fetchTodayGenerations(),
-          fetchGenerationTrend(),
-          fetchModelUsage()
-        ]);
-
-        // Update summary cards
-        document.getElementById('analyticsUserCount').textContent = formatNumber(userCount);
-        document.getElementById('analyticsImageCount').textContent = formatNumber(imageCount);
-        document.getElementById('analyticsVideoCount').textContent = formatNumber(videoCount);
-        document.getElementById('analyticsTodayCount').textContent = formatNumber(todayCount);
-
-        // Render charts
-        renderGenerationTrendChart(trendData);
-        renderModelUsageChart(modelData);
-
-        console.log('📊 Analytics dashboard loaded successfully');
-      } catch (error) {
-        console.error('Error loading analytics:', error);
-      }
-    }
-
-    function formatNumber(num) {
-      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-      return num.toString();
-    }
-
-    async function fetchUserCount() {
-      try {
-        const { count, error } = await supabaseClient
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-        if (error) throw error;
-        return count || 0;
-      } catch (e) {
-        console.error('Error fetching user count:', e);
-        return 0;
-      }
-    }
-
-    async function fetchImageCount() {
-      try {
-        const { count, error } = await supabaseClient
-          .from('generated_images')
-          .select('*', { count: 'exact', head: true });
-        if (error) throw error;
-        return count || 0;
-      } catch (e) {
-        console.error('Error fetching image count:', e);
-        return 0;
-      }
-    }
-
-    async function fetchVideoCount() {
-      try {
-        const { count, error } = await supabaseClient
-          .from('generated_videos')
-          .select('*', { count: 'exact', head: true });
-        if (error) throw error;
-        return count || 0;
-      } catch (e) {
-        console.error('Error fetching video count:', e);
-        return 0;
-      }
-    }
-
-    async function fetchTodayGenerations() {
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayIso = today.toISOString();
-
-        const [imageResult, videoResult] = await Promise.all([
-          supabaseClient
-            .from('generated_images')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', todayIso),
-          supabaseClient
-            .from('generated_videos')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', todayIso)
-        ]);
-
-        return (imageResult.count || 0) + (videoResult.count || 0);
-      } catch (e) {
-        console.error('Error fetching today count:', e);
-        return 0;
-      }
-    }
-
-    async function fetchGenerationTrend() {
-      try {
-        // Get data for last 7 days
-        const days = [];
-        const imageCounts = [];
-        const videoCounts = [];
-
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          date.setHours(0, 0, 0, 0);
-          const startOfDay = date.toISOString();
-
-          const endDate = new Date(date);
-          endDate.setDate(endDate.getDate() + 1);
-          const endOfDay = endDate.toISOString();
-
-          days.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-
-          const [imageResult, videoResult] = await Promise.all([
-            supabaseClient
-              .from('generated_images')
-              .select('*', { count: 'exact', head: true })
-              .gte('created_at', startOfDay)
-              .lt('created_at', endOfDay),
-            supabaseClient
-              .from('generated_videos')
-              .select('*', { count: 'exact', head: true })
-              .gte('created_at', startOfDay)
-              .lt('created_at', endOfDay)
-          ]);
-
-          imageCounts.push(imageResult.count || 0);
-          videoCounts.push(videoResult.count || 0);
-        }
-
-        return { days, imageCounts, videoCounts };
-      } catch (e) {
-        console.error('Error fetching trend data:', e);
-        return { days: [], imageCounts: [], videoCounts: [] };
-      }
-    }
-
-    async function fetchModelUsage() {
-      try {
-        // Fetch image models
-        const { data: imageData, error: imageError } = await supabaseClient
-          .from('generated_images')
-          .select('model');
-
-        if (imageError) throw imageError;
-
-        // Count by model
-        const modelCounts = {};
-        (imageData || []).forEach(item => {
-          const model = item.model || 'Unknown';
-          modelCounts[model] = (modelCounts[model] || 0) + 1;
-        });
-
-        // Convert to arrays for chart
-        const labels = Object.keys(modelCounts);
-        const values = Object.values(modelCounts);
-
-        return { labels, values };
-      } catch (e) {
-        console.error('Error fetching model usage:', e);
-        return { labels: [], values: [] };
-      }
-    }
-
-    function renderGenerationTrendChart(data) {
-      const ctx = document.getElementById('generationTrendChart');
-      if (!ctx) return;
-
-      // Destroy existing chart if it exists
-      if (generationTrendChart) {
-        generationTrendChart.destroy();
-      }
-
-      generationTrendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: data.days,
-          datasets: [
-            {
-              label: 'Images',
-              data: data.imageCounts,
-              borderColor: '#9d4edd',
-              backgroundColor: 'rgba(157, 78, 221, 0.1)',
-              fill: true,
-              tension: 0.4
-            },
-            {
-              label: 'Videos',
-              data: data.videoCounts,
-              borderColor: '#ff2ebb',
-              backgroundColor: 'rgba(255, 46, 187, 0.1)',
-              fill: true,
-              tension: 0.4
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-              labels: { color: '#888' }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(255,255,255,0.1)' },
-              ticks: { color: '#888' }
-            },
-            x: {
-              grid: { color: 'rgba(255,255,255,0.1)' },
-              ticks: { color: '#888' }
-            }
-          }
-        }
-      });
-    }
-
-    function renderModelUsageChart(data) {
-      const ctx = document.getElementById('modelUsageChart');
-      if (!ctx) return;
-
-      // Destroy existing chart if it exists
-      if (modelUsageChart) {
-        modelUsageChart.destroy();
-      }
-
-      // Color palette
-      const colors = [
-        '#9d4edd', '#ff2ebb', '#00b2ff', '#4ade80', '#ffa500',
-        '#ff6b6b', '#a855f7', '#06b6d4', '#eab308', '#ec4899'
-      ];
-
-      modelUsageChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: data.labels,
-          datasets: [{
-            data: data.values,
-            backgroundColor: colors.slice(0, data.labels.length),
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                color: '#888',
-                boxWidth: 12,
-                padding: 8
-              }
-            }
-          }
-        }
-      });
-    }
+    // Note: Analytics dashboard functions are in js/analytics.js
 
     function renderPoliciesAdminGrid() {
       const grid = document.getElementById('policiesAdminGrid');
@@ -20863,9 +18256,9 @@
 
         console.log('📝 Saving policy:', type, policyData.title);
 
-        const response = await fetch(`${API_BASE_URL}/api/policies/${type}?user_id=${currentUser.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/policies/${type}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(policyData)
         });
 

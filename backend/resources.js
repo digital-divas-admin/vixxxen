@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
+const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
 
 // Configure multer for memory storage
 const upload = multer({
@@ -26,24 +27,26 @@ if (supabaseUrl && supabaseServiceKey) {
 }
 
 // GET /api/resources - Get all resources with access control
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { type, topic, user_id } = req.query;
+    const { type, topic } = req.query;
+    // Use verified user ID from auth middleware (not query param)
+    const userId = req.userId;
 
-    // Get user's membership tier if user_id provided
+    // Get user's membership tier if authenticated
     let userTier = null;
     let userPurchases = [];
     let userCredits = 0;
 
-    if (user_id) {
+    if (userId) {
       const { data: membership } = await supabase
         .from('memberships')
         .select('tier')
-        .eq('user_id', user_id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .single();
 
@@ -53,7 +56,7 @@ router.get('/', async (req, res) => {
       const { data: purchases } = await supabase
         .from('user_purchases')
         .select('resource_id')
-        .eq('user_id', user_id);
+        .eq('user_id', userId);
 
       userPurchases = purchases?.map(p => p.resource_id) || [];
 
@@ -61,7 +64,7 @@ router.get('/', async (req, res) => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('credit_balance')
-        .eq('id', user_id)
+        .eq('id', userId)
         .single();
 
       userCredits = profile?.credit_balance || 0;
@@ -171,23 +174,135 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/resources/bootstrap - Get all user data in one call
+// IMPORTANT: This route must be defined BEFORE /:id to avoid being caught by the wildcard
+// Changed from /:userId to use authenticated user - prevents IDOR vulnerability
+router.get('/bootstrap', requireAuth, async (req, res) => {
+  console.log('📊 Bootstrap endpoint hit, userId:', req.userId);
+  try {
+    if (!supabase) {
+      console.log('📊 Bootstrap: Supabase not configured');
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    // Use verified user ID from auth middleware (not URL param)
+    const userId = req.userId;
+    console.log('📊 Bootstrap: Fetching data for user:', userId);
+
+    // Run all queries in parallel for maximum speed
+    const [profileResult, charactersResult, membershipResult, subscriptionResult] = await Promise.all([
+      // Get profile
+      supabase
+        .from('profiles')
+        .select('id, email, full_name, credits, plan, avatar_url')
+        .eq('id', userId)
+        .single(),
+
+      // Get owned characters
+      supabase
+        .from('user_characters')
+        .select('character_id')
+        .eq('user_id', userId),
+
+      // Get membership
+      supabase
+        .from('memberships')
+        .select('tier, is_active')
+        .eq('user_id', userId)
+        .single(),
+
+      // Get subscription
+      supabase
+        .from('subscriptions')
+        .select('tier, status, expires_at')
+        .eq('user_id', userId)
+        .single()
+    ]);
+    console.log('📊 Bootstrap: All queries completed');
+
+    // Handle profile (required)
+    if (profileResult.error) {
+      console.error('Bootstrap: Profile fetch error:', profileResult.error);
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    const profile = profileResult.data;
+    const characters = charactersResult.data || [];
+    const membership = membershipResult.data;
+    const subscription = subscriptionResult.data;
+
+    // Determine user plan from membership or subscription
+    let userPlan = 'Free Plan';
+    const tierNames = {
+      'rising_star': 'Rising Star',
+      'supernova': 'Supernova',
+      'mentorship': 'Mentorship',
+      'starter': 'Starter Plan',
+      'creator': 'Creator Plan',
+      'pro': 'Pro Plan'
+    };
+
+    if (membership && membership.is_active && membership.tier) {
+      userPlan = tierNames[membership.tier] || membership.tier.charAt(0).toUpperCase() + membership.tier.slice(1);
+    } else if (subscription && subscription.status === 'active') {
+      userPlan = tierNames[subscription.tier] || subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1);
+    } else if (profile.plan) {
+      userPlan = profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan';
+    }
+
+    // Check if subscription is expired
+    let subscriptionActive = false;
+    if (subscription && subscription.status === 'active' && subscription.expires_at) {
+      subscriptionActive = new Date(subscription.expires_at) > new Date();
+    }
+
+    console.log('📊 Bootstrap: Sending response for user:', profile.email);
+    res.json({
+      profile: {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        credits: profile.credits || 0,
+        avatar_url: profile.avatar_url
+      },
+      plan: userPlan,
+      characters: characters.map(c => c.character_id),
+      membership: membership ? {
+        tier: membership.tier,
+        is_active: membership.is_active
+      } : null,
+      subscription: subscription ? {
+        tier: subscription.tier,
+        status: subscription.status,
+        expires_at: subscription.expires_at,
+        is_active: subscriptionActive
+      } : null
+    });
+
+  } catch (error) {
+    console.error('Bootstrap error:', error);
+    res.status(500).json({ error: 'Failed to load user data' });
+  }
+});
+
 // GET /api/resources/:id - Get single resource with full content (if authorized)
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     // Get user's membership tier
     let userTier = null;
-    if (user_id) {
+    if (userId) {
       const { data: membership } = await supabase
         .from('memberships')
         .select('tier')
-        .eq('user_id', user_id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .single();
 
@@ -247,33 +362,14 @@ router.get('/status', async (req, res) => {
   });
 });
 
-// Helper function to check if user is admin
-async function isUserAdmin(userId) {
-  if (!userId || !supabase) return false;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-
-  return profile?.role === 'admin';
-}
-
 // POST /api/resources/upload - Upload thumbnail image (admin only)
-router.post('/upload', upload.single('thumbnail'), async (req, res) => {
+router.post('/upload', requireAdmin, upload.single('thumbnail'), async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-
-    // Check admin status
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
+    // User is verified admin via requireAdmin middleware
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -314,18 +410,14 @@ router.post('/upload', upload.single('thumbnail'), async (req, res) => {
 });
 
 // POST /api/resources - Create new resource (admin only)
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-
-    // Check admin status
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
+    const userId = req.userId;
 
     const {
       title, description, type, topic, thumbnail_url, content_url, content_body, access_tier, duration,
@@ -375,7 +467,7 @@ router.post('/', async (req, res) => {
         sale_price: sale_price || null,
         sale_ends_at: sale_ends_at || null,
         revenue_share_percent: revenue_share_percent || 70,
-        creator_id: is_purchasable ? user_id : null
+        creator_id: is_purchasable ? userId : null
       })
       .select()
       .single();
@@ -394,19 +486,14 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/resources/:id - Update resource (admin only)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
-
-    // Check admin status
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const {
       title, description, type, topic, thumbnail_url, content_url, content_body, access_tier, duration,
@@ -462,19 +549,14 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/resources/:id - Delete resource (admin only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
-
-    // Check admin status
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { error } = await supabase
       .from('resources')
@@ -499,16 +581,14 @@ router.delete('/:id', async (req, res) => {
 // =============================================
 
 // GET /api/resources/purchases - Get user's purchased resources
-router.get('/purchases/list', async (req, res) => {
+router.get('/purchases/list', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     const { data: purchases, error } = await supabase
       .from('user_purchases')
@@ -516,7 +596,7 @@ router.get('/purchases/list', async (req, res) => {
         *,
         resources (id, title, description, type, topic, thumbnail_url, duration)
       `)
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .order('purchased_at', { ascending: false });
 
     if (error) {
@@ -533,29 +613,27 @@ router.get('/purchases/list', async (req, res) => {
 });
 
 // GET /api/resources/credits - Get user's credit balance and history
-router.get('/credits/balance', async (req, res) => {
+router.get('/credits/balance', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     // Get credit balance
     const { data: profile } = await supabase
       .from('profiles')
       .select('credit_balance')
-      .eq('id', user_id)
+      .eq('id', userId)
       .single();
 
     // Get recent transactions
     const { data: transactions } = await supabase
       .from('credit_transactions')
       .select('*')
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -571,18 +649,16 @@ router.get('/credits/balance', async (req, res) => {
 });
 
 // POST /api/resources/purchase - Initiate a resource purchase
-router.post('/purchase', async (req, res) => {
+router.post('/purchase', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
     const { resource_id, use_credits } = req.body;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
-    }
     if (!resource_id) {
       return res.status(400).json({ error: 'resource_id is required' });
     }
@@ -606,7 +682,7 @@ router.post('/purchase', async (req, res) => {
     const { data: existingPurchase } = await supabase
       .from('user_purchases')
       .select('id')
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .eq('resource_id', resource_id)
       .single();
 
@@ -627,7 +703,7 @@ router.post('/purchase', async (req, res) => {
     const { data: profile } = await supabase
       .from('profiles')
       .select('credit_balance')
-      .eq('id', user_id)
+      .eq('id', userId)
       .single();
 
     const creditBalance = profile?.credit_balance || 0;
@@ -645,13 +721,13 @@ router.post('/purchase', async (req, res) => {
       await supabase
         .from('profiles')
         .update({ credit_balance: creditBalance - creditsToUse })
-        .eq('id', user_id);
+        .eq('id', userId);
 
       // Record credit transaction
       await supabase
         .from('credit_transactions')
         .insert({
-          user_id,
+          user_id: userId,
           amount: -creditsToUse,
           type: 'spent',
           description: `Purchased: ${resource.title}`,
@@ -662,7 +738,7 @@ router.post('/purchase', async (req, res) => {
       const { data: purchase, error: purchaseError } = await supabase
         .from('user_purchases')
         .insert({
-          user_id,
+          user_id: userId,
           resource_id,
           amount_paid: 0,
           original_price: resource.price,
@@ -720,17 +796,18 @@ router.post('/purchase', async (req, res) => {
 });
 
 // POST /api/resources/purchase/confirm - Confirm purchase after payment
-router.post('/purchase/confirm', async (req, res) => {
+router.post('/purchase/confirm', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
     const { resource_id, payment_id, credits_used } = req.body;
 
-    if (!user_id || !resource_id) {
-      return res.status(400).json({ error: 'user_id and resource_id are required' });
+    if (!resource_id) {
+      return res.status(400).json({ error: 'resource_id is required' });
     }
 
     // Get resource
@@ -760,18 +837,18 @@ router.post('/purchase/confirm', async (req, res) => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('credit_balance')
-        .eq('id', user_id)
+        .eq('id', userId)
         .single();
 
       await supabase
         .from('profiles')
         .update({ credit_balance: (profile?.credit_balance || 0) - credits_used })
-        .eq('id', user_id);
+        .eq('id', userId);
 
       await supabase
         .from('credit_transactions')
         .insert({
-          user_id,
+          user_id: userId,
           amount: -credits_used,
           type: 'spent',
           description: `Partial payment for: ${resource.title}`,
@@ -783,7 +860,7 @@ router.post('/purchase/confirm', async (req, res) => {
     const { data: purchase, error: purchaseError } = await supabase
       .from('user_purchases')
       .insert({
-        user_id,
+        user_id: userId,
         resource_id,
         amount_paid: amountPaid,
         original_price: resource.price,
@@ -828,16 +905,14 @@ router.post('/purchase/confirm', async (req, res) => {
 });
 
 // GET /api/resources/earnings - Get creator's earnings (for creators)
-router.get('/earnings', async (req, res) => {
+router.get('/earnings', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     // Get earnings summary
     const { data: earnings, error } = await supabase
@@ -847,7 +922,7 @@ router.get('/earnings', async (req, res) => {
         resources (title),
         user_purchases (purchased_at)
       `)
-      .eq('creator_id', user_id)
+      .eq('creator_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -872,113 +947,6 @@ router.get('/earnings', async (req, res) => {
   } catch (error) {
     console.error('Earnings fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/resources/bootstrap/:userId - Get all user data in one call
-router.get('/bootstrap/:userId', async (req, res) => {
-  try {
-    if (!supabase) {
-      return res.status(500).json({ error: 'Supabase not configured' });
-    }
-
-    const { userId } = req.params;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
-
-    // Run all queries in parallel for maximum speed
-    const [profileResult, charactersResult, membershipResult, subscriptionResult] = await Promise.all([
-      // Get profile
-      supabase
-        .from('profiles')
-        .select('id, email, full_name, credits, plan, avatar_url')
-        .eq('id', userId)
-        .single(),
-
-      // Get owned characters
-      supabase
-        .from('user_characters')
-        .select('character_id')
-        .eq('user_id', userId),
-
-      // Get membership
-      supabase
-        .from('memberships')
-        .select('tier, is_active')
-        .eq('user_id', userId)
-        .single(),
-
-      // Get subscription
-      supabase
-        .from('subscriptions')
-        .select('tier, status, expires_at')
-        .eq('user_id', userId)
-        .single()
-    ]);
-
-    // Handle profile (required)
-    if (profileResult.error) {
-      console.error('Bootstrap: Profile fetch error:', profileResult.error);
-      return res.status(404).json({ error: 'User profile not found' });
-    }
-
-    const profile = profileResult.data;
-    const characters = charactersResult.data || [];
-    const membership = membershipResult.data;
-    const subscription = subscriptionResult.data;
-
-    // Determine user plan from membership or subscription
-    let userPlan = 'Free Plan';
-    const tierNames = {
-      'rising_star': 'Rising Star',
-      'supernova': 'Supernova',
-      'mentorship': 'Mentorship',
-      'starter': 'Starter Plan',
-      'creator': 'Creator Plan',
-      'pro': 'Pro Plan'
-    };
-
-    if (membership && membership.is_active && membership.tier) {
-      userPlan = tierNames[membership.tier] || membership.tier.charAt(0).toUpperCase() + membership.tier.slice(1);
-    } else if (subscription && subscription.status === 'active') {
-      userPlan = tierNames[subscription.tier] || subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1);
-    } else if (profile.plan) {
-      userPlan = profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan';
-    }
-
-    // Check if subscription is expired
-    let subscriptionActive = false;
-    if (subscription && subscription.status === 'active' && subscription.expires_at) {
-      subscriptionActive = new Date(subscription.expires_at) > new Date();
-    }
-
-    res.json({
-      profile: {
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
-        credits: profile.credits || 0,
-        avatar_url: profile.avatar_url
-      },
-      plan: userPlan,
-      characters: characters.map(c => c.character_id),
-      membership: membership ? {
-        tier: membership.tier,
-        is_active: membership.is_active
-      } : null,
-      subscription: subscription ? {
-        tier: subscription.tier,
-        status: subscription.status,
-        expires_at: subscription.expires_at,
-        is_active: subscriptionActive
-      } : null
-    });
-
-  } catch (error) {
-    console.error('Bootstrap error:', error);
-    res.status(500).json({ error: 'Failed to load user data' });
   }
 });
 

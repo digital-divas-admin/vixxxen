@@ -4,6 +4,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const seedreamRouter = require('./seedream');
 const nanoBananaRouter = require('./nanoBanana');
 const klingRouter = require('./kling');
@@ -25,6 +26,7 @@ const complianceRouter = require('./compliance');
 const reportsRouter = require('./reports');
 const inpaintRouter = require('./inpaint');
 const { initializeChat } = require('./chat');
+const { requireAuth } = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,6 +45,45 @@ initializeChat(io);
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64-encoded images
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Trust first proxy (required for rate limiting behind Render/reverse proxies)
+// This allows express-rate-limit to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', 1);
+
+// ===========================================
+// RATE LIMITING CONFIGURATION
+// ===========================================
+
+// General API rate limiter - 100 requests per minute per IP
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Strict limiter for sensitive endpoints - 10 requests per 15 minutes per IP
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many requests to this endpoint, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Generation limiter for AI endpoints - 30 requests per minute per IP
+// (prevents abuse while allowing normal usage)
+const generationLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  message: { error: 'Generation rate limit exceeded. Please wait a moment.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general rate limiting to all API routes
+app.use('/api/', generalLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -64,26 +105,33 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/seedream', seedreamRouter);
-app.use('/api/nano-banana', nanoBananaRouter);
-app.use('/api/kling', klingRouter);
-app.use('/api/wan', wanRouter);
-app.use('/api/veo', veoRouter);
-app.use('/api/eraser', eraserRouter);
-app.use('/api/qwen-image-edit', qwenImageEditRouter);
-app.use('/api/qwen', qwenRouter);
-app.use('/api/deepseek', deepseekRouter);
-app.use('/api/bg-remover', bgRemoverRouter);
-app.use('/api/elevenlabs', elevenlabsRouter);
-app.use('/api/payments', paymentsRouter);
+
+// Generation endpoints - require auth + rate limiter (30/min)
+// All generation endpoints require login to prevent abuse
+app.use('/api/seedream', requireAuth, generationLimiter, seedreamRouter);
+app.use('/api/nano-banana', requireAuth, generationLimiter, nanoBananaRouter);
+app.use('/api/kling', requireAuth, generationLimiter, klingRouter);
+app.use('/api/wan', requireAuth, generationLimiter, wanRouter);
+app.use('/api/veo', requireAuth, generationLimiter, veoRouter);
+app.use('/api/eraser', requireAuth, generationLimiter, eraserRouter);
+app.use('/api/qwen-image-edit', requireAuth, generationLimiter, qwenImageEditRouter);
+app.use('/api/qwen', requireAuth, generationLimiter, qwenRouter);
+app.use('/api/deepseek', requireAuth, generationLimiter, deepseekRouter);
+app.use('/api/bg-remover', requireAuth, generationLimiter, bgRemoverRouter);
+app.use('/api/elevenlabs', requireAuth, generationLimiter, elevenlabsRouter);
+app.use('/api/inpaint', requireAuth, generationLimiter, inpaintRouter);
+
+// Sensitive endpoints - apply strict rate limiter (10/15min)
+app.use('/api/payments', strictLimiter, paymentsRouter);
+app.use('/api/age-verification', strictLimiter, ageVerificationRouter);
+
+// Standard endpoints - use general rate limiter (already applied globally)
 app.use('/api/resources', resourcesRouter);
 app.use('/api/starthere', starthereRouter);
 app.use('/api/characters', charactersRouter);
 app.use('/api/policies', policiesRouter);
-app.use('/api/age-verification', ageVerificationRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
-app.use('/api/inpaint', inpaintRouter);
 
 // Serve static files from the parent directory (frontend)
 app.use(express.static(path.join(__dirname, '..')));

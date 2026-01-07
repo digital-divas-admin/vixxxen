@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
+const { requireAdmin } = require('./middleware/auth');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -9,19 +10,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 let supabase = null;
 if (supabaseUrl && supabaseServiceKey) {
   supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
-
-// Helper function to check admin status
-async function isUserAdmin(userId) {
-  if (!userId || !supabase) return false;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-
-  return profile?.role === 'admin';
 }
 
 // GET /api/policies - Get all active policies
@@ -80,17 +68,13 @@ router.get('/:type', async (req, res) => {
 });
 
 // GET /api/policies/admin/all - Get all policies including inactive (admin only)
-router.get('/admin/all', async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { data: policies, error } = await supabase
       .from('policies')
@@ -111,20 +95,16 @@ router.get('/admin/all', async (req, res) => {
 });
 
 // PUT /api/policies/:type - Update or create a policy (admin only)
-router.put('/:type', async (req, res) => {
+router.put('/:type', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { type } = req.params;
-    const { user_id } = req.query;
+    // User is verified admin via requireAdmin middleware
 
     console.log(`📝 Policy update request for type: ${type}`);
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
 
     const { title, content, is_active } = req.body;
 

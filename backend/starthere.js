@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
+const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -12,21 +13,22 @@ if (supabaseUrl && supabaseServiceKey) {
 }
 
 // GET /api/starthere - Get all start here guides with user progress
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
-    // Get user's completed guides if user_id provided
+    // Get user's completed guides if authenticated
     let userCompletedGuides = [];
-    if (user_id) {
+    if (userId) {
       const { data: completions } = await supabase
         .from('starthere_completions')
         .select('guide_id')
-        .eq('user_id', user_id);
+        .eq('user_id', userId);
 
       userCompletedGuides = completions?.map(c => c.guide_id) || [];
     }
@@ -65,24 +67,21 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/starthere/:id/complete - Mark a guide as complete
-router.post('/:id/complete', async (req, res) => {
+router.post('/:id/complete', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.body;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     // Check if already completed
     const { data: existing } = await supabase
       .from('starthere_completions')
       .select('id')
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .eq('guide_id', id)
       .single();
 
@@ -94,7 +93,7 @@ router.post('/:id/complete', async (req, res) => {
     const { error } = await supabase
       .from('starthere_completions')
       .insert({
-        user_id,
+        user_id: userId,
         guide_id: id
       });
 
@@ -111,31 +110,14 @@ router.post('/:id/complete', async (req, res) => {
   }
 });
 
-// Helper function to check admin status
-async function isUserAdmin(userId) {
-  if (!userId || !supabase) return false;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-
-  return profile?.role === 'admin';
-}
-
 // POST /api/starthere - Create a new guide (admin only)
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { title, description, icon, thumbnail_url, content_url, content_body, duration, sort_order } = req.body;
 
@@ -172,18 +154,14 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/starthere/:id - Update a guide (admin only)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { title, description, icon, thumbnail_url, content_url, content_body, duration, sort_order } = req.body;
 
@@ -219,18 +197,14 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/starthere/:id - Delete a guide (admin only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { error } = await supabase
       .from('starthere_guides')

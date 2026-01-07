@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
+const { requireAuth } = require('./middleware/auth');
 
 // Lazy initialization of Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -49,17 +50,14 @@ function isRegionRestricted(countryCode, regionCode) {
 }
 
 // GET /api/age-verification/status - Check if user is verified
-router.get('/status', async (req, res) => {
+router.get('/status', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(503).json({ error: 'Database not configured', verified: false });
     }
 
-    const userId = req.query.user_id;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     const { data, error } = await supabase
       .from('age_verifications')
@@ -109,17 +107,15 @@ router.get('/check-location', async (req, res) => {
 });
 
 // POST /api/age-verification/verify - Submit age verification
-router.post('/verify', async (req, res) => {
+router.post('/verify', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(503).json({ error: 'Database not configured' });
     }
 
-    const { user_id, confirmed } = req.body;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
+    const { confirmed } = req.body;
 
     if (!confirmed) {
       return res.status(400).json({ error: 'Age confirmation required' });
@@ -139,7 +135,7 @@ router.post('/verify', async (req, res) => {
       const { data, error } = await supabase
         .from('age_verifications')
         .upsert({
-          user_id: user_id,
+          user_id: userId,
           verified: false,
           method: 'blocked',
           country_code: location.country_code,
@@ -165,7 +161,7 @@ router.post('/verify', async (req, res) => {
     const { data, error } = await supabase
       .from('age_verifications')
       .upsert({
-        user_id: user_id,
+        user_id: userId,
         verified: true,
         method: 'self_declaration',
         country_code: location.country_code,
@@ -191,17 +187,15 @@ router.post('/verify', async (req, res) => {
 });
 
 // PUT /api/age-verification/content-mode - Update user's content mode preference
-router.put('/content-mode', async (req, res) => {
+router.put('/content-mode', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(503).json({ error: 'Database not configured' });
     }
 
-    const { user_id, content_mode } = req.body;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
+    const { content_mode } = req.body;
 
     if (!['safe', 'nsfw'].includes(content_mode)) {
       return res.status(400).json({ error: 'Invalid content mode' });
@@ -210,7 +204,7 @@ router.put('/content-mode', async (req, res) => {
     const { data, error } = await supabase
       .from('profiles')
       .update({ content_mode: content_mode })
-      .eq('id', user_id)
+      .eq('id', userId)
       .select()
       .single();
 
