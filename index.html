@@ -11600,6 +11600,12 @@
 
     // Apply the crop and update the image
     function applyCrop() {
+      // Require login for crop
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       if (!cropperInstance) {
         showEditError('Please upload an image first');
         return;
@@ -11732,6 +11738,12 @@
     }
 
     function performEditAction() {
+      // Require login for edit actions
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       console.log('performEditAction called, currentEditTool:', currentEditTool);
       console.log('editSourceImage:', !!editSourceImage);
       console.log('maskCanvas:', !!maskCanvas);
