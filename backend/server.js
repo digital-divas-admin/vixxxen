@@ -45,6 +45,10 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64-encoded images
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Trust first proxy (required for rate limiting behind Render/reverse proxies)
+// This allows express-rate-limit to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', 1);
+
 // ===========================================
 // RATE LIMITING CONFIGURATION
 // ===========================================
