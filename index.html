@@ -10634,6 +10634,13 @@
     }
 
     function handleFileUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const files = Array.from(event.target.files);
 
       if (referenceImages.length + files.length > 14) {
@@ -10734,6 +10741,13 @@
 
     // Video Tab Functions
     function handleVideoStartImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -10774,6 +10788,13 @@
     }
 
     function handleVeoLastFrameUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -11203,6 +11224,13 @@
 
     // Edit/Eraser Tab Functions with Canvas Mask Drawing
     function handleEditSourceImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -12062,6 +12090,13 @@
     let inpaintResultUrl = null;
 
     function handleInpaintImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
@@ -12352,6 +12387,12 @@
     }
 
     async function generateInpaint() {
+      // Require login for inpaint generation
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return;
+      }
+
       if (!inpaintImage) {
         showError('Please upload an image first');
         return;
@@ -12686,6 +12727,13 @@
     }
 
     function handleCaptionImageUpload(event) {
+      // Require login for uploads
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        event.target.value = ''; // Clear the file input
+        return;
+      }
+
       const file = event.target.files[0];
       if (!file) return;
 
