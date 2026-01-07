@@ -98,9 +98,9 @@ router.post('/create-charge', async (req, res) => {
       currency: 'BTC,ETH,LTC,USDT,USDC,DOGE',
       email: '', // Optional - user can enter on Plisio page
       order_name: tierConfig.name,
-      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen-6yn3.onrender.com'}/api/payments/webhook/plisio`,
-      success_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen-6yn3.onrender.com'}?payment=success&tier=${tier}`,
-      fail_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen-6yn3.onrender.com'}?payment=failed`,
+      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio`,
+      success_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=success&tier=${tier}`,
+      fail_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=failed`,
       api_key: PLISIO_API_KEY
     });
 
