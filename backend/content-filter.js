@@ -1,6 +1,6 @@
 /**
  * Content Filter Module
- * Manages blocked words for safe mode content restrictions
+ * Manages blocked words for content restrictions in safe and NSFW modes
  */
 const express = require('express');
 const router = express.Router();
@@ -19,19 +19,23 @@ if (supabaseUrl && supabaseServiceKey) {
 // ===========================================
 // BLOCKED WORDS CACHE
 // ===========================================
-let blockedWordsCache = null;
+// Separate caches for each mode
+let safeModeCache = null;
+let nsfwModeCache = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Get blocked words from cache or database
+ * Get blocked words from cache or database for a specific mode
+ * @param {string} mode - 'safe' or 'nsfw'
  */
-async function getBlockedWords() {
+async function getBlockedWords(mode = 'safe') {
   const now = Date.now();
 
-  // Return cached data if still valid
-  if (blockedWordsCache && (now - cacheTimestamp) < CACHE_TTL) {
-    return blockedWordsCache;
+  // Check cache based on mode
+  const cache = mode === 'nsfw' ? nsfwModeCache : safeModeCache;
+  if (cache && (now - cacheTimestamp) < CACHE_TTL) {
+    return cache;
   }
 
   // Fetch from database
@@ -40,30 +44,37 @@ async function getBlockedWords() {
     return [];
   }
 
+  // Get words that apply to this mode or 'both'
   const { data, error } = await supabase
     .from('safe_mode_blocked_words')
-    .select('word, category')
-    .eq('is_active', true);
+    .select('word, category, applies_to')
+    .eq('is_active', true)
+    .or(`applies_to.eq.${mode},applies_to.eq.both`);
 
   if (error) {
     console.error('Error fetching blocked words:', error);
     // Return cached data if available, even if stale
-    return blockedWordsCache || [];
+    return cache || [];
   }
 
-  // Update cache
-  blockedWordsCache = data || [];
+  // Update appropriate cache
+  if (mode === 'nsfw') {
+    nsfwModeCache = data || [];
+  } else {
+    safeModeCache = data || [];
+  }
   cacheTimestamp = now;
-  console.log(`📝 Blocked words cache updated: ${blockedWordsCache.length} words`);
+  console.log(`📝 Blocked words cache updated for ${mode} mode: ${data?.length || 0} words`);
 
-  return blockedWordsCache;
+  return data || [];
 }
 
 /**
  * Clear the blocked words cache (call after modifications)
  */
 function clearCache() {
-  blockedWordsCache = null;
+  safeModeCache = null;
+  nsfwModeCache = null;
   cacheTimestamp = 0;
   console.log('📝 Blocked words cache cleared');
 }
@@ -97,11 +108,13 @@ function containsBlockedContent(prompt, blockedWords) {
 /**
  * GET /api/content-filter/blocked-words
  * Get list of active blocked words for frontend validation
+ * Query param: mode ('safe' or 'nsfw') - defaults to 'safe'
  * Public access - no auth required
  */
 router.get('/blocked-words', async (req, res) => {
   try {
-    const words = await getBlockedWords();
+    const mode = req.query.mode === 'nsfw' ? 'nsfw' : 'safe';
+    const words = await getBlockedWords(mode);
 
     // Return just the words array for frontend (no categories needed for validation)
     const wordList = words.map(w => w.word.toLowerCase());
@@ -109,6 +122,7 @@ router.get('/blocked-words', async (req, res) => {
     res.json({
       words: wordList,
       count: wordList.length,
+      mode: mode,
       cached: Date.now() - cacheTimestamp < 1000 // Was this from cache?
     });
   } catch (error) {
@@ -120,22 +134,25 @@ router.get('/blocked-words', async (req, res) => {
 /**
  * POST /api/content-filter/validate
  * Validate a prompt against blocked words
+ * Body: { prompt, mode } - mode defaults to 'safe'
  * Public access - no auth required
  */
 router.post('/validate', async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, mode = 'safe' } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const blockedWords = await getBlockedWords();
+    const validMode = mode === 'nsfw' ? 'nsfw' : 'safe';
+    const blockedWords = await getBlockedWords(validMode);
     const isBlocked = containsBlockedContent(prompt, blockedWords);
 
     res.json({
       valid: !isBlocked,
-      blocked: isBlocked
+      blocked: isBlocked,
+      mode: validMode
     });
   } catch (error) {
     console.error('Error validating prompt:', error);
@@ -157,7 +174,7 @@ router.get('/admin/words', requireAdmin, async (req, res) => {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { category, search } = req.query;
+    const { category, search, applies_to } = req.query;
 
     let query = supabase
       .from('safe_mode_blocked_words')
@@ -166,6 +183,10 @@ router.get('/admin/words', requireAdmin, async (req, res) => {
 
     if (category && category !== 'all') {
       query = query.eq('category', category);
+    }
+
+    if (applies_to && applies_to !== 'all') {
+      query = query.eq('applies_to', applies_to);
     }
 
     if (search) {
@@ -199,11 +220,14 @@ router.post('/admin/words', requireAdmin, async (req, res) => {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { word, category = 'explicit' } = req.body;
+    const { word, category = 'explicit', applies_to = 'safe' } = req.body;
 
     if (!word || typeof word !== 'string' || word.trim().length === 0) {
       return res.status(400).json({ error: 'Word is required' });
     }
+
+    // Validate applies_to value
+    const validAppliesTo = ['safe', 'nsfw', 'both'].includes(applies_to) ? applies_to : 'safe';
 
     const trimmedWord = word.trim().toLowerCase();
 
@@ -223,6 +247,7 @@ router.post('/admin/words', requireAdmin, async (req, res) => {
       .insert({
         word: trimmedWord,
         category: category,
+        applies_to: validAppliesTo,
         is_active: true
       })
       .select()
@@ -257,12 +282,15 @@ router.put('/admin/words/:id', requireAdmin, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { word, category, is_active } = req.body;
+    const { word, category, is_active, applies_to } = req.body;
 
     const updates = {};
     if (word !== undefined) updates.word = word.trim().toLowerCase();
     if (category !== undefined) updates.category = category;
     if (is_active !== undefined) updates.is_active = is_active;
+    if (applies_to !== undefined && ['safe', 'nsfw', 'both'].includes(applies_to)) {
+      updates.applies_to = applies_to;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No updates provided' });
@@ -341,11 +369,14 @@ router.post('/admin/words/bulk', requireAdmin, async (req, res) => {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { words, category = 'explicit' } = req.body;
+    const { words, category = 'explicit', applies_to = 'safe' } = req.body;
 
     if (!Array.isArray(words) || words.length === 0) {
       return res.status(400).json({ error: 'Words array is required' });
     }
+
+    // Validate applies_to value
+    const validAppliesTo = ['safe', 'nsfw', 'both'].includes(applies_to) ? applies_to : 'safe';
 
     // Prepare words for insertion
     const wordsToInsert = words
@@ -353,6 +384,7 @@ router.post('/admin/words/bulk', requireAdmin, async (req, res) => {
       .map(w => ({
         word: w.trim().toLowerCase(),
         category: category,
+        applies_to: validAppliesTo,
         is_active: true
       }));
 

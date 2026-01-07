@@ -1,14 +1,15 @@
 -- ===========================================
--- SAFE MODE BLOCKED WORDS SCHEMA
+-- CONTENT FILTER BLOCKED WORDS SCHEMA
 -- ===========================================
 -- This table stores words/phrases that are blocked in Safe Mode
--- to prevent generation of inappropriate content.
+-- and/or NSFW Mode to prevent generation of inappropriate content.
 
 -- Create the blocked words table
 CREATE TABLE IF NOT EXISTS safe_mode_blocked_words (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   word TEXT NOT NULL,
-  category TEXT DEFAULT 'explicit',  -- 'explicit', 'violence', 'other'
+  category TEXT DEFAULT 'explicit',  -- 'explicit', 'celebrities', 'violence', 'other'
+  applies_to TEXT DEFAULT 'safe',    -- 'safe', 'nsfw', or 'both'
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -25,6 +26,10 @@ ON safe_mode_blocked_words (is_active) WHERE is_active = true;
 -- Create index for category filtering
 CREATE INDEX IF NOT EXISTS idx_blocked_words_category
 ON safe_mode_blocked_words (category);
+
+-- Create index for applies_to filtering
+CREATE INDEX IF NOT EXISTS idx_blocked_words_applies_to
+ON safe_mode_blocked_words (applies_to);
 
 -- Enable Row Level Security
 ALTER TABLE safe_mode_blocked_words ENABLE ROW LEVEL SECURITY;
@@ -137,3 +142,21 @@ ON CONFLICT DO NOTHING;
 -- Verify the data
 -- SELECT COUNT(*) as total_words FROM safe_mode_blocked_words;
 -- SELECT * FROM safe_mode_blocked_words ORDER BY category, word;
+
+
+-- ===========================================
+-- MIGRATION: Add applies_to column
+-- ===========================================
+-- Run this section if the table already exists without the applies_to column.
+-- This adds the ability to block words in Safe Mode, NSFW Mode, or Both.
+
+-- Add the applies_to column if it doesn't exist
+ALTER TABLE safe_mode_blocked_words
+ADD COLUMN IF NOT EXISTS applies_to TEXT DEFAULT 'safe';
+
+-- Create index for applies_to filtering (if not exists)
+CREATE INDEX IF NOT EXISTS idx_blocked_words_applies_to
+ON safe_mode_blocked_words (applies_to);
+
+-- Update existing words to default to 'safe' mode (already handled by DEFAULT)
+-- UPDATE safe_mode_blocked_words SET applies_to = 'safe' WHERE applies_to IS NULL;

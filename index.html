@@ -8248,8 +8248,8 @@
               <!-- Blocked Words Management Dashboard -->
               <div class="blocked-words-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
                 <div class="policies-admin-header">
-                  <h2 class="policies-admin-title">🚫 Safe Mode Blocked Words</h2>
-                  <p class="policies-admin-subtitle">Manage words/phrases blocked in Safe Mode prompts</p>
+                  <h2 class="policies-admin-title">🚫 Content Filter - Blocked Words</h2>
+                  <p class="policies-admin-subtitle">Manage words/phrases blocked in Safe Mode and/or NSFW Mode prompts</p>
                 </div>
 
                 <!-- Stats -->
@@ -8272,13 +8272,18 @@
                 </div>
 
                 <!-- Add Word Form -->
-                <div class="add-word-form" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                <div class="add-word-form" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 800px; margin-left: auto; margin-right: auto;">
                   <input type="text" id="newBlockedWord" placeholder="Enter word or phrase..." style="flex: 1; min-width: 200px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
                   <select id="newWordCategory" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                     <option value="explicit">Explicit</option>
                     <option value="celebrities">Celebrities</option>
                     <option value="violence">Violence</option>
                     <option value="other">Other</option>
+                  </select>
+                  <select id="newWordAppliesTo" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="safe">Safe Mode Only</option>
+                    <option value="nsfw">NSFW Mode Only</option>
+                    <option value="both">Both Modes</option>
                   </select>
                   <button onclick="addBlockedWord()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
                     ➕ Add Word
@@ -8305,6 +8310,11 @@
                       <option value="violence">Violence</option>
                       <option value="other">Other</option>
                     </select>
+                    <select id="bulkWordAppliesTo" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                      <option value="safe">Safe Mode Only</option>
+                      <option value="nsfw">NSFW Mode Only</option>
+                      <option value="both">Both Modes</option>
+                    </select>
                     <button onclick="addBulkBlockedWords()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
                       ➕ Add All Words
                     </button>
@@ -8313,7 +8323,7 @@
                 </div>
 
                 <!-- Filter and Search -->
-                <div class="blocked-words-filters" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                <div class="blocked-words-filters" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 800px; margin-left: auto; margin-right: auto;">
                   <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="filterBlockedWordsList()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
                   <select id="categoryFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                     <option value="all">All Categories</option>
@@ -8321,6 +8331,12 @@
                     <option value="celebrities">Celebrities</option>
                     <option value="violence">Violence</option>
                     <option value="other">Other</option>
+                  </select>
+                  <select id="appliesToFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="all">All Modes</option>
+                    <option value="safe">Safe Mode Only</option>
+                    <option value="nsfw">NSFW Mode Only</option>
+                    <option value="both">Both Modes</option>
                   </select>
                   <button onclick="loadBlockedWordsAdmin()" style="padding: 12px 24px; background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
                     🔄 Refresh
@@ -10115,30 +10131,41 @@
     }
 
     // ===========================================
-    // SAFE MODE CONTENT FILTER
+    // CONTENT FILTER (Safe & NSFW modes)
     // ===========================================
-    let blockedWords = []; // Cached list of blocked words for safe mode
+    let blockedWords = []; // Cached list of blocked words for current mode
+    let blockedWordsMode = null; // Track which mode the cache is for
 
-    // Fetch blocked words from API and cache them
-    async function loadBlockedWords() {
+    // Fetch blocked words from API for specific mode
+    async function loadBlockedWords(mode = null) {
+      const targetMode = mode || contentMode || 'safe';
       try {
-        const response = await fetch(`${API_BASE_URL}/api/content-filter/blocked-words`);
+        const response = await fetch(`${API_BASE_URL}/api/content-filter/blocked-words?mode=${targetMode}`);
         if (response.ok) {
           const data = await response.json();
           blockedWords = data.words || [];
-          console.log(`📝 Loaded ${blockedWords.length} blocked words for safe mode`);
+          blockedWordsMode = targetMode;
+          console.log(`📝 Loaded ${blockedWords.length} blocked words for ${targetMode} mode`);
         }
       } catch (error) {
         console.error('Failed to load blocked words:', error);
         // Use empty array - allow generation if API fails
         blockedWords = [];
+        blockedWordsMode = targetMode;
       }
     }
 
     // Validate prompt against blocked words (substring match, case insensitive)
-    function validatePromptForSafeMode(prompt) {
-      if (contentMode !== 'safe' || !prompt || blockedWords.length === 0) {
+    function validatePrompt(prompt) {
+      // Skip validation if no blocked words loaded or mode mismatch
+      if (!prompt || blockedWords.length === 0) {
         return { valid: true };
+      }
+
+      // Reload blocked words if mode changed
+      if (blockedWordsMode !== contentMode) {
+        // Async reload - for now, allow the request but reload for next time
+        loadBlockedWords(contentMode);
       }
 
       const lowerPrompt = prompt.toLowerCase();
@@ -10151,9 +10178,15 @@
       return { valid: true };
     }
 
+    // Legacy alias for backwards compatibility
+    function validatePromptForSafeMode(prompt) {
+      return validatePrompt(prompt);
+    }
+
     // Show restricted content error modal
     function showRestrictedContentError() {
-      showError('This prompt contains restricted content for Safe Mode. Please modify your prompt or switch to NSFW mode.');
+      const modeText = contentMode === 'safe' ? 'Safe Mode' : 'NSFW Mode';
+      showError(`This prompt contains restricted content for ${modeText}. Please modify your prompt.`);
     }
 
     // Cold start check - detect slow server response on Render free tier
@@ -10413,6 +10446,8 @@
       contentMode = mode;
       updateContentModeUI();
       filterModelsByContentMode();
+      // Reload blocked words for the new mode
+      loadBlockedWords(mode);
       // Note: filterModelsByContentMode() handles auto-selection when switching modes
     }
 

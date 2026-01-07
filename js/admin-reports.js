@@ -172,11 +172,19 @@ async function loadBlockedWordsAdmin() {
   if (!isUserAdmin) return;
 
   const category = document.getElementById('categoryFilter')?.value || 'all';
+  const appliesTo = document.getElementById('appliesToFilter')?.value || 'all';
 
   try {
     let url = `${API_BASE_URL}/api/content-filter/admin/words`;
+    const params = [];
     if (category && category !== 'all') {
-      url += `?category=${category}`;
+      params.push(`category=${category}`);
+    }
+    if (appliesTo && appliesTo !== 'all') {
+      params.push(`applies_to=${appliesTo}`);
+    }
+    if (params.length > 0) {
+      url += '?' + params.join('&');
     }
 
     const response = await authFetch(url);
@@ -234,9 +242,23 @@ function renderBlockedWordsList(words) {
     other: '#ffa500'
   };
 
+  const appliesToLabels = {
+    safe: '🔒 Safe',
+    nsfw: '🔞 NSFW',
+    both: '🔒🔞 Both'
+  };
+
+  const appliesToColors = {
+    safe: '#4ade80',
+    nsfw: '#ff2ebb',
+    both: '#ffa500'
+  };
+
   container.innerHTML = filteredWords.map(word => {
     const color = categoryColors[word.category] || '#9d4edd';
     const opacity = word.is_active ? '1' : '0.5';
+    const appliesTo = word.applies_to || 'safe';
+    const appliesToColor = appliesToColors[appliesTo] || '#888';
 
     return `
       <div class="blocked-word-tag" data-id="${word.id}" style="
@@ -253,6 +275,7 @@ function renderBlockedWordsList(words) {
       ">
         <span style="color: ${word.is_active ? '#fff' : '#888'};">${escapeHtml(word.word)}</span>
         <span style="font-size: 0.7rem; color: #888; text-transform: uppercase;">${word.category}</span>
+        <span style="font-size: 0.65rem; color: ${appliesToColor}; padding: 2px 6px; background: rgba(${hexToRgb(appliesToColor)}, 0.2); border-radius: 4px;">${appliesToLabels[appliesTo] || appliesTo}</span>
         <button onclick="toggleBlockedWord('${word.id}', ${!word.is_active})" title="${word.is_active ? 'Deactivate' : 'Activate'}" style="
           background: none;
           border: none;
@@ -299,9 +322,11 @@ async function addBlockedWord() {
 
   const wordInput = document.getElementById('newBlockedWord');
   const categorySelect = document.getElementById('newWordCategory');
+  const appliesToSelect = document.getElementById('newWordAppliesTo');
 
   const word = wordInput?.value?.trim();
   const category = categorySelect?.value || 'explicit';
+  const applies_to = appliesToSelect?.value || 'safe';
 
   if (!word) {
     alert('Please enter a word or phrase.');
@@ -311,7 +336,7 @@ async function addBlockedWord() {
   try {
     const response = await authFetch(`${API_BASE_URL}/api/content-filter/admin/words`, {
       method: 'POST',
-      body: JSON.stringify({ word, category })
+      body: JSON.stringify({ word, category, applies_to })
     });
 
     if (response.status === 409) {
@@ -436,9 +461,11 @@ async function addBulkBlockedWords() {
 
   const textarea = document.getElementById('bulkBlockedWords');
   const categorySelect = document.getElementById('bulkWordCategory');
+  const appliesToSelect = document.getElementById('bulkWordAppliesTo');
 
   const words = parseBulkWords(textarea.value);
   const category = categorySelect?.value || 'explicit';
+  const applies_to = appliesToSelect?.value || 'safe';
 
   if (words.length === 0) {
     alert('Please enter at least one word.');
@@ -448,7 +475,7 @@ async function addBulkBlockedWords() {
   try {
     const response = await authFetch(`${API_BASE_URL}/api/content-filter/admin/words/bulk`, {
       method: 'POST',
-      body: JSON.stringify({ words, category })
+      body: JSON.stringify({ words, category, applies_to })
     });
 
     if (!response.ok) throw new Error('Failed to add words');
