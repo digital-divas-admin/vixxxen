@@ -9555,7 +9555,8 @@
 
     <!-- Payment Modal Test Panel -->
     <div style="position: fixed; bottom: 20px; right: 20px; z-index: 60000; background: rgba(0,0,0,0.9); padding: 16px; border-radius: 12px; border: 1px solid #333; display: none;" id="paymentTestPanel">
-      <div style="color: white; font-size: 0.9rem; margin-bottom: 12px; font-weight: 600;">🧪 Payment Modal Tests</div>
+      <div style="color: white; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">🧪 Payment Modal Tests</div>
+      <div style="color: #666; font-size: 0.75rem; margin-bottom: 12px;">Press 'p' 3 times to toggle</div>
       <button onclick="showPaymentSuccess('starter')" style="display: block; width: 100%; margin-bottom: 8px; padding: 8px 16px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer;">Test Success (Starter)</button>
       <button onclick="showPaymentSuccess('creator')" style="display: block; width: 100%; margin-bottom: 8px; padding: 8px 16px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer;">Test Success (Creator)</button>
       <button onclick="showPaymentSuccess('pro')" style="display: block; width: 100%; margin-bottom: 8px; padding: 8px 16px; background: #00ff88; border: none; border-radius: 6px; color: #0f0f0f; font-weight: 600; cursor: pointer;">Test Success (Pro)</button>
@@ -16001,12 +16002,27 @@
       }
     });
 
-    // Keyboard shortcut to toggle payment test panel (Ctrl/Cmd + Shift + T)
+    // Triple-tap 'p' to toggle payment test panel
+    let pKeyPressCount = 0;
+    let pKeyTimer = null;
     document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
-        e.preventDefault();
-        const panel = document.getElementById('paymentTestPanel');
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Ignore if user is typing in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        pKeyPressCount++;
+
+        if (pKeyPressCount === 3) {
+          const panel = document.getElementById('paymentTestPanel');
+          panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+          pKeyPressCount = 0;
+          clearTimeout(pKeyTimer);
+        } else {
+          clearTimeout(pKeyTimer);
+          pKeyTimer = setTimeout(() => {
+            pKeyPressCount = 0;
+          }, 500);
+        }
       }
     });
 
