@@ -97,6 +97,7 @@ router.post('/create-charge', async (req, res) => {
     const orderNumber = `${tier}-${userId.substring(0, 8)}-${Date.now()}`;
 
     // Build Plisio API URL with query parameters
+    // IMPORTANT: json=true is required for Node.js webhooks to receive JSON data
     const params = new URLSearchParams({
       source_currency: 'USD',
       source_amount: tierConfig.price.toString(),
@@ -104,7 +105,7 @@ router.post('/create-charge', async (req, res) => {
       currency: 'BTC,ETH,LTC,USDT,USDC,DOGE',
       email: '', // Optional - user can enter on Plisio page
       order_name: tierConfig.name,
-      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio`,
+      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio?json=true`,
       success_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=success&tier=${tier}`,
       fail_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=failed`,
       api_key: PLISIO_API_KEY
@@ -179,22 +180,25 @@ router.post('/webhook/plisio', async (req, res) => {
 
     // Verify webhook signature if secret key is set
     if (PLISIO_SECRET_KEY && data.verify_hash) {
-      // Plisio sends verify_hash - we need to verify it
-      const params = { ...data };
-      delete params.verify_hash;
+      // Plisio verification: stringify ordered object without verify_hash
+      const ordered = { ...data };
+      delete ordered.verify_hash;
 
-      // Sort params and create string
-      const sortedKeys = Object.keys(params).sort();
-      const values = sortedKeys.map(key => params[key]).join('');
+      // Stringify the ordered object
+      const string = JSON.stringify(ordered);
 
-      const expectedHash = crypto
-        .createHmac('sha1', PLISIO_SECRET_KEY)
-        .update(values)
-        .digest('hex');
+      // Create HMAC hash
+      const hmac = crypto.createHmac('sha1', PLISIO_SECRET_KEY);
+      hmac.update(string);
+      const expectedHash = hmac.digest('hex');
 
       if (data.verify_hash !== expectedHash) {
         console.error('Invalid webhook signature');
-        // Don't reject - Plisio might use different verification
+        console.error('Expected:', expectedHash);
+        console.error('Received:', data.verify_hash);
+        // Don't reject - log for debugging but continue processing
+      } else {
+        console.log('Webhook signature verified successfully');
       }
     }
 
