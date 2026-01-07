@@ -14160,6 +14160,9 @@
       updateCharacterDropdowns();
 
       console.log('👋 Logged out');
+
+      // Force page reload to ensure clean state
+      window.location.reload();
     }
 
     // Load user profile data from Supabase (with optional bootstrap optimization)
