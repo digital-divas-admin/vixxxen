@@ -378,32 +378,52 @@ router.post('/admin/words/bulk', requireAdmin, async (req, res) => {
     // Validate applies_to value
     const validAppliesTo = ['safe', 'nsfw', 'both'].includes(applies_to) ? applies_to : 'safe';
 
-    // Prepare words for insertion
-    const wordsToInsert = words
+    // Clean and normalize words
+    const cleanedWords = words
       .filter(w => typeof w === 'string' && w.trim().length > 0)
-      .map(w => ({
-        word: w.trim().toLowerCase(),
-        category: category,
-        applies_to: validAppliesTo,
-        is_active: true
-      }));
+      .map(w => w.trim().toLowerCase());
 
-    if (wordsToInsert.length === 0) {
+    if (cleanedWords.length === 0) {
       return res.status(400).json({ error: 'No valid words provided' });
     }
 
-    // Insert with upsert to handle duplicates gracefully
+    // Get existing words to filter out duplicates
+    const { data: existingWords } = await supabase
+      .from('safe_mode_blocked_words')
+      .select('word')
+      .in('word', cleanedWords);
+
+    const existingSet = new Set((existingWords || []).map(w => w.word.toLowerCase()));
+
+    // Filter out words that already exist
+    const newWords = cleanedWords.filter(w => !existingSet.has(w));
+
+    if (newWords.length === 0) {
+      return res.status(200).json({
+        message: 'All words already exist',
+        added: 0,
+        requested: words.length,
+        duplicates: words.length
+      });
+    }
+
+    // Prepare words for insertion
+    const wordsToInsert = newWords.map(w => ({
+      word: w,
+      category: category,
+      applies_to: validAppliesTo,
+      is_active: true
+    }));
+
+    // Insert new words
     const { data, error } = await supabase
       .from('safe_mode_blocked_words')
-      .upsert(wordsToInsert, {
-        onConflict: 'word',
-        ignoreDuplicates: true
-      })
+      .insert(wordsToInsert)
       .select();
 
     if (error) {
       console.error('Error bulk adding words:', error);
-      return res.status(500).json({ error: 'Failed to add words' });
+      return res.status(500).json({ error: 'Failed to add words', details: error.message });
     }
 
     // Clear cache
@@ -412,11 +432,12 @@ router.post('/admin/words/bulk', requireAdmin, async (req, res) => {
     res.status(201).json({
       message: `Added ${data?.length || 0} words`,
       added: data?.length || 0,
-      requested: words.length
+      requested: words.length,
+      duplicates: words.length - (data?.length || 0)
     });
   } catch (error) {
     console.error('Error bulk adding words:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
