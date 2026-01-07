@@ -102,7 +102,6 @@ router.post('/create-charge', async (req, res) => {
       source_currency: 'USD',
       source_amount: tierConfig.price.toString(),
       order_number: orderNumber,
-      currency: 'BTC,ETH,LTC,USDT,USDC,DOGE',
       email: '', // Optional - user can enter on Plisio page
       order_name: tierConfig.name,
       callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio?json=true`,
@@ -110,6 +109,8 @@ router.post('/create-charge', async (req, res) => {
       fail_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=failed`,
       api_key: PLISIO_API_KEY
     });
+
+    // Note: Removed 'currency' parameter - Plisio will show all available cryptocurrencies for user to choose
 
     const response = await fetch(`https://plisio.net/api/v1/invoices/new?${params.toString()}`);
     const data = await response.json();
