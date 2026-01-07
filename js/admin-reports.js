@@ -389,3 +389,89 @@ async function deleteBlockedWord(id, word) {
     alert('Failed to delete word. Please try again.');
   }
 }
+
+// Toggle bulk entry form visibility
+function toggleBulkEntry() {
+  const form = document.getElementById('bulkEntryForm');
+  const toggle = document.getElementById('bulkEntryToggle');
+
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    toggle.textContent = '📋 Hide Bulk Entry';
+    toggle.style.background = 'rgba(157, 78, 221, 0.2)';
+
+    // Add input listener to update word count
+    const textarea = document.getElementById('bulkBlockedWords');
+    textarea.addEventListener('input', updateBulkWordCount);
+  } else {
+    form.style.display = 'none';
+    toggle.textContent = '📋 Bulk Add Multiple Words';
+    toggle.style.background = 'transparent';
+  }
+}
+
+// Update the word count display as user types
+function updateBulkWordCount() {
+  const textarea = document.getElementById('bulkBlockedWords');
+  const countDisplay = document.getElementById('bulkWordCount');
+  const words = parseBulkWords(textarea.value);
+  countDisplay.textContent = `${words.length} word${words.length !== 1 ? 's' : ''}`;
+}
+
+// Parse bulk words from textarea (supports newlines and commas)
+function parseBulkWords(text) {
+  if (!text || !text.trim()) return [];
+
+  // Split by newlines and commas, then clean up
+  return text
+    .split(/[\n,]+/)
+    .map(w => w.trim().toLowerCase())
+    .filter(w => w.length > 0);
+}
+
+// Add multiple blocked words at once
+async function addBulkBlockedWords() {
+  if (!isUserAdmin) return;
+
+  const textarea = document.getElementById('bulkBlockedWords');
+  const categorySelect = document.getElementById('bulkWordCategory');
+
+  const words = parseBulkWords(textarea.value);
+  const category = categorySelect?.value || 'explicit';
+
+  if (words.length === 0) {
+    alert('Please enter at least one word.');
+    return;
+  }
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/content-filter/admin/words/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ words, category })
+    });
+
+    if (!response.ok) throw new Error('Failed to add words');
+
+    const data = await response.json();
+
+    // Show result
+    alert(`Added ${data.added} of ${data.requested} words.\n${data.requested - data.added > 0 ? `(${data.requested - data.added} were duplicates)` : ''}`);
+
+    // Clear textarea and hide form
+    textarea.value = '';
+    updateBulkWordCount();
+    toggleBulkEntry();
+
+    // Reload list
+    loadBlockedWordsAdmin();
+
+    // Refresh frontend cache
+    if (typeof loadBlockedWords === 'function') {
+      loadBlockedWords();
+    }
+
+  } catch (error) {
+    console.error('Error adding bulk words:', error);
+    alert('Failed to add words. Please try again.');
+  }
+}

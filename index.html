@@ -8272,7 +8272,7 @@
                 </div>
 
                 <!-- Add Word Form -->
-                <div class="add-word-form" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                <div class="add-word-form" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 700px; margin-left: auto; margin-right: auto;">
                   <input type="text" id="newBlockedWord" placeholder="Enter word or phrase..." style="flex: 1; min-width: 200px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
                   <select id="newWordCategory" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                     <option value="explicit">Explicit</option>
@@ -8282,6 +8282,32 @@
                   <button onclick="addBlockedWord()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
                     ➕ Add Word
                   </button>
+                </div>
+
+                <!-- Bulk Add Toggle -->
+                <div style="text-align: center; margin-bottom: 16px;">
+                  <button onclick="toggleBulkEntry()" id="bulkEntryToggle" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #9d4edd; cursor: pointer; font-size: 0.85rem;">
+                    📋 Bulk Add Multiple Words
+                  </button>
+                </div>
+
+                <!-- Bulk Add Form (hidden by default) -->
+                <div id="bulkEntryForm" style="display: none; margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                  <div style="margin-bottom: 12px; color: #888; font-size: 0.85rem; text-align: center;">
+                    Enter multiple words (one per line or comma-separated)
+                  </div>
+                  <textarea id="bulkBlockedWords" placeholder="nude&#10;naked&#10;explicit&#10;or: nude, naked, explicit" style="width: 100%; min-height: 120px; padding: 12px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; resize: vertical; font-family: inherit;"></textarea>
+                  <div style="display: flex; gap: 12px; margin-top: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                    <select id="bulkWordCategory" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                      <option value="explicit">Explicit</option>
+                      <option value="violence">Violence</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <button onclick="addBulkBlockedWords()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                      ➕ Add All Words
+                    </button>
+                    <span id="bulkWordCount" style="color: #888; font-size: 0.85rem;">0 words</span>
+                  </div>
                 </div>
 
                 <!-- Filter and Search -->
