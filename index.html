@@ -6964,13 +6964,19 @@
     <div class="login-modal" id="loginModal">
       <div class="login-modal-content">
         <div class="login-modal-title">Welcome to Vixxxen</div>
-        <div class="login-modal-subtitle">Sign in to continue creating amazing content</div>
+        <div class="login-modal-subtitle">Sign in or create an account to start creating</div>
 
         <input type="email" class="login-input" placeholder="Email" id="loginEmail">
-        <input type="password" class="login-input" placeholder="Password" id="loginPassword">
+        <input type="password" class="login-input" placeholder="Password (min 6 characters)" id="loginPassword">
 
-        <button class="user-menu-btn primary" onclick="handleLogin()">Sign In</button>
-        <button class="user-menu-btn" onclick="closeLoginModal()">Cancel</button>
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <button class="user-menu-btn primary" onclick="handleLogin()" style="flex: 1;">Sign In</button>
+          <button class="user-menu-btn primary" onclick="handleSignUpFromModal()" style="flex: 1; background: linear-gradient(135deg, #00b2ff, #0088cc);">Create Account</button>
+        </div>
+        <div style="font-size: 0.8rem; color: #888; text-align: center; margin-top: 8px;">
+          🎁 New accounts get <strong style="color: #00b2ff;">20 free credits</strong> to start!
+        </div>
+        <button class="user-menu-btn" onclick="closeLoginModal()" style="margin-top: 8px;">Cancel</button>
       </div>
     </div>
 
@@ -10230,7 +10236,7 @@
       if (mode === 'nsfw') {
         // Check if user is logged in
         if (!currentUser) {
-          alert('Please log in to access NSFW content.');
+          showLoginRequiredModal();
           return;
         }
 
@@ -14195,6 +14201,35 @@
       } catch (err) {
         console.error('Sign up error:', err);
         alert('An error occurred during sign up');
+      }
+    }
+
+    // Handle signup from the modal directly
+    async function handleSignUpFromModal() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        alert('Please enter both email and password');
+        return;
+      }
+
+      if (password.length < 6) {
+        alert('Password must be at least 6 characters');
+        return;
+      }
+
+      // Show loading state
+      const signupBtn = document.querySelector('#loginModal button[onclick="handleSignUpFromModal()"]');
+      const originalText = signupBtn.textContent;
+      signupBtn.textContent = 'Creating...';
+      signupBtn.disabled = true;
+
+      try {
+        await handleSignUp(email, password);
+      } finally {
+        signupBtn.textContent = originalText;
+        signupBtn.disabled = false;
       }
     }
 
