@@ -31,10 +31,10 @@ function openBillingPage() {
 async function loadBillingData() {
   if (!currentUser) return;
 
-  // Set credits balance
+  // Set credits balance - use userCredits global variable
   const creditsDisplay = document.getElementById('billingCredits');
   if (creditsDisplay) {
-    creditsDisplay.textContent = currentUser.credits?.toLocaleString() || '0';
+    creditsDisplay.textContent = userCredits?.toLocaleString() || '0';
   }
 
   // Load transaction history
