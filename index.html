@@ -14171,7 +14171,9 @@
       try {
         // Try bootstrap endpoint first for faster loading (uses JWT auth, not URL param)
         try {
+          console.log('📊 Calling bootstrap endpoint...');
           const response = await authFetch(`${API_BASE_URL}/api/resources/bootstrap`);
+          console.log('📊 Bootstrap response status:', response.status);
           if (response.ok) {
             const data = await response.json();
             console.log('📊 Bootstrap data received:', data);
@@ -14205,6 +14207,10 @@
             ]);
 
             return; // Success - exit early
+          } else {
+            // Log the error response for debugging
+            const errorText = await response.text().catch(() => 'Could not read error response');
+            console.warn('📊 Bootstrap returned error:', response.status, errorText);
           }
         } catch (bootstrapErr) {
           console.warn('📊 Bootstrap unavailable, using direct queries:', bootstrapErr.message);
