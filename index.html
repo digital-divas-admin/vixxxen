@@ -9517,82 +9517,82 @@
         </div>
 
         <div class="pricing-cards">
-          <!-- Basic Plan -->
+          <!-- Starter Plan -->
           <div class="pricing-card">
             <div class="pricing-tier">Starter</div>
             <div class="pricing-name">Basic</div>
-            <div class="pricing-price">$1.25<span>/mo</span></div>
+            <div class="pricing-price">$20<span>/mo</span></div>
             <div class="pricing-period">Billed monthly</div>
 
             <div class="pricing-credits">
-              <div class="pricing-credits-amount">5,000</div>
+              <div class="pricing-credits-amount">1,000</div>
               <div class="pricing-credits-label">Credits per month</div>
             </div>
 
             <ul class="pricing-features">
-              <li class="pricing-feature">All AI Models Access</li>
-              <li class="pricing-feature">Image Generation</li>
-              <li class="pricing-feature">Video Generation</li>
+              <li class="pricing-feature">125 Qwen HD Images (1152x1536)</li>
+              <li class="pricing-feature">250 Seedream Images</li>
+              <li class="pricing-feature">143 Qwen Inpaints</li>
+              <li class="pricing-feature">77 Nano Banana Images</li>
               <li class="pricing-feature">Image Editing Tools</li>
               <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
               <li class="pricing-feature">Standard Support</li>
               <li class="pricing-feature disabled">Priority Processing</li>
-              <li class="pricing-feature disabled">API Access</li>
             </ul>
 
-            <button class="pricing-cta" onclick="selectPlan('basic', 1.25)">Get Started</button>
+            <button class="pricing-cta" onclick="selectPlan('starter', 20)">Get Started</button>
           </div>
 
-          <!-- Pro Plan (Featured) -->
+          <!-- Creator Plan (Featured) -->
           <div class="pricing-card featured">
-            <div class="pricing-tier">Professional</div>
-            <div class="pricing-name">Pro</div>
-            <div class="pricing-price">$1.75<span>/mo</span></div>
+            <div class="pricing-tier">Most Popular</div>
+            <div class="pricing-name">Creator</div>
+            <div class="pricing-price">$50<span>/mo</span></div>
             <div class="pricing-period">Billed monthly</div>
 
             <div class="pricing-credits">
-              <div class="pricing-credits-amount">20,000</div>
+              <div class="pricing-credits-amount">3,000</div>
               <div class="pricing-credits-label">Credits per month</div>
             </div>
 
             <ul class="pricing-features">
-              <li class="pricing-feature">All AI Models Access</li>
-              <li class="pricing-feature">Image Generation</li>
-              <li class="pricing-feature">Video Generation</li>
-              <li class="pricing-feature">Image Editing Tools</li>
-              <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
+              <li class="pricing-feature">375 Qwen HD Images (1152x1536)</li>
+              <li class="pricing-feature">750 Seedream Images</li>
+              <li class="pricing-feature">429 Qwen Inpaints</li>
+              <li class="pricing-feature">231 Nano Banana Images</li>
+              <li class="pricing-feature">25 Veo Videos (720p/1080p)</li>
               <li class="pricing-feature">Priority Support</li>
               <li class="pricing-feature">Priority Processing</li>
-              <li class="pricing-feature disabled">API Access</li>
+              <li class="pricing-feature">All AI Models Access</li>
             </ul>
 
-            <button class="pricing-cta" onclick="selectPlan('pro', 1.75)">Get Pro</button>
+            <button class="pricing-cta" onclick="selectPlan('creator', 50)">Get Creator</button>
           </div>
 
-          <!-- Ultimate Plan -->
+          <!-- Pro Plan -->
           <div class="pricing-card">
-            <div class="pricing-tier">Enterprise</div>
-            <div class="pricing-name">Ultimate</div>
-            <div class="pricing-price">$2.25<span>/mo</span></div>
+            <div class="pricing-tier">Professional</div>
+            <div class="pricing-name">Pro</div>
+            <div class="pricing-price">$95<span>/mo</span></div>
             <div class="pricing-period">Billed monthly</div>
 
             <div class="pricing-credits">
-              <div class="pricing-credits-amount">100,000</div>
+              <div class="pricing-credits-amount">6,500</div>
               <div class="pricing-credits-label">Credits per month</div>
             </div>
 
             <ul class="pricing-features">
-              <li class="pricing-feature">All AI Models Access</li>
-              <li class="pricing-feature">Image Generation</li>
-              <li class="pricing-feature">Video Generation</li>
-              <li class="pricing-feature">Image Editing Tools</li>
-              <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
+              <li class="pricing-feature">812 Qwen HD Images (1152x1536)</li>
+              <li class="pricing-feature">1,625 Seedream Images</li>
+              <li class="pricing-feature">929 Qwen Inpaints</li>
+              <li class="pricing-feature">500 Nano Banana Images</li>
+              <li class="pricing-feature">54 Veo Videos (720p/1080p)</li>
               <li class="pricing-feature">24/7 Premium Support</li>
               <li class="pricing-feature">Priority Processing</li>
-              <li class="pricing-feature">Full API Access</li>
+              <li class="pricing-feature">All AI Models + API Access</li>
             </ul>
 
-            <button class="pricing-cta" onclick="selectPlan('ultimate', 2.25)">Go Ultimate</button>
+            <button class="pricing-cta" onclick="selectPlan('pro', 95)">Go Pro</button>
           </div>
         </div>
 
@@ -15474,18 +15474,18 @@
       // Image generation costs
       image: {
         'nano-banana': {
-          base: 10,
-          '1:1': 10,
-          '16:9': 15,
-          '9:16': 15,
-          '4:3': 12,
-          '3:4': 12
+          base: 13,
+          '1:1': 13,
+          '16:9': 13,
+          '9:16': 13,
+          '4:3': 13,
+          '3:4': 13
         },
         'seedream': {
-          base: 25,
-          '1K': 25,
-          '2K': 35,
-          '4K': 50
+          base: 4,
+          '1K': 4,
+          '2K': 4,
+          '4K': 4
         },
         'flux': {
           base: 20,
@@ -15496,35 +15496,35 @@
           '3:4': 22
         },
         'qwen': {
-          base: 18,
-          '1:1': 18,
-          '16:9': 23,
-          '9:16': 23,
-          '4:3': 20,
-          '3:4': 20
+          base: 8,
+          '1:1': 8,
+          '16:9': 8,
+          '9:16': 8,
+          '4:3': 8,
+          '3:4': 8
         },
-        'qwen-image-edit': 30
+        'qwen-image-edit': 7
       },
       // Video generation costs (more expensive)
       video: {
         'kling': {
-          '5s': 100,
-          '10s': 200
+          '5s': 35,
+          '10s': 70
         },
         'wan': {
-          '5s': 150,
-          '10s': 300
+          '5s': 40,
+          '10s': 80
         },
         'veo': {
-          '4s': 150,
-          '8s': 250,
-          '12s': 350
+          '4s': 120,
+          '8s': 120,
+          '12s': 120
         }
       },
       // Editing costs
       edit: {
-        'object-eraser': 20,
-        'bg-remover': 15
+        'object-eraser': 4,
+        'bg-remover': 1
       },
       // Caption/AI chat costs (cheapest)
       caption: {
@@ -16124,15 +16124,15 @@
       }
 
       const planNames = {
-        'basic': 'Basic Plan',
-        'pro': 'Pro Plan',
-        'ultimate': 'Ultimate Plan'
+        'starter': 'Starter Plan',
+        'creator': 'Creator Plan',
+        'pro': 'Pro Plan'
       };
 
       const credits = {
-        'basic': '5,000',
-        'pro': '20,000',
-        'ultimate': '100,000'
+        'starter': '1,000',
+        'creator': '3,000',
+        'pro': '6,500'
       };
 
       if (!confirm(`Subscribe to ${planNames[plan]}?\n\nPrice: $${price}/month\nCredits: ${credits[plan]} per month\n\nYou'll be redirected to pay with cryptocurrency.`)) {
