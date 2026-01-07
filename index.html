@@ -10236,9 +10236,9 @@
 
         // Check if already verified
         if (!ageVerified) {
-          // Check verification status from server
+          // Check verification status from server (uses JWT auth)
           try {
-            const response = await fetch(`${API_BASE_URL}/api/age-verification/status?user_id=${currentUser.id}`);
+            const response = await authFetch(`${API_BASE_URL}/api/age-verification/status`);
             const data = await response.json();
 
             if (data.verified) {
@@ -14166,9 +14166,9 @@
     async function loadUserProfile(userId) {
       console.log('📊 Loading profile for user:', userId);
       try {
-        // Try bootstrap endpoint first for faster loading
+        // Try bootstrap endpoint first for faster loading (uses JWT auth, not URL param)
         try {
-          const response = await fetch(`${API_BASE_URL}/api/resources/bootstrap/${userId}`);
+          const response = await authFetch(`${API_BASE_URL}/api/resources/bootstrap`);
           if (response.ok) {
             const data = await response.json();
             console.log('📊 Bootstrap data received:', data);
@@ -14374,13 +14374,10 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/payments/create-charge`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/payments/create-charge`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tier: plan,
-            userId: currentUser.id
-          })
+          body: JSON.stringify({ tier: plan })
         });
 
         const data = await response.json();
@@ -14406,12 +14403,11 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/payments/create-charge`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/payments/create-charge`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tier: `credits_${credits}`,
-            userId: currentUser.id,
             credits: credits,
             price: price
           })
@@ -15063,7 +15059,8 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/characters/${editingCharacterId}?user_id=${currentUser.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/characters/${editingCharacterId}`, {
           method: 'DELETE'
         });
 
@@ -16183,7 +16180,8 @@
       const userId = user?.id || null;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/starthere?user_id=${userId || ''}`);
+        // Uses optional JWT auth - if logged in, will track completion status
+        const response = await authFetch(`${API_BASE_URL}/api/starthere`);
         const data = await response.json();
 
         if (data.guides) {
@@ -16458,7 +16456,8 @@
       if (!confirm('Are you sure you want to delete this guide?')) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/starthere/${editingGuideId}?user_id=${user.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/starthere/${editingGuideId}`, {
           method: 'DELETE'
         });
 
@@ -16498,7 +16497,8 @@
         const formData = new FormData();
         formData.append('thumbnail', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/resources/upload?user_id=${user.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/upload`, {
           method: 'POST',
           body: formData
         });
@@ -16525,7 +16525,8 @@
       const userId = user?.id || null;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/resources?user_id=${userId || ''}`);
+        // Uses optional JWT auth - if logged in, will show ownership status
+        const response = await authFetch(`${API_BASE_URL}/api/resources`);
         const data = await response.json();
 
         if (data.resources) {
@@ -16851,9 +16852,9 @@
       if (!resource) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/resources/purchase?user_id=${user.id}`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/purchase`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ resource_id: resourceId, use_credits: useCredits })
         });
 
@@ -16891,9 +16892,9 @@
       if (!user) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/resources/purchase/confirm?user_id=${user.id}`, {
+        // Uses JWT auth - userId extracted from token on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/purchase/confirm`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             resource_id: resourceId,
             payment_id: 'manual_' + Date.now(), // Placeholder for actual payment ID
@@ -17180,7 +17181,8 @@
         const formData = new FormData();
         formData.append('thumbnail', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/resources/upload?user_id=${user.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/resources/upload`, {
           method: 'POST',
           body: formData
         });
@@ -17286,16 +17288,10 @@
         btn.textContent = 'Creating payment...';
         btn.disabled = true;
 
-        // Create Coinbase Commerce charge
-        const response = await fetch(`${API_BASE_URL}/api/payments/create-charge`, {
+        // Create payment charge (uses JWT auth)
+        const response = await authFetch(`${API_BASE_URL}/api/payments/create-charge`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            tier: tier,
-            userId: currentUser.id
-          })
+          body: JSON.stringify({ tier: tier })
         });
 
         const data = await response.json();
@@ -18126,9 +18122,9 @@
 
         console.log('📝 Saving policy:', type, policyData.title);
 
-        const response = await fetch(`${API_BASE_URL}/api/policies/${type}?user_id=${currentUser.id}`, {
+        // Uses JWT auth - admin check done on server
+        const response = await authFetch(`${API_BASE_URL}/api/policies/${type}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(policyData)
         });
 

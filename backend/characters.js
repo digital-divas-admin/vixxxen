@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
+const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -11,35 +12,23 @@ if (supabaseUrl && supabaseServiceKey) {
   supabase = createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// Helper function to check admin status
-async function isUserAdmin(userId) {
-  if (!userId || !supabase) return false;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-
-  return profile?.role === 'admin';
-}
-
 // GET /api/characters - Get all characters with ownership status
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     // Get user's owned characters
     let ownedCharacterIds = [];
-    if (user_id) {
+    if (userId) {
       const { data: owned } = await supabase
         .from('user_characters')
         .select('character_id')
-        .eq('user_id', user_id);
+        .eq('user_id', userId);
 
       ownedCharacterIds = owned?.map(o => o.character_id) || [];
     }
@@ -71,17 +60,13 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/characters/all - Get all characters including inactive (admin only)
-router.get('/all', async (req, res) => {
+router.get('/all', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { data: characters, error } = await supabase
       .from('marketplace_characters')
@@ -102,17 +87,13 @@ router.get('/all', async (req, res) => {
 });
 
 // POST /api/characters - Create a new character (admin only)
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const {
       name, category, description, price, tags,
@@ -156,18 +137,14 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/characters/:id - Update a character (admin only)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const {
       name, category, description, price, rating, purchases, tags,
@@ -212,18 +189,14 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/characters/:id - Delete a character (admin only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.query;
-
-    if (!await isUserAdmin(user_id)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    // User is verified admin via requireAdmin middleware
 
     const { error } = await supabase
       .from('marketplace_characters')
@@ -244,18 +217,15 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/characters/:id/purchase - Purchase a character
-router.post('/:id/purchase', async (req, res) => {
+router.post('/:id/purchase', requireAuth, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     const { id } = req.params;
-    const { user_id } = req.body;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID required' });
-    }
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     // Get character info
     const { data: character, error: charError } = await supabase
@@ -272,7 +242,7 @@ router.post('/:id/purchase', async (req, res) => {
     const { data: existing } = await supabase
       .from('user_characters')
       .select('id')
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .eq('character_id', id)
       .single();
 
@@ -284,7 +254,7 @@ router.post('/:id/purchase', async (req, res) => {
     const { error } = await supabase
       .from('user_characters')
       .insert({
-        user_id,
+        user_id: userId,
         character_id: id,
         amount_paid: character.price
       });

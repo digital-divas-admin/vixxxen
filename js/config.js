@@ -33,3 +33,102 @@ console.log(`🔗 API URL: ${API_BASE_URL || window.location.origin} (${isLocal 
 
 // NSFW-only models - always tag output as NSFW regardless of content mode
 const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
+
+// ===========================================
+// AUTHENTICATED API HELPER
+// ===========================================
+// Wraps fetch with automatic auth header injection
+
+/**
+ * Make an authenticated API request
+ * Automatically adds the Supabase JWT token to Authorization header
+ * @param {string} url - The API endpoint URL
+ * @param {object} options - Fetch options (method, body, etc.)
+ * @returns {Promise<Response>} - The fetch response
+ */
+async function authFetch(url, options = {}) {
+  // Get current session token
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  // Build headers with auth token if available
+  // Don't set Content-Type for FormData (browser handles it)
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...options.headers
+  };
+
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+
+  // Make the request with auth headers
+  return fetch(url, {
+    ...options,
+    headers
+  });
+}
+
+/**
+ * Make an authenticated GET request
+ * @param {string} url - The API endpoint URL
+ * @returns {Promise<any>} - Parsed JSON response
+ */
+async function authGet(url) {
+  const response = await authFetch(url, { method: 'GET' });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Make an authenticated POST request
+ * @param {string} url - The API endpoint URL
+ * @param {object} data - Request body data
+ * @returns {Promise<any>} - Parsed JSON response
+ */
+async function authPost(url, data) {
+  const response = await authFetch(url, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Make an authenticated PUT request
+ * @param {string} url - The API endpoint URL
+ * @param {object} data - Request body data
+ * @returns {Promise<any>} - Parsed JSON response
+ */
+async function authPut(url, data) {
+  const response = await authFetch(url, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Make an authenticated DELETE request
+ * @param {string} url - The API endpoint URL
+ * @returns {Promise<any>} - Parsed JSON response
+ */
+async function authDelete(url) {
+  const response = await authFetch(url, { method: 'DELETE' });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+  return response.json();
+}

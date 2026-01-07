@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { requireAuth } = require('./middleware/auth');
 
 const router = express.Router();
 
@@ -73,9 +74,11 @@ const TIERS = {
 };
 
 // Create a Plisio invoice
-router.post('/create-charge', async (req, res) => {
+router.post('/create-charge', requireAuth, async (req, res) => {
   try {
-    const { tier, userId } = req.body;
+    const { tier } = req.body;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     if (!PLISIO_API_KEY) {
       console.error('PLISIO_API_KEY is not set');
@@ -85,10 +88,6 @@ router.post('/create-charge', async (req, res) => {
     if (!tier || !TIERS[tier]) {
       console.error('Invalid tier requested:', tier);
       return res.status(400).json({ error: `Invalid tier: ${tier}` });
-    }
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID required' });
     }
 
     const tierConfig = TIERS[tier];
@@ -402,9 +401,10 @@ router.post('/webhook/plisio', async (req, res) => {
 });
 
 // Get user's subscription status
-router.get('/subscription/:userId', async (req, res) => {
+router.get('/subscription', requireAuth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     const { data: subscription, error } = await supabase
       .from('subscriptions')
@@ -441,9 +441,10 @@ router.get('/subscription/:userId', async (req, res) => {
 });
 
 // Get user's payment history
-router.get('/history/:userId', async (req, res) => {
+router.get('/history', requireAuth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    // Use verified user ID from auth middleware
+    const userId = req.userId;
 
     const { data: payments, error } = await supabase
       .from('payments')
