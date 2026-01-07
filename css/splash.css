@@ -1,0 +1,85 @@
+/* ===========================================
+   SPLASH SCREEN - Loading & Cold Start
+   =========================================== */
+
+/* Critical loading splash (inline in HTML for immediate display) */
+.loading-splash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0f0f0f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  transition: opacity 0.3s ease-out;
+}
+
+.loading-splash.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-splash-logo {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 20px;
+}
+
+.loading-splash-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 46, 187, 0.2);
+  border-top-color: #ff2ebb;
+  border-radius: 50%;
+  animation: splash-spin 1s linear infinite;
+}
+
+.loading-splash-text {
+  color: #888;
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+
+/* Cold Start Banner */
+.cold-start-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #ff9500, #ff6b00);
+  color: #fff;
+  padding: 12px 20px;
+  text-align: center;
+  z-index: 10001;
+  display: none;
+  animation: slideDown 0.3s ease-out;
+  font-size: 0.9rem;
+}
+
+.cold-start-banner.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cold-start-banner .spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.cold-start-banner.ready {
+  background: linear-gradient(135deg, #00c853, #00a844);
+}

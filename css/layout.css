@@ -1,0 +1,354 @@
+/* ===========================================
+   LAYOUT - Container, Navigation, Panels
+   =========================================== */
+
+.container {
+  display: flex;
+  height: 100vh;
+  padding-bottom: 50px; /* Space for fixed footer */
+}
+
+/* Main Navigation Sidebar */
+.main-nav {
+  width: 90px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 0;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.nav-tabs-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-tab {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  color: var(--text-muted);
+  transition: background 0.2s, color 0.2s;
+}
+
+.nav-tab:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.nav-tab.active {
+  border-left-color: var(--accent-primary);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.nav-icon {
+  font-size: 1.5rem;
+}
+
+.nav-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* User Area */
+.user-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border-top: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(255, 46, 187, 0.5);
+}
+
+.user-avatar.logged-out {
+  background: var(--bg-hover);
+  border: 2px dashed var(--border-light);
+}
+
+.user-status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #00ff88;
+  border: 2px solid var(--bg-secondary);
+  border-radius: 50%;
+}
+
+.user-credits {
+  font-size: 0.65rem;
+  color: var(--accent-secondary);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-tertiary);
+  transform: scale(1.1);
+}
+
+.theme-icon {
+  font-size: 1.1rem;
+  transition: transform 0.3s;
+}
+
+.theme-toggle:hover .theme-icon {
+  transform: rotate(20deg);
+}
+
+/* Left Panel */
+.left-panel {
+  width: 380px;
+  background: var(--bg-tertiary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: width 0.3s ease, background 0.3s;
+}
+
+.left-panel.canvas-active {
+  width: 760px;
+}
+
+/* Header */
+.header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.logo {
+  height: 40px;
+  width: auto;
+}
+
+.header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tagline {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Content Area */
+.content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Tab Content Sections */
+.tab-section {
+  display: none;
+  flex: 1;
+}
+
+.tab-section.active {
+  display: flex;
+}
+
+/* Right Panel - Output */
+.right-panel {
+  flex: 1;
+  background: var(--bg-primary);
+  overflow-y: auto;
+  padding: 20px;
+  transition: background 0.3s;
+}
+
+/* Video tab specific */
+#videoSection .left-panel {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 100px);
+  overflow: hidden;
+}
+
+#videoSection .left-panel .header {
+  flex-shrink: 0;
+}
+
+#videoSection .content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 30px;
+}
+
+/* Site Footer */
+.site-footer {
+  position: fixed;
+  bottom: 0;
+  left: 90px;
+  right: 0;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 12px 32px;
+  z-index: 100;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.footer-tagline {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--text-primary);
+}
+
+.footer-copyright {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-ai-disclosure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #888;
+  background: rgba(0, 178, 255, 0.1);
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 178, 255, 0.2);
+}
+
+.ai-badge {
+  background: linear-gradient(135deg, #00b2ff, #00d4aa);
+  color: #000;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+}
+
+.footer-main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Placeholder Content */
+.placeholder-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  padding: 40px;
+  text-align: center;
+}
+
+.placeholder-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.3;
+}
+
+.placeholder-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #888;
+}
+
+.placeholder-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}

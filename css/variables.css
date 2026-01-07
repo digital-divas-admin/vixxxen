@@ -1,0 +1,47 @@
+/* ===========================================
+   CSS VARIABLES - Theme Colors & Design Tokens
+   =========================================== */
+
+:root {
+  /* Dark theme (default) */
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #1a1a1a;
+  --bg-card: #1a1a1a;
+  --bg-input: #0a0a0a;
+  --bg-hover: #2a2a2a;
+  --border-color: #2a2a2a;
+  --border-light: #3a3a3a;
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+  --text-muted: #666666;
+  --accent-primary: #ff2ebb;
+  --accent-secondary: #00b2ff;
+  --accent-gradient: linear-gradient(135deg, #ff2ebb, #00b2ff);
+  --success: #00ff88;
+  --error: #ff4444;
+  --warning: #ffaa00;
+  --overlay: rgba(0, 0, 0, 0.8);
+}
+
+/* Light theme */
+.light-theme {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8e8ed;
+  --bg-card: #ffffff;
+  --bg-input: #f0f0f5;
+  --bg-hover: #e0e0e5;
+  --border-color: #d1d1d6;
+  --border-light: #c7c7cc;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-muted: #8e8e93;
+  --accent-primary: #e91e9c;
+  --accent-secondary: #007aff;
+  --accent-gradient: linear-gradient(135deg, #e91e9c, #007aff);
+  --success: #30d158;
+  --error: #ff3b30;
+  --warning: #ff9500;
+  --overlay: rgba(255, 255, 255, 0.9);
+}
