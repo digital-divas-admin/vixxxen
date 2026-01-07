@@ -25,6 +25,7 @@ const ageVerificationRouter = require('./age-verification');
 const complianceRouter = require('./compliance');
 const reportsRouter = require('./reports');
 const inpaintRouter = require('./inpaint');
+const contentFilterRouter = require('./content-filter');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 
@@ -132,6 +133,7 @@ app.use('/api/characters', charactersRouter);
 app.use('/api/policies', policiesRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/content-filter', contentFilterRouter);
 
 // Serve static files from the parent directory (frontend)
 app.use(express.static(path.join(__dirname, '..')));

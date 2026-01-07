@@ -7002,17 +7002,17 @@
               NSFW
             </button>
           </div>
-          <span class="content-mode-info" id="contentModeInfo">All models available in NSFW mode</span>
+          <span class="content-mode-info" id="contentModeInfo">All models • Content filtered</span>
         </div>
 
         <div class="model-tabs" id="imageModelTabs">
-          <button class="model-tab active" onclick="selectModel('nano-banana')" id="nanoTab">
+          <button class="model-tab active" onclick="selectModel('nano-banana')" id="nanoTab" data-safe-mode="true">
             🍌 Nano Banana Pro
           </button>
-          <button class="model-tab" onclick="selectModel('seedream')" id="seedreamTab" data-nsfw="true">
+          <button class="model-tab" onclick="selectModel('seedream')" id="seedreamTab" data-safe-mode="true" data-nsfw-mode="true">
             🌊 Seedream 4.5
           </button>
-          <button class="model-tab" onclick="selectModel('qwen')" id="qwenGenTab" data-nsfw="true">
+          <button class="model-tab" onclick="selectModel('qwen')" id="qwenGenTab" data-safe-mode="true" data-nsfw-mode="true">
             🎨 Qwen
           </button>
         </div>
@@ -8241,6 +8241,68 @@
                     <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
                     <div style="font-size: 1.3rem; font-weight: 600; color: #4ade80; margin-bottom: 8px;">All Clear!</div>
                     <div style="color: #888; font-size: 0.95rem;">No content reports to review at this time.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Blocked Words Management Dashboard -->
+              <div class="blocked-words-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
+                <div class="policies-admin-header">
+                  <h2 class="policies-admin-title">🚫 Safe Mode Blocked Words</h2>
+                  <p class="policies-admin-subtitle">Manage words/phrases blocked in Safe Mode prompts</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="blocked-words-stats" id="blockedWordsStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.1), rgba(157, 78, 221, 0.05)); border: 1px solid rgba(157, 78, 221, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">📝</div>
+                    <div class="report-stat-value" id="totalBlockedWords" style="font-size: 2rem; font-weight: 700; color: #9d4edd;">0</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Total Words</div>
+                  </div>
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.05)); border: 1px solid rgba(74, 222, 128, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">✅</div>
+                    <div class="report-stat-value" id="activeBlockedWords" style="font-size: 2rem; font-weight: 700; color: #4ade80;">0</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Active</div>
+                  </div>
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(255, 165, 0, 0.1), rgba(255, 165, 0, 0.05)); border: 1px solid rgba(255, 165, 0, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">⏸️</div>
+                    <div class="report-stat-value" id="inactiveBlockedWords" style="font-size: 2rem; font-weight: 700; color: #ffa500;">0</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Inactive</div>
+                  </div>
+                </div>
+
+                <!-- Add Word Form -->
+                <div class="add-word-form" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                  <input type="text" id="newBlockedWord" placeholder="Enter word or phrase..." style="flex: 1; min-width: 200px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                  <select id="newWordCategory" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="explicit">Explicit</option>
+                    <option value="violence">Violence</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <button onclick="addBlockedWord()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
+                    ➕ Add Word
+                  </button>
+                </div>
+
+                <!-- Filter and Search -->
+                <div class="blocked-words-filters" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                  <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="filterBlockedWordsList()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                  <select id="categoryFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="all">All Categories</option>
+                    <option value="explicit">Explicit</option>
+                    <option value="violence">Violence</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <button onclick="loadBlockedWordsAdmin()" style="padding: 12px 24px; background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                    🔄 Refresh
+                  </button>
+                </div>
+
+                <!-- Words List -->
+                <div class="blocked-words-list" id="blockedWordsList" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 900px; margin: 0 auto; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; min-height: 100px;">
+                  <div class="blocked-words-empty" style="text-align: center; padding: 40px 20px; width: 100%;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">📝</div>
+                    <div style="color: #888; font-size: 0.95rem;">Loading blocked words...</div>
                   </div>
                 </div>
               </div>
@@ -10023,6 +10085,48 @@
       return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
     }
 
+    // ===========================================
+    // SAFE MODE CONTENT FILTER
+    // ===========================================
+    let blockedWords = []; // Cached list of blocked words for safe mode
+
+    // Fetch blocked words from API and cache them
+    async function loadBlockedWords() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/content-filter/blocked-words`);
+        if (response.ok) {
+          const data = await response.json();
+          blockedWords = data.words || [];
+          console.log(`📝 Loaded ${blockedWords.length} blocked words for safe mode`);
+        }
+      } catch (error) {
+        console.error('Failed to load blocked words:', error);
+        // Use empty array - allow generation if API fails
+        blockedWords = [];
+      }
+    }
+
+    // Validate prompt against blocked words (substring match, case insensitive)
+    function validatePromptForSafeMode(prompt) {
+      if (contentMode !== 'safe' || !prompt || blockedWords.length === 0) {
+        return { valid: true };
+      }
+
+      const lowerPrompt = prompt.toLowerCase();
+      for (const word of blockedWords) {
+        if (lowerPrompt.includes(word.toLowerCase())) {
+          return { valid: false, blocked: true };
+        }
+      }
+
+      return { valid: true };
+    }
+
+    // Show restricted content error modal
+    function showRestrictedContentError() {
+      showError('This prompt contains restricted content for Safe Mode. Please modify your prompt or switch to NSFW mode.');
+    }
+
     // Cold start check - detect slow server response on Render free tier
     let serverReady = false;
 
@@ -10222,6 +10326,9 @@
       updateContentModeUI();
       filterModelsByContentMode();
 
+      // Load blocked words for safe mode content filtering
+      loadBlockedWords();
+
       // Set up checkbox listener
       const checkbox = document.getElementById('ageConfirmCheckbox');
       if (checkbox) {
@@ -10277,24 +10384,7 @@
       contentMode = mode;
       updateContentModeUI();
       filterModelsByContentMode();
-
-      // Reset to safe model if current model is NSFW-only
-      if (mode === 'safe') {
-        const currentTab = document.getElementById(currentModel === 'nano-banana' ? 'nanoTab' :
-                          currentModel === 'seedream' ? 'seedreamTab' :
-                          currentModel === 'flux' ? 'fluxTab' :
-                          currentModel === 'qwen' ? 'qwenGenTab' : 'qwenTab');
-        if (currentTab && currentTab.dataset.nsfw === 'true') {
-          selectModel('nano-banana');
-        }
-
-        // Same for video
-        const currentVideoTab = document.getElementById(currentVideoModel === 'kling' ? 'klingVideoTab' :
-                               currentVideoModel === 'wan' ? 'wanVideoTab' : 'veoVideoTab');
-        if (currentVideoTab && currentVideoTab.dataset.nsfw === 'true') {
-          selectVideoModel('kling');
-        }
-      }
+      // Note: filterModelsByContentMode() handles auto-selection when switching modes
     }
 
     // Update content mode UI (toggle buttons)
@@ -10316,8 +10406,8 @@
 
       if (infoText) {
         infoText.textContent = contentMode === 'safe'
-          ? 'Limited models in Safe mode'
-          : 'All models available';
+          ? 'All models • Content filtered'
+          : 'Seedream & Qwen only';
       }
 
       // Video section toggle
@@ -10339,15 +10429,30 @@
 
     // Filter models based on content mode
     function filterModelsByContentMode() {
-      // Image models
+      // Image models - use data-safe-mode and data-nsfw-mode attributes
       const imageModelTabs = document.getElementById('imageModelTabs');
       if (imageModelTabs) {
         const tabs = imageModelTabs.querySelectorAll('.model-tab');
         tabs.forEach(tab => {
-          if (tab.dataset.nsfw === 'true') {
-            tab.style.display = contentMode === 'nsfw' ? 'block' : 'none';
+          const showInSafe = tab.dataset.safeMode === 'true';
+          const showInNsfw = tab.dataset.nsfwMode === 'true';
+
+          if (contentMode === 'safe') {
+            tab.style.display = showInSafe ? 'block' : 'none';
+          } else {
+            tab.style.display = showInNsfw ? 'block' : 'none';
           }
         });
+
+        // Auto-select appropriate model when switching modes
+        if (contentMode === 'nsfw') {
+          // In NSFW mode, if current model is nano-banana (not available), switch to seedream
+          if (currentModel === 'nano-banana') {
+            selectModel('seedream');
+          }
+        } else {
+          // In safe mode, all models available - no need to switch
+        }
       }
 
       // Video models - In NSFW mode, only Wan 2.2 is available
@@ -13222,6 +13327,14 @@
       const prompt = document.getElementById('promptInput').value.trim();
       if (!prompt) {
         showError('Please enter a prompt first!');
+        resetButton();
+        return;
+      }
+
+      // Validate prompt for safe mode content restrictions
+      const promptValidation = validatePromptForSafeMode(prompt);
+      if (!promptValidation.valid) {
+        showRestrictedContentError();
         resetButton();
         return;
       }
@@ -16304,6 +16417,7 @@
       } else if (tab === 'policies') {
         renderPoliciesAdminGrid();
         loadAdminReports(); // Load reports dashboard
+        loadBlockedWordsAdmin(); // Load blocked words management
         loadAnalyticsDashboard(); // Load analytics dashboard
       }
       // Note: community tab doesn't have an add button (channel management is separate)

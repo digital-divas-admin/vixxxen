@@ -160,3 +160,232 @@ async function updateReportStatus(reportId, status, action = null) {
     alert('Failed to update report. Please try again.');
   }
 }
+
+// ===========================================
+// BLOCKED WORDS ADMIN MANAGEMENT
+// ===========================================
+
+let adminBlockedWords = []; // Cache for admin view
+
+// Load blocked words for admin dashboard
+async function loadBlockedWordsAdmin() {
+  if (!isUserAdmin) return;
+
+  const category = document.getElementById('categoryFilter')?.value || 'all';
+
+  try {
+    let url = `${API_BASE_URL}/api/content-filter/admin/words`;
+    if (category && category !== 'all') {
+      url += `?category=${category}`;
+    }
+
+    const response = await authFetch(url);
+    if (!response.ok) throw new Error('Failed to load blocked words');
+
+    const data = await response.json();
+    adminBlockedWords = data.words || [];
+
+    // Update stats
+    const total = adminBlockedWords.length;
+    const active = adminBlockedWords.filter(w => w.is_active).length;
+    const inactive = total - active;
+
+    document.getElementById('totalBlockedWords').textContent = total;
+    document.getElementById('activeBlockedWords').textContent = active;
+    document.getElementById('inactiveBlockedWords').textContent = inactive;
+
+    // Render the words list
+    renderBlockedWordsList(adminBlockedWords);
+
+  } catch (error) {
+    console.error('Error loading blocked words:', error);
+    document.getElementById('blockedWordsList').innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #ff4444; width: 100%;">
+        Failed to load blocked words. Please try again.
+      </div>
+    `;
+  }
+}
+
+// Render blocked words as tags
+function renderBlockedWordsList(words) {
+  const container = document.getElementById('blockedWordsList');
+  const searchTerm = document.getElementById('searchBlockedWords')?.value?.toLowerCase() || '';
+
+  // Filter by search term if present
+  const filteredWords = searchTerm
+    ? words.filter(w => w.word.toLowerCase().includes(searchTerm))
+    : words;
+
+  if (!filteredWords || filteredWords.length === 0) {
+    container.innerHTML = `
+      <div class="blocked-words-empty" style="text-align: center; padding: 40px 20px; width: 100%;">
+        <div style="font-size: 3rem; margin-bottom: 12px;">📝</div>
+        <div style="color: #888; font-size: 0.95rem;">${searchTerm ? 'No words match your search.' : 'No blocked words found. Add some above!'}</div>
+      </div>
+    `;
+    return;
+  }
+
+  const categoryColors = {
+    explicit: '#ff2ebb',
+    violence: '#ff4444',
+    other: '#ffa500'
+  };
+
+  container.innerHTML = filteredWords.map(word => {
+    const color = categoryColors[word.category] || '#9d4edd';
+    const opacity = word.is_active ? '1' : '0.5';
+
+    return `
+      <div class="blocked-word-tag" data-id="${word.id}" style="
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: ${word.is_active ? `rgba(${hexToRgb(color)}, 0.15)` : 'rgba(100, 100, 100, 0.15)'};
+        border: 1px solid ${word.is_active ? color : '#666'};
+        border-radius: 20px;
+        font-size: 0.85rem;
+        opacity: ${opacity};
+        transition: all 0.2s;
+      ">
+        <span style="color: ${word.is_active ? '#fff' : '#888'};">${escapeHtml(word.word)}</span>
+        <span style="font-size: 0.7rem; color: #888; text-transform: uppercase;">${word.category}</span>
+        <button onclick="toggleBlockedWord('${word.id}', ${!word.is_active})" title="${word.is_active ? 'Deactivate' : 'Activate'}" style="
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 0.9rem;
+          padding: 2px;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        " onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+          ${word.is_active ? '⏸️' : '▶️'}
+        </button>
+        <button onclick="deleteBlockedWord('${word.id}', '${escapeHtml(word.word)}')" title="Delete" style="
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 0.9rem;
+          padding: 2px;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        " onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+          🗑️
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Helper to convert hex to RGB
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+    : '157, 78, 221';
+}
+
+// Filter blocked words list (client-side search)
+function filterBlockedWordsList() {
+  renderBlockedWordsList(adminBlockedWords);
+}
+
+// Add a new blocked word
+async function addBlockedWord() {
+  if (!isUserAdmin) return;
+
+  const wordInput = document.getElementById('newBlockedWord');
+  const categorySelect = document.getElementById('newWordCategory');
+
+  const word = wordInput?.value?.trim();
+  const category = categorySelect?.value || 'explicit';
+
+  if (!word) {
+    alert('Please enter a word or phrase.');
+    return;
+  }
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/content-filter/admin/words`, {
+      method: 'POST',
+      body: JSON.stringify({ word, category })
+    });
+
+    if (response.status === 409) {
+      alert('This word already exists in the blocked list.');
+      return;
+    }
+
+    if (!response.ok) throw new Error('Failed to add word');
+
+    // Clear input and reload
+    wordInput.value = '';
+    loadBlockedWordsAdmin();
+
+    // Refresh frontend cache
+    if (typeof loadBlockedWords === 'function') {
+      loadBlockedWords();
+    }
+
+  } catch (error) {
+    console.error('Error adding blocked word:', error);
+    alert('Failed to add word. Please try again.');
+  }
+}
+
+// Toggle blocked word active status
+async function toggleBlockedWord(id, newStatus) {
+  if (!isUserAdmin) return;
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/content-filter/admin/words/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_active: newStatus })
+    });
+
+    if (!response.ok) throw new Error('Failed to update word');
+
+    // Reload list
+    loadBlockedWordsAdmin();
+
+    // Refresh frontend cache
+    if (typeof loadBlockedWords === 'function') {
+      loadBlockedWords();
+    }
+
+  } catch (error) {
+    console.error('Error toggling blocked word:', error);
+    alert('Failed to update word. Please try again.');
+  }
+}
+
+// Delete a blocked word
+async function deleteBlockedWord(id, word) {
+  if (!isUserAdmin) return;
+
+  if (!confirm(`Are you sure you want to delete "${word}" from the blocked list?`)) {
+    return;
+  }
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/content-filter/admin/words/${id}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) throw new Error('Failed to delete word');
+
+    // Reload list
+    loadBlockedWordsAdmin();
+
+    // Refresh frontend cache
+    if (typeof loadBlockedWords === 'function') {
+      loadBlockedWords();
+    }
+
+  } catch (error) {
+    console.error('Error deleting blocked word:', error);
+    alert('Failed to delete word. Please try again.');
+  }
+}
