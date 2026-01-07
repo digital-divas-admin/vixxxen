@@ -77,8 +77,14 @@ router.post('/create-charge', async (req, res) => {
   try {
     const { tier, userId } = req.body;
 
+    if (!PLISIO_API_KEY) {
+      console.error('PLISIO_API_KEY is not set');
+      return res.status(500).json({ error: 'Payment provider not configured' });
+    }
+
     if (!tier || !TIERS[tier]) {
-      return res.status(400).json({ error: 'Invalid tier' });
+      console.error('Invalid tier requested:', tier);
+      return res.status(400).json({ error: `Invalid tier: ${tier}` });
     }
 
     if (!userId) {
@@ -107,9 +113,23 @@ router.post('/create-charge', async (req, res) => {
     const response = await fetch(`https://plisio.net/api/v1/invoices/new?${params.toString()}`);
     const data = await response.json();
 
+    console.log('Plisio API response:', JSON.stringify(data, null, 2));
+
     if (data.status !== 'success') {
-      console.error('Plisio error:', data);
-      return res.status(500).json({ error: data.data?.message || 'Failed to create invoice' });
+      console.error('Plisio error response:', JSON.stringify(data, null, 2));
+      const errorMessage = data.data?.message || data.message || 'Failed to create invoice';
+      return res.status(500).json({
+        error: errorMessage,
+        details: data
+      });
+    }
+
+    if (!data.data || !data.data.txn_id || !data.data.invoice_url) {
+      console.error('Invalid Plisio response structure:', JSON.stringify(data, null, 2));
+      return res.status(500).json({
+        error: 'Invalid response from payment provider',
+        details: 'Missing required fields in response'
+      });
     }
 
     // Store pending payment in database
@@ -142,7 +162,12 @@ router.post('/create-charge', async (req, res) => {
 
   } catch (error) {
     console.error('Create invoice error:', error);
-    res.status(500).json({ error: 'Failed to create payment' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      error: 'Failed to create payment',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
