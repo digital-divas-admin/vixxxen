@@ -26,6 +26,7 @@ const complianceRouter = require('./compliance');
 const reportsRouter = require('./reports');
 const inpaintRouter = require('./inpaint');
 const { initializeChat } = require('./chat');
+const { requireAuth } = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -105,19 +106,20 @@ app.get('/health', (req, res) => {
 
 // API Routes
 
-// Generation endpoints - apply generation rate limiter (30/min)
-app.use('/api/seedream', generationLimiter, seedreamRouter);
-app.use('/api/nano-banana', generationLimiter, nanoBananaRouter);
-app.use('/api/kling', generationLimiter, klingRouter);
-app.use('/api/wan', generationLimiter, wanRouter);
-app.use('/api/veo', generationLimiter, veoRouter);
-app.use('/api/eraser', generationLimiter, eraserRouter);
-app.use('/api/qwen-image-edit', generationLimiter, qwenImageEditRouter);
-app.use('/api/qwen', generationLimiter, qwenRouter);
-app.use('/api/deepseek', generationLimiter, deepseekRouter);
-app.use('/api/bg-remover', generationLimiter, bgRemoverRouter);
-app.use('/api/elevenlabs', generationLimiter, elevenlabsRouter);
-app.use('/api/inpaint', generationLimiter, inpaintRouter);
+// Generation endpoints - require auth + rate limiter (30/min)
+// All generation endpoints require login to prevent abuse
+app.use('/api/seedream', requireAuth, generationLimiter, seedreamRouter);
+app.use('/api/nano-banana', requireAuth, generationLimiter, nanoBananaRouter);
+app.use('/api/kling', requireAuth, generationLimiter, klingRouter);
+app.use('/api/wan', requireAuth, generationLimiter, wanRouter);
+app.use('/api/veo', requireAuth, generationLimiter, veoRouter);
+app.use('/api/eraser', requireAuth, generationLimiter, eraserRouter);
+app.use('/api/qwen-image-edit', requireAuth, generationLimiter, qwenImageEditRouter);
+app.use('/api/qwen', requireAuth, generationLimiter, qwenRouter);
+app.use('/api/deepseek', requireAuth, generationLimiter, deepseekRouter);
+app.use('/api/bg-remover', requireAuth, generationLimiter, bgRemoverRouter);
+app.use('/api/elevenlabs', requireAuth, generationLimiter, elevenlabsRouter);
+app.use('/api/inpaint', requireAuth, generationLimiter, inpaintRouter);
 
 // Sensitive endpoints - apply strict rate limiter (10/15min)
 app.use('/api/payments', strictLimiter, paymentsRouter);

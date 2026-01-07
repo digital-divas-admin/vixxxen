@@ -13823,8 +13823,9 @@
     // Deduct credits using Supabase
     async function deductCredits(amount, operation) {
       if (!isUserLoggedIn || !currentUser) {
-        console.warn('User not logged in, skipping credit deduction');
-        return true; // Allow operation in demo mode
+        console.warn('User not logged in, cannot deduct credits');
+        showLoginRequiredModal();
+        return false; // Block operation - login required
       }
 
       if (userCredits < amount) {
@@ -13903,9 +13904,12 @@
       }
     }
 
-    // Check if user has enough credits
+    // Check if user has enough credits (requires login)
     function hasEnoughCredits(amount) {
-      if (!isUserLoggedIn) return true; // Allow in demo mode
+      if (!isUserLoggedIn) {
+        showLoginRequiredModal();
+        return false; // Block - login required
+      }
       return userCredits >= amount;
     }
 
@@ -14030,6 +14034,27 @@
 
     function openLoginModal() {
       document.getElementById('loginModal').classList.add('active');
+    }
+
+    // Show login required modal with message
+    function showLoginRequiredModal() {
+      // Create a brief notification then open login
+      const notification = document.createElement('div');
+      notification.className = 'login-required-toast';
+      notification.innerHTML = `
+        <div style="background: linear-gradient(135deg, #ff6b6b, #ee5a5a); color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 12px; font-weight: 500;">
+          <span style="font-size: 24px;">🔐</span>
+          <span>Sign up to start creating! Get 20 free credits.</span>
+        </div>
+      `;
+      notification.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; animation: slideDown 0.3s ease;';
+      document.body.appendChild(notification);
+
+      // Remove notification after delay and open login
+      setTimeout(() => {
+        notification.remove();
+        openLoginModal();
+      }, 1500);
     }
 
     function closeLoginModal() {
