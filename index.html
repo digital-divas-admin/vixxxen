@@ -13237,7 +13237,7 @@
             }
 
             try {
-              const statusResponse = await fetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
+              const statusResponse = await authFetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
               if (!statusResponse.ok) continue;
 
               const statusData = await statusResponse.json();
