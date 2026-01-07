@@ -13,60 +13,60 @@ const supabase = createClient(
 const PLISIO_API_KEY = process.env.PLISIO_API_KEY;
 const PLISIO_SECRET_KEY = process.env.PLISIO_SECRET_KEY;
 
-// Pricing configuration (TEST PRICES)
+// Pricing configuration
 const TIERS = {
-  basic: {
-    name: 'Basic Subscription',
+  starter: {
+    name: 'Starter Plan',
     description: 'Access to all AI models and basic features',
-    price: 1.25,
-    credits: 5000,
+    price: 20.00,
+    credits: 1000,
+    duration_days: 30
+  },
+  creator: {
+    name: 'Creator Plan',
+    description: 'Priority processing and more credits',
+    price: 50.00,
+    credits: 3000,
     duration_days: 30
   },
   pro: {
-    name: 'Pro Subscription',
-    description: 'Priority processing and more credits',
-    price: 1.75,
-    credits: 20000,
-    duration_days: 30
-  },
-  ultimate: {
-    name: 'Ultimate Subscription',
+    name: 'Pro Plan',
     description: 'Full access with API and premium support',
-    price: 2.25,
-    credits: 100000,
+    price: 95.00,
+    credits: 6500,
     duration_days: 30
   },
   supernova: {
     name: 'Supernova Membership',
     description: 'Access to Supernova community channels and resources',
-    price: 2.00,
+    price: 25.00,
     duration_days: 30
   },
   mentorship: {
     name: 'Mentorship Program',
     description: 'Full access including private mentorship channels and 1-on-1 guidance',
-    price: 3.00,
+    price: 100.00,
     duration_days: 30
   },
   // Credit packages (one-time purchases)
   credits_500: {
     name: '500 Credits',
     description: 'One-time credit top-up',
-    price: 0.50,
+    price: 12.00,
     credits: 500,
     is_credit_package: true
   },
   credits_1000: {
     name: '1,000 Credits',
     description: 'One-time credit top-up',
-    price: 0.75,
+    price: 22.00,
     credits: 1000,
     is_credit_package: true
   },
   credits_2500: {
     name: '2,500 Credits',
     description: 'One-time credit top-up',
-    price: 1.00,
+    price: 50.00,
     credits: 2500,
     is_credit_package: true
   }
