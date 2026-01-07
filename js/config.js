@@ -21,6 +21,14 @@ console.log('✅ Supabase initialized for project:', SUPABASE_URL);
 
 // Current user session (will be set by auth state handler)
 let currentUser = null;
+// Cached session for API calls - avoids race condition with getSession() during auth state changes
+let cachedSession = null;
+
+// Function to update cached session (called by auth state change handler)
+function setCachedSession(session) {
+  cachedSession = session;
+  console.log('🔑 Session cached:', session ? 'yes' : 'cleared');
+}
 
 // Auto-detect local vs production environment
 const isLocal = window.location.hostname === 'localhost'
@@ -47,10 +55,15 @@ const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
  * @returns {Promise<Response>} - The fetch response
  */
 async function authFetch(url, options = {}) {
-  console.log('🔑 authFetch: Getting session...');
-  // Get current session token
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  console.log('🔑 authFetch: Session retrieved, has token:', !!session?.access_token);
+  // Use cached session first (avoids race condition during auth state changes)
+  // Only fall back to getSession() if cache is empty
+  let session = cachedSession;
+  if (!session) {
+    console.log('🔑 authFetch: No cached session, calling getSession()...');
+    const result = await supabaseClient.auth.getSession();
+    session = result.data?.session;
+  }
+  console.log('🔑 authFetch: Has token:', !!session?.access_token);
 
   // Build headers with auth token if available
   // Don't set Content-Type for FormData (browser handles it)

@@ -14278,6 +14278,9 @@
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log('🔐 Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
 
+      // Cache the session immediately for use by authFetch (avoids race condition)
+      setCachedSession(session);
+
       if (session?.user) {
         console.log('🔐 User found in session:', session.user.email);
         currentUser = session.user;
