@@ -47,8 +47,10 @@ const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
  * @returns {Promise<Response>} - The fetch response
  */
 async function authFetch(url, options = {}) {
+  console.log('🔑 authFetch: Getting session...');
   // Get current session token
   const { data: { session } } = await supabaseClient.auth.getSession();
+  console.log('🔑 authFetch: Session retrieved, has token:', !!session?.access_token);
 
   // Build headers with auth token if available
   // Don't set Content-Type for FormData (browser handles it)
@@ -63,10 +65,13 @@ async function authFetch(url, options = {}) {
   }
 
   // Make the request with auth headers
-  return fetch(url, {
+  console.log('🔑 authFetch: Making request to', url);
+  const response = await fetch(url, {
     ...options,
     headers
   });
+  console.log('🔑 authFetch: Response received, status:', response.status);
+  return response;
 }
 
 /**
