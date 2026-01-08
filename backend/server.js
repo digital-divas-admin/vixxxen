@@ -100,7 +100,7 @@ app.get('/health', (req, res) => {
       veo: !!process.env.REPLICATE_API_KEY,
       eraser: !!process.env.REPLICATE_API_KEY,
       qwenImageEdit: !!process.env.REPLICATE_API_KEY,
-      deepseek: !!process.env.REPLICATE_API_KEY,
+      deepseek: !!process.env.OPENROUTER_API_KEY,
       elevenlabs: !!process.env.ELEVENLABS_API_KEY,
       email: !!process.env.RESEND_API_KEY
     }
@@ -184,12 +184,12 @@ server.listen(PORT, () => {
   console.log(`   ElevenLabs TTS: ${process.env.ELEVENLABS_API_KEY ? '✅ Configured' : '❌ Missing ELEVENLABS_API_KEY'}`);
   console.log(`   Email (Resend): ${process.env.RESEND_API_KEY ? '✅ Configured' : '⚠️  Optional - Set RESEND_API_KEY'}`);
 
-  // Debug: Show XAI API Key status
-  if (process.env.XAI_API_KEY) {
-    console.log(`\n🔑 xAI API Key loaded: ${process.env.XAI_API_KEY.substring(0, 10)}...`);
+  // Debug: Show OpenRouter API Key status (for AI Chat)
+  if (process.env.OPENROUTER_API_KEY) {
+    console.log(`\n🔑 OpenRouter API Key loaded: ${process.env.OPENROUTER_API_KEY.substring(0, 10)}...`);
   } else {
-    console.log('\n⚠️  WARNING: XAI_API_KEY not found in environment variables!');
-    console.log('   Make sure .env file contains: XAI_API_KEY=your-key-here');
+    console.log('\n⚠️  WARNING: OPENROUTER_API_KEY not found in environment variables!');
+    console.log('   AI Chat will not work. Set OPENROUTER_API_KEY=your-key-here');
   }
 
   console.log('\n💡 Available endpoints:');
@@ -202,7 +202,7 @@ server.listen(PORT, () => {
   console.log(`   POST http://localhost:${PORT}/api/wan/generate`);
   console.log(`   POST http://localhost:${PORT}/api/veo/generate`);
   console.log(`   POST http://localhost:${PORT}/api/eraser/erase`);
-  console.log('\n📝 Make sure to set REPLICATE_API_KEY, GOOGLE_API_KEY, and XAI_API_KEY in your .env file\n');
+  console.log('\n📝 Make sure to set REPLICATE_API_KEY, GOOGLE_API_KEY, and OPENROUTER_API_KEY in your .env file\n');
 });
 
 // Graceful shutdown
