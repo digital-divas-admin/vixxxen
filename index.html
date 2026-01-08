@@ -2643,6 +2643,94 @@
       transform: scale(1.02);
     }
 
+    /* GPU Config Button */
+    .admin-gpu-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 380px;
+      padding: 12px 18px;
+      border-radius: 30px;
+      border: 2px solid #00bcd4;
+      background: rgba(0, 188, 212, 0.1);
+      color: #00bcd4;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .admin-gpu-btn:hover {
+      background: rgba(0, 188, 212, 0.2);
+      transform: scale(1.02);
+    }
+
+    .admin-gpu-btn.visible {
+      display: flex;
+    }
+
+    /* GPU Status Grid */
+    .gpu-status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .gpu-status-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .gpu-status-label {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 8px;
+    }
+
+    .gpu-status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gpu-status-indicator .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #666;
+    }
+
+    .gpu-status-indicator .status-dot.online {
+      background: #4caf50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    }
+
+    .gpu-status-indicator .status-dot.offline {
+      background: #f44336;
+      box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+    }
+
+    .gpu-status-indicator .status-dot.checking {
+      background: #ff9800;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .gpu-status-indicator .status-text {
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     .admin-preview-toggle.active {
       background: #ff9800;
       color: #000;
@@ -8392,6 +8480,11 @@
       <span>👁️</span> Preview as Non-Subscriber
     </button>
 
+    <!-- Admin GPU Config Button -->
+    <button class="admin-gpu-btn" id="adminGpuBtn" onclick="openGpuConfigModal()">
+      <span>⚡</span> GPU Config
+    </button>
+
     <!-- Preview Mode Indicator -->
     <div class="preview-indicator" id="previewIndicator">
       ⚠️ Preview Mode Active
@@ -9244,6 +9337,69 @@
       <source id="modalVideoSource" src="" type="video/mp4">
       Your browser does not support video playback.
     </video>
+  </div>
+
+  <!-- GPU Configuration Modal (Admin) -->
+  <div class="resource-form-modal" id="gpuConfigModal">
+    <div class="resource-form-content" style="max-width: 600px;">
+      <div class="resource-form-header">
+        <h3 class="resource-form-title">GPU Configuration</h3>
+        <button class="resource-form-close" onclick="closeGpuConfigModal()">✕</button>
+      </div>
+      <div class="resource-form-body">
+        <!-- Status Indicators -->
+        <div class="gpu-status-grid" id="gpuStatusGrid">
+          <div class="gpu-status-card">
+            <div class="gpu-status-label">Serverless</div>
+            <div class="gpu-status-indicator" id="serverlessStatus">
+              <span class="status-dot"></span>
+              <span class="status-text">Checking...</span>
+            </div>
+          </div>
+          <div class="gpu-status-card">
+            <div class="gpu-status-label">Dedicated</div>
+            <div class="gpu-status-indicator" id="dedicatedStatus">
+              <span class="status-dot"></span>
+              <span class="status-text">Not configured</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuration Form -->
+        <form id="gpuConfigForm" onsubmit="saveGpuConfig(event)">
+          <div class="resource-form-group">
+            <label class="resource-form-label">Routing Mode</label>
+            <select class="resource-form-input" id="gpuModeSelect">
+              <option value="serverless">Serverless Only (Current)</option>
+              <option value="dedicated">Dedicated Only</option>
+              <option value="hybrid">Hybrid (Dedicated + Serverless Overflow)</option>
+              <option value="serverless-primary">Serverless Primary (Dedicated Overflow)</option>
+            </select>
+            <div class="resource-form-hint" id="gpuModeHint">All jobs route to RunPod Serverless</div>
+          </div>
+
+          <div class="resource-form-group">
+            <label class="resource-form-label">Dedicated GPU URL</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" class="resource-form-input" id="gpuDedicatedUrl" placeholder="https://your-pod-id.runpod.ai" style="flex: 1;">
+              <button type="button" class="resource-form-btn" onclick="testDedicatedGpu()" style="width: auto; padding: 0 16px;">Test</button>
+            </div>
+            <div class="resource-form-hint">URL of your dedicated ComfyUI Pod wrapper</div>
+          </div>
+
+          <div class="resource-form-group">
+            <label class="resource-form-label">Fallback Timeout (ms)</label>
+            <input type="number" class="resource-form-input" id="gpuTimeout" value="5000" min="1000" max="30000" step="500">
+            <div class="resource-form-hint">How long to wait for dedicated GPU before falling back (1000-30000ms)</div>
+          </div>
+
+          <div class="resource-form-actions">
+            <button type="button" class="resource-form-btn cancel" onclick="closeGpuConfigModal()">Cancel</button>
+            <button type="submit" class="resource-form-btn save" id="gpuConfigSaveBtn">Save Configuration</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- External JavaScript Modules (load in order) -->
@@ -10717,6 +10873,10 @@
 
       const adminStarthereBtn = document.getElementById('adminStarthereBtn');
       if (adminStarthereBtn) adminStarthereBtn.classList.remove('visible');
+
+      // Hide GPU config button (it's global, not tab-specific, but hide when switching away)
+      const adminGpuBtn = document.getElementById('adminGpuBtn');
+      if (adminGpuBtn) adminGpuBtn.classList.remove('visible');
     }
 
     function selectModel(model) {
@@ -17266,6 +17426,7 @@
       if (isUserAdmin) {
         document.getElementById('adminResourcesBtn')?.classList.add('visible');
         document.getElementById('adminPreviewToggle')?.classList.add('visible');
+        document.getElementById('adminGpuBtn')?.classList.add('visible');
       }
     }
 
@@ -17287,6 +17448,168 @@
       // Re-render resources with preview mode applied
       renderResources();
     }
+
+    // ==================== GPU CONFIG FUNCTIONS ====================
+
+    const gpuModeDescriptions = {
+      'serverless': 'All jobs route to RunPod Serverless (current behavior)',
+      'dedicated': 'All jobs route to dedicated GPU (fails if unavailable)',
+      'hybrid': 'Try dedicated first, fall back to serverless if busy/unavailable',
+      'serverless-primary': 'Try serverless first, fall back to dedicated if unavailable'
+    };
+
+    async function openGpuConfigModal() {
+      const modal = document.getElementById('gpuConfigModal');
+      modal.classList.add('active');
+
+      // Reset status indicators to checking
+      setStatusIndicator('serverlessStatus', 'checking', 'Checking...');
+      setStatusIndicator('dedicatedStatus', 'checking', 'Checking...');
+
+      // Load current config and status
+      try {
+        const [configRes, statusRes] = await Promise.all([
+          authFetch(`${API_BASE_URL}/api/admin/gpu-config`),
+          authFetch(`${API_BASE_URL}/api/admin/gpu-status`)
+        ]);
+
+        if (configRes.ok) {
+          const data = await configRes.json();
+          const config = data.config;
+
+          document.getElementById('gpuModeSelect').value = config.mode || 'serverless';
+          document.getElementById('gpuDedicatedUrl').value = config.dedicatedUrl || '';
+          document.getElementById('gpuTimeout').value = config.dedicatedTimeout || 5000;
+          document.getElementById('gpuModeHint').textContent = gpuModeDescriptions[config.mode] || '';
+        }
+
+        if (statusRes.ok) {
+          const status = await statusRes.json();
+
+          // Update serverless status
+          if (status.serverless?.configured) {
+            setStatusIndicator('serverlessStatus', 'online', `Online (${status.serverless.endpoint})`);
+          } else {
+            setStatusIndicator('serverlessStatus', 'offline', 'Not configured');
+          }
+
+          // Update dedicated status
+          if (status.dedicated?.configured) {
+            if (status.dedicated.health?.healthy) {
+              const queueInfo = status.dedicated.health.queueDepth > 0
+                ? ` (queue: ${status.dedicated.health.queueDepth})`
+                : '';
+              setStatusIndicator('dedicatedStatus', 'online', `Online${queueInfo}`);
+            } else {
+              setStatusIndicator('dedicatedStatus', 'offline', status.dedicated.health?.reason || 'Unhealthy');
+            }
+          } else {
+            setStatusIndicator('dedicatedStatus', 'offline', 'Not configured');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load GPU config:', error);
+        setStatusIndicator('serverlessStatus', 'offline', 'Error loading');
+        setStatusIndicator('dedicatedStatus', 'offline', 'Error loading');
+      }
+    }
+
+    function closeGpuConfigModal() {
+      document.getElementById('gpuConfigModal').classList.remove('active');
+    }
+
+    function setStatusIndicator(elementId, status, text) {
+      const indicator = document.getElementById(elementId);
+      if (!indicator) return;
+
+      const dot = indicator.querySelector('.status-dot');
+      const textEl = indicator.querySelector('.status-text');
+
+      dot.className = 'status-dot ' + status;
+      textEl.textContent = text;
+    }
+
+    // Update hint when mode changes
+    document.getElementById('gpuModeSelect')?.addEventListener('change', function() {
+      document.getElementById('gpuModeHint').textContent = gpuModeDescriptions[this.value] || '';
+    });
+
+    async function saveGpuConfig(event) {
+      event.preventDefault();
+
+      const saveBtn = document.getElementById('gpuConfigSaveBtn');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+
+      try {
+        const config = {
+          mode: document.getElementById('gpuModeSelect').value,
+          dedicatedUrl: document.getElementById('gpuDedicatedUrl').value || null,
+          dedicatedTimeout: parseInt(document.getElementById('gpuTimeout').value, 10)
+        };
+
+        const response = await authFetch(`${API_BASE_URL}/api/admin/gpu-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+
+        if (response.ok) {
+          showNotification('GPU configuration saved successfully', 'success');
+          closeGpuConfigModal();
+        } else {
+          const error = await response.json();
+          showNotification(error.error || 'Failed to save configuration', 'error');
+        }
+      } catch (error) {
+        console.error('Failed to save GPU config:', error);
+        showNotification('Failed to save configuration', 'error');
+      } finally {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+      }
+    }
+
+    async function testDedicatedGpu() {
+      const url = document.getElementById('gpuDedicatedUrl').value;
+      if (!url) {
+        showNotification('Please enter a dedicated GPU URL first', 'warning');
+        return;
+      }
+
+      setStatusIndicator('dedicatedStatus', 'checking', 'Testing...');
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/admin/gpu-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const result = await response.json();
+
+        if (result.healthy) {
+          const queueInfo = result.queueDepth > 0 ? ` (queue: ${result.queueDepth})` : '';
+          setStatusIndicator('dedicatedStatus', 'online', `Healthy${queueInfo}`);
+          showNotification('Dedicated GPU is reachable and healthy!', 'success');
+        } else {
+          setStatusIndicator('dedicatedStatus', 'offline', result.reason || 'Unhealthy');
+          showNotification(`Dedicated GPU test failed: ${result.reason}`, 'error');
+        }
+      } catch (error) {
+        console.error('GPU test failed:', error);
+        setStatusIndicator('dedicatedStatus', 'offline', 'Test failed');
+        showNotification('Failed to test dedicated GPU', 'error');
+      }
+    }
+
+    // Close GPU config modal when clicking outside
+    document.getElementById('gpuConfigModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeGpuConfigModal();
+      }
+    });
 
     function openResourceForm(resourceId = null) {
       const modal = document.getElementById('resourceFormModal');
