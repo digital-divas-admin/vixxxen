@@ -7673,16 +7673,6 @@
     <!-- Caption Tab Section -->
     <div class="tab-section" id="captionSection">
       <div class="caption-container">
-        <!-- Model selector at top -->
-        <div class="tool-selector-container" style="position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 4px;">
-          <button class="caption-model-tab active" onclick="selectCaptionModel('gpt-5')" id="gpt5CaptionTab">
-            🤖 GPT-5
-          </button>
-          <button class="caption-model-tab" onclick="selectCaptionModel('grok-4')" id="grok4CaptionTab">
-            ⚡ Grok-4
-          </button>
-        </div>
-
         <!-- Chat conversation area -->
         <div class="caption-chat-area" id="captionChatArea">
           <div class="caption-welcome">
@@ -8827,7 +8817,7 @@
               <li class="pricing-feature">142 Qwen Inpaints</li>
               <li class="pricing-feature">76 Nano Banana Images</li>
               <li class="pricing-feature">Image Editing Tools</li>
-              <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
+              <li class="pricing-feature">AI Chat (Grok-4)</li>
               <li class="pricing-feature">Standard Support</li>
               <li class="pricing-feature disabled">Priority Processing</li>
             </ul>
@@ -8886,11 +8876,6 @@
 
             <button class="pricing-cta" onclick="selectPlan('pro', 95)">Go Pro</button>
           </div>
-        </div>
-
-        <div class="pricing-footer">
-          <p class="pricing-footer-text">Need a custom plan or have questions?</p>
-          <a href="mailto:support@vixxxen.ai" class="pricing-contact">Contact our sales team →</a>
         </div>
       </div>
     </div>
@@ -10657,7 +10642,7 @@
     // Caption state
     let captionImage = null;
     let isCaptioning = false;
-    let currentCaptionModel = 'gpt-5'; // 'gpt-5' or 'grok-4'
+    let currentCaptionModel = 'grok-4'; // Using Grok-4 for AI chat
     let conversationHistory = []; // Store conversation messages for context
 
     // Switch between main navigation tabs (Image, Video, Edit, Inpaint, Caption)
@@ -14037,9 +14022,8 @@
         'object-eraser': 4,
         'bg-remover': 1
       },
-      // Caption/AI chat costs (cheapest)
+      // Caption/AI chat costs
       caption: {
-        'gpt-5': 5,
         'grok-4': 3
       }
     };
