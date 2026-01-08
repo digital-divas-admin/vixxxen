@@ -17822,7 +17822,6 @@
             resultDiv.style.color = '#4ade80';
             resultDiv.innerHTML = '✅ Configuration saved successfully!';
           }
-          showNotification('GPU configuration saved successfully', 'success');
 
           // Refresh the display
           loadGpuConfigInline();
@@ -17834,7 +17833,6 @@
             resultDiv.style.color = '#ff4444';
             resultDiv.innerHTML = `❌ Failed: ${error.error || 'Unknown error'}`;
           }
-          showNotification(error.error || 'Failed to save configuration', 'error');
         }
       } catch (error) {
         console.error('Failed to save GPU config:', error);
@@ -17844,7 +17842,6 @@
           resultDiv.style.color = '#ff4444';
           resultDiv.innerHTML = '❌ Failed to save configuration';
         }
-        showNotification('Failed to save configuration', 'error');
       }
     }
 
