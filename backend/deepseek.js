@@ -10,6 +10,8 @@ const replicate = new Replicate({
 // Vision models
 const GPT5_MODEL = "openai/gpt-5";
 const XAI_API_URL = "https://api.x.ai/v1/chat/completions";
+const GROK_VISION_MODEL = "grok-2-vision-1212";  // For image analysis
+const GROK_TEXT_MODEL = "grok-2-1212";           // For text-only chat
 
 router.post('/caption', async (req, res) => {
   try {
@@ -57,8 +59,10 @@ router.post('/caption', async (req, res) => {
     let fullResponse = '';
 
     if (model === 'grok-4') {
-      // Use xAI API directly for Grok-4
-      console.log(`Calling xAI Grok-4 API${hasImage ? ' with vision' : ''}...`);
+      // Use xAI API directly for Grok
+      // Select the right model based on whether there's an image
+      const grokModel = hasImage ? GROK_VISION_MODEL : GROK_TEXT_MODEL;
+      console.log(`Calling xAI ${grokModel}${hasImage ? ' (vision)' : ' (text)'}...`);
 
       // Build messages array from conversation history
       const grokMessages = [
@@ -110,7 +114,7 @@ router.post('/caption', async (req, res) => {
       }
 
       const requestPayload = {
-        model: 'grok-4',
+        model: grokModel,
         messages: grokMessages,
         max_completion_tokens: maxTokens,
         stream: stream
