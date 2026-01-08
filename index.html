@@ -7002,17 +7002,17 @@
               NSFW
             </button>
           </div>
-          <span class="content-mode-info" id="contentModeInfo">All models available in NSFW mode</span>
+          <span class="content-mode-info" id="contentModeInfo">All models • Content filtered</span>
         </div>
 
         <div class="model-tabs" id="imageModelTabs">
-          <button class="model-tab active" onclick="selectModel('nano-banana')" id="nanoTab">
+          <button class="model-tab active" onclick="selectModel('nano-banana')" id="nanoTab" data-safe-mode="true">
             🍌 Nano Banana Pro
           </button>
-          <button class="model-tab" onclick="selectModel('seedream')" id="seedreamTab" data-nsfw="true">
+          <button class="model-tab" onclick="selectModel('seedream')" id="seedreamTab" data-safe-mode="true" data-nsfw-mode="true">
             🌊 Seedream 4.5
           </button>
-          <button class="model-tab" onclick="selectModel('qwen')" id="qwenGenTab" data-nsfw="true">
+          <button class="model-tab" onclick="selectModel('qwen')" id="qwenGenTab" data-safe-mode="true" data-nsfw-mode="true">
             🎨 Qwen
           </button>
         </div>
@@ -7416,7 +7416,7 @@
         </div>
 
         <!-- Edit Tool Selector -->
-        <div style="margin: 16px 20px; display: flex; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 4px;">
+        <div class="tool-selector-container" style="margin: 16px 20px; display: flex; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 4px;">
           <button class="caption-model-tab active" onclick="selectEditTool('eraser')" id="eraserToolTab">
             ✂️ Object Eraser
           </button>
@@ -7673,16 +7673,6 @@
     <!-- Caption Tab Section -->
     <div class="tab-section" id="captionSection">
       <div class="caption-container">
-        <!-- Model selector at top -->
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; gap: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 4px;">
-          <button class="caption-model-tab active" onclick="selectCaptionModel('gpt-5')" id="gpt5CaptionTab">
-            🤖 GPT-5
-          </button>
-          <button class="caption-model-tab" onclick="selectCaptionModel('grok-4')" id="grok4CaptionTab">
-            ⚡ Grok-4
-          </button>
-        </div>
-
         <!-- Chat conversation area -->
         <div class="caption-chat-area" id="captionChatArea">
           <div class="caption-welcome">
@@ -8244,6 +8234,125 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Blocked Words Management Dashboard -->
+              <div class="blocked-words-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
+                <div class="policies-admin-header">
+                  <h2 class="policies-admin-title">🚫 Content Filter - Blocked Words</h2>
+                  <p class="policies-admin-subtitle">Manage words/phrases blocked in Safe Mode and/or NSFW Mode prompts</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="blocked-words-stats" id="blockedWordsStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.1), rgba(157, 78, 221, 0.05)); border: 1px solid rgba(157, 78, 221, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">📝</div>
+                    <div class="report-stat-value" id="totalBlockedWords" style="font-size: 2rem; font-weight: 700; color: #9d4edd;">0</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Total Words</div>
+                  </div>
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.05)); border: 1px solid rgba(74, 222, 128, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">✅</div>
+                    <div class="report-stat-value" id="activeBlockedWords" style="font-size: 2rem; font-weight: 700; color: #4ade80;">0</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Active</div>
+                  </div>
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(255, 165, 0, 0.1), rgba(255, 165, 0, 0.05)); border: 1px solid rgba(255, 165, 0, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">⏸️</div>
+                    <div class="report-stat-value" id="inactiveBlockedWords" style="font-size: 2rem; font-weight: 700; color: #ffa500;">0</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Inactive</div>
+                  </div>
+                </div>
+
+                <!-- Add Word Form -->
+                <div class="add-word-form" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                  <input type="text" id="newBlockedWord" placeholder="Enter word or phrase..." style="flex: 1; min-width: 200px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                  <select id="newWordCategory" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="explicit">Explicit</option>
+                    <option value="celebrities">Celebrities</option>
+                    <option value="violence">Violence</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <select id="newWordAppliesTo" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="safe">Safe Mode Only</option>
+                    <option value="nsfw">NSFW Mode Only</option>
+                    <option value="both">Both Modes</option>
+                  </select>
+                  <button onclick="addBlockedWord()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
+                    ➕ Add Word
+                  </button>
+                </div>
+
+                <!-- Bulk Add Toggle -->
+                <div style="text-align: center; margin-bottom: 16px;">
+                  <button onclick="toggleBulkEntry()" id="bulkEntryToggle" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #9d4edd; cursor: pointer; font-size: 0.85rem;">
+                    📋 Bulk Add Multiple Words
+                  </button>
+                </div>
+
+                <!-- Bulk Add Form (hidden by default) -->
+                <div id="bulkEntryForm" style="display: none; margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; max-width: 700px; margin-left: auto; margin-right: auto;">
+                  <div style="margin-bottom: 12px; color: #888; font-size: 0.85rem; text-align: center;">
+                    Enter multiple words (one per line or comma-separated)
+                  </div>
+                  <textarea id="bulkBlockedWords" placeholder="nude&#10;naked&#10;explicit&#10;or: nude, naked, explicit" style="width: 100%; min-height: 120px; padding: 12px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; resize: vertical; font-family: inherit;"></textarea>
+                  <div style="display: flex; gap: 12px; margin-top: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                    <select id="bulkWordCategory" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                      <option value="explicit">Explicit</option>
+                      <option value="celebrities">Celebrities</option>
+                      <option value="violence">Violence</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <select id="bulkWordAppliesTo" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                      <option value="safe">Safe Mode Only</option>
+                      <option value="nsfw">NSFW Mode Only</option>
+                      <option value="both">Both Modes</option>
+                    </select>
+                    <button onclick="addBulkBlockedWords()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                      ➕ Add All Words
+                    </button>
+                    <span id="bulkWordCount" style="color: #888; font-size: 0.85rem;">0 words</span>
+                  </div>
+                </div>
+
+                <!-- Filter and Search -->
+                <div class="blocked-words-filters" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+                  <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="filterBlockedWordsList()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                  <select id="categoryFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="all">All Categories</option>
+                    <option value="explicit">Explicit</option>
+                    <option value="celebrities">Celebrities</option>
+                    <option value="violence">Violence</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <select id="appliesToFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                    <option value="all">All Modes</option>
+                    <option value="safe">Safe Mode Only</option>
+                    <option value="nsfw">NSFW Mode Only</option>
+                    <option value="both">Both Modes</option>
+                  </select>
+                  <button onclick="loadBlockedWordsAdmin()" style="padding: 12px 24px; background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                    🔄 Refresh
+                  </button>
+                </div>
+
+                <!-- Words List (Collapsible) -->
+                <div class="blocked-words-accordion" style="max-width: 900px; margin: 0 auto;">
+                  <button onclick="toggleBlockedWordsPanel()" id="blockedWordsToggle" style="width: 100%; padding: 16px 24px; background: rgba(255,255,255,0.02); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 12px; color: #fff; cursor: pointer; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                      <span style="font-size: 1.2rem;">📋</span>
+                      <span>View All Blocked Words</span>
+                      <span id="blockedWordsToggleCount" style="background: rgba(157, 78, 221, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; color: #9d4edd;">0 words</span>
+                    </span>
+                    <span id="blockedWordsToggleIcon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+                  </button>
+                  <div id="blockedWordsPanel" style="display: none; margin-top: 12px; animation: slideDown 0.3s ease-out;">
+                    <div class="blocked-words-list" id="blockedWordsList" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; min-height: 100px; max-height: 400px; overflow-y: auto;">
+                      <div class="blocked-words-empty" style="text-align: center; padding: 40px 20px; width: 100%;">
+                        <div style="font-size: 3rem; margin-bottom: 12px;">📝</div>
+                        <div style="color: #888; font-size: 0.95rem;">Loading blocked words...</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <!-- End Policies Sub-tab Content -->
@@ -8708,7 +8817,7 @@
               <li class="pricing-feature">142 Qwen Inpaints</li>
               <li class="pricing-feature">76 Nano Banana Images</li>
               <li class="pricing-feature">Image Editing Tools</li>
-              <li class="pricing-feature">AI Chat (GPT-5 & Grok-4)</li>
+              <li class="pricing-feature">AI Chat (Grok-4)</li>
               <li class="pricing-feature">Standard Support</li>
               <li class="pricing-feature disabled">Priority Processing</li>
             </ul>
@@ -8767,11 +8876,6 @@
 
             <button class="pricing-cta" onclick="selectPlan('pro', 95)">Go Pro</button>
           </div>
-        </div>
-
-        <div class="pricing-footer">
-          <p class="pricing-footer-text">Need a custom plan or have questions?</p>
-          <a href="mailto:support@vixxxen.ai" class="pricing-contact">Contact our sales team →</a>
         </div>
       </div>
     </div>
@@ -10023,6 +10127,65 @@
       return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
     }
 
+    // ===========================================
+    // CONTENT FILTER (Safe & NSFW modes)
+    // ===========================================
+    let blockedWords = []; // Cached list of blocked words for current mode
+    let blockedWordsMode = null; // Track which mode the cache is for
+
+    // Fetch blocked words from API for specific mode
+    async function loadBlockedWords(mode = null) {
+      const targetMode = mode || contentMode || 'safe';
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/content-filter/blocked-words?mode=${targetMode}`);
+        if (response.ok) {
+          const data = await response.json();
+          blockedWords = data.words || [];
+          blockedWordsMode = targetMode;
+          console.log(`📝 Loaded ${blockedWords.length} blocked words for ${targetMode} mode`);
+        }
+      } catch (error) {
+        console.error('Failed to load blocked words:', error);
+        // Use empty array - allow generation if API fails
+        blockedWords = [];
+        blockedWordsMode = targetMode;
+      }
+    }
+
+    // Validate prompt against blocked words (substring match, case insensitive)
+    function validatePrompt(prompt) {
+      // Skip validation if no blocked words loaded or mode mismatch
+      if (!prompt || blockedWords.length === 0) {
+        return { valid: true };
+      }
+
+      // Reload blocked words if mode changed
+      if (blockedWordsMode !== contentMode) {
+        // Async reload - for now, allow the request but reload for next time
+        loadBlockedWords(contentMode);
+      }
+
+      const lowerPrompt = prompt.toLowerCase();
+      for (const word of blockedWords) {
+        if (lowerPrompt.includes(word.toLowerCase())) {
+          return { valid: false, blocked: true };
+        }
+      }
+
+      return { valid: true };
+    }
+
+    // Legacy alias for backwards compatibility
+    function validatePromptForSafeMode(prompt) {
+      return validatePrompt(prompt);
+    }
+
+    // Show restricted content error modal
+    function showRestrictedContentError() {
+      const modeText = contentMode === 'safe' ? 'Safe Mode' : 'NSFW Mode';
+      showError(`This prompt contains restricted content for ${modeText}. Please modify your prompt.`);
+    }
+
     // Cold start check - detect slow server response on Render free tier
     let serverReady = false;
 
@@ -10222,6 +10385,9 @@
       updateContentModeUI();
       filterModelsByContentMode();
 
+      // Load blocked words for safe mode content filtering
+      loadBlockedWords();
+
       // Set up checkbox listener
       const checkbox = document.getElementById('ageConfirmCheckbox');
       if (checkbox) {
@@ -10277,24 +10443,9 @@
       contentMode = mode;
       updateContentModeUI();
       filterModelsByContentMode();
-
-      // Reset to safe model if current model is NSFW-only
-      if (mode === 'safe') {
-        const currentTab = document.getElementById(currentModel === 'nano-banana' ? 'nanoTab' :
-                          currentModel === 'seedream' ? 'seedreamTab' :
-                          currentModel === 'flux' ? 'fluxTab' :
-                          currentModel === 'qwen' ? 'qwenGenTab' : 'qwenTab');
-        if (currentTab && currentTab.dataset.nsfw === 'true') {
-          selectModel('nano-banana');
-        }
-
-        // Same for video
-        const currentVideoTab = document.getElementById(currentVideoModel === 'kling' ? 'klingVideoTab' :
-                               currentVideoModel === 'wan' ? 'wanVideoTab' : 'veoVideoTab');
-        if (currentVideoTab && currentVideoTab.dataset.nsfw === 'true') {
-          selectVideoModel('kling');
-        }
-      }
+      // Reload blocked words for the new mode
+      loadBlockedWords(mode);
+      // Note: filterModelsByContentMode() handles auto-selection when switching modes
     }
 
     // Update content mode UI (toggle buttons)
@@ -10316,8 +10467,8 @@
 
       if (infoText) {
         infoText.textContent = contentMode === 'safe'
-          ? 'Limited models in Safe mode'
-          : 'All models available';
+          ? 'All models • Content filtered'
+          : 'Seedream & Qwen only';
       }
 
       // Video section toggle
@@ -10339,15 +10490,30 @@
 
     // Filter models based on content mode
     function filterModelsByContentMode() {
-      // Image models
+      // Image models - use data-safe-mode and data-nsfw-mode attributes
       const imageModelTabs = document.getElementById('imageModelTabs');
       if (imageModelTabs) {
         const tabs = imageModelTabs.querySelectorAll('.model-tab');
         tabs.forEach(tab => {
-          if (tab.dataset.nsfw === 'true') {
-            tab.style.display = contentMode === 'nsfw' ? 'block' : 'none';
+          const showInSafe = tab.dataset.safeMode === 'true';
+          const showInNsfw = tab.dataset.nsfwMode === 'true';
+
+          if (contentMode === 'safe') {
+            tab.style.display = showInSafe ? 'block' : 'none';
+          } else {
+            tab.style.display = showInNsfw ? 'block' : 'none';
           }
         });
+
+        // Auto-select appropriate model when switching modes
+        if (contentMode === 'nsfw') {
+          // In NSFW mode, if current model is nano-banana (not available), switch to seedream
+          if (currentModel === 'nano-banana') {
+            selectModel('seedream');
+          }
+        } else {
+          // In safe mode, all models available - no need to switch
+        }
       }
 
       // Video models - In NSFW mode, only Wan 2.2 is available
@@ -10476,7 +10642,7 @@
     // Caption state
     let captionImage = null;
     let isCaptioning = false;
-    let currentCaptionModel = 'gpt-5'; // 'gpt-5' or 'grok-4'
+    let currentCaptionModel = 'grok-4'; // Using Grok-4 for AI chat
     let conversationHistory = []; // Store conversation messages for context
 
     // Switch between main navigation tabs (Image, Video, Edit, Inpaint, Caption)
@@ -12864,17 +13030,24 @@
           messages: conversationHistory, // Send full conversation history
           model: currentCaptionModel,
           maxTokens: 4096,
-          reasoningEffort: 'medium',
-          verbosity: 'medium',
           stream: true
         };
 
-        console.log(`Calling ${currentCaptionModel.toUpperCase()} for ${captionImage ? 'vision' : 'text-only'} query (streaming)...`);
+        console.log(`Calling Grok for ${captionImage ? 'vision' : 'text-only'} query (streaming)...`);
+
+        // Get auth token for streaming request
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const token = session?.access_token;
+
+        if (!token) {
+          throw new Error('Please log in to use AI chat');
+        }
 
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(payload)
         });
@@ -12941,9 +13114,11 @@
       } catch (error) {
         console.error('Caption generation failed:', error);
 
-        let errorMessage = 'Sorry, there was an error analyzing the image. Please try again.';
+        let errorMessage = 'Sorry, there was an error. Please try again.';
         if (error.message?.includes('Failed to fetch')) {
           errorMessage = 'Connection failed - make sure the backend server is running';
+        } else if (error.message?.includes('API')) {
+          errorMessage = 'AI service error - please try again in a moment';
         }
 
         // Clear typing indicator before showing error
@@ -13014,9 +13189,8 @@
           console.log(`🎨 [Batch ${batchId}] Starting generation ${genIndex + 1} of ${numOutputs}`);
 
           // Submit job via backend proxy
-          const submitResponse = await fetch(`${API_BASE_URL}/api/qwen/generate`, {
+          const submitResponse = await authFetch(`${API_BASE_URL}/api/qwen/generate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: qwenPrompt, loras })
           });
 
@@ -13069,7 +13243,7 @@
             }
 
             try {
-              const statusResponse = await fetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
+              const statusResponse = await authFetch(`${API_BASE_URL}/api/qwen/status/${jobId}`);
               if (!statusResponse.ok) continue;
 
               const statusData = await statusResponse.json();
@@ -13226,6 +13400,14 @@
         return;
       }
 
+      // Validate prompt for safe mode content restrictions
+      const promptValidation = validatePromptForSafeMode(prompt);
+      if (!promptValidation.valid) {
+        showRestrictedContentError();
+        resetButton();
+        return;
+      }
+
       // Calculate and check credits
       let aspectRatio, numOutputs;
       if (currentModel === 'qwen') {
@@ -13330,11 +13512,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
@@ -13852,9 +14031,8 @@
         'object-eraser': 4,
         'bg-remover': 1
       },
-      // Caption/AI chat costs (cheapest)
+      // Caption/AI chat costs
       caption: {
-        'gpt-5': 5,
         'grok-4': 3
       }
     };
@@ -14209,6 +14387,17 @@
           // Auto-confirmed (if email confirmation is disabled)
           closeLoginModal();
           console.log('✅ Account created and logged in as:', email);
+
+          // Send welcome email (async, don't wait for it)
+          try {
+            authFetch(`${API_BASE_URL}/api/email/welcome`, { method: 'POST' })
+              .then(res => {
+                if (res.ok) console.log('📧 Welcome email sent');
+              })
+              .catch(err => console.log('📧 Welcome email skipped:', err.message));
+          } catch (e) {
+            // Ignore email errors - non-critical
+          }
         }
       } catch (err) {
         console.error('Sign up error:', err);
@@ -16088,6 +16277,9 @@
     }
 
     async function loadManagedChannels() {
+      const listEl = document.getElementById('channelManageList');
+      listEl.innerHTML = '<div class="channel-manage-empty">Loading channels...</div>';
+
       try {
         const { data: channels, error } = await supabaseClient
           .from('channels')
@@ -16097,6 +16289,7 @@
 
         if (error) {
           console.error('Error loading channels:', error);
+          listEl.innerHTML = `<div class="channel-manage-empty" style="color: #ff4444;">Error loading channels: ${error.message}</div>`;
           return;
         }
 
@@ -16104,6 +16297,7 @@
         renderManagedChannels();
       } catch (err) {
         console.error('Error loading channels:', err);
+        listEl.innerHTML = `<div class="channel-manage-empty" style="color: #ff4444;">Error: ${err.message}</div>`;
       }
     }
 
@@ -16304,6 +16498,7 @@
       } else if (tab === 'policies') {
         renderPoliciesAdminGrid();
         loadAdminReports(); // Load reports dashboard
+        loadBlockedWordsAdmin(); // Load blocked words management
         loadAnalyticsDashboard(); // Load analytics dashboard
       }
       // Note: community tab doesn't have an add button (channel management is separate)

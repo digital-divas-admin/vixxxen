@@ -43,19 +43,53 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own payments
 CREATE POLICY "Users can view own payments" ON payments
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
 
--- Service role can insert/update payments (for webhooks)
+-- Admins can view all payments
+CREATE POLICY "Admins can view all payments" ON payments
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'admin'
+    )
+  );
+
+-- Service role can manage payments (for webhooks)
 CREATE POLICY "Service role can manage payments" ON payments
-  FOR ALL USING (true);
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- Users can view their own subscription
 CREATE POLICY "Users can view own subscription" ON subscriptions
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Admins can view all subscriptions
+CREATE POLICY "Admins can view all subscriptions" ON subscriptions
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role = 'admin'
+    )
+  );
 
 -- Service role can manage subscriptions (for webhooks)
 CREATE POLICY "Service role can manage subscriptions" ON subscriptions
-  FOR ALL USING (true);
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- Function to check subscription expiry
 CREATE OR REPLACE FUNCTION check_subscription_active(p_user_id UUID)

@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('./middleware/auth');
+const { sendSubscriptionEmail, sendPaymentReceiptEmail, isEmailConfigured } = require('./email');
 
 const router = express.Router();
 
@@ -261,6 +262,30 @@ router.post('/webhook/plisio', async (req, res) => {
             .eq('id', userId);
 
           console.log(`Added ${creditsToAdd} credits to user ${userId}. New total: ${newCredits}`);
+
+          // Send receipt email for credit purchase
+          if (isEmailConfigured()) {
+            try {
+              const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('email, full_name, display_name')
+                .eq('id', userId)
+                .single();
+
+              if (userProfile?.email) {
+                await sendPaymentReceiptEmail(
+                  userProfile.email,
+                  userProfile.display_name || userProfile.full_name,
+                  tierConfig.price,
+                  'USD',
+                  paymentTier, // credit package name
+                  txnId
+                );
+              }
+            } catch (emailError) {
+              console.error('Failed to send credit purchase receipt:', emailError);
+            }
+          }
         } else {
           // This is a subscription - activate membership
           // Calculate expiration date
@@ -342,6 +367,43 @@ router.post('/webhook/plisio', async (req, res) => {
           }
 
           console.log(`Membership activated for user ${userId}: ${paymentTier}`);
+
+          // Send confirmation emails if email service is configured
+          if (isEmailConfigured()) {
+            try {
+              // Get user email and name
+              const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('email, full_name, display_name')
+                .eq('id', userId)
+                .single();
+
+              if (userProfile?.email) {
+                const userName = userProfile.display_name || userProfile.full_name;
+
+                // Send subscription confirmation
+                await sendSubscriptionEmail(
+                  userProfile.email,
+                  userName,
+                  paymentTier,
+                  expiresAt.toISOString()
+                );
+
+                // Send payment receipt
+                await sendPaymentReceiptEmail(
+                  userProfile.email,
+                  userName,
+                  tierConfig.price,
+                  'USD',
+                  paymentTier,
+                  txnId
+                );
+              }
+            } catch (emailError) {
+              console.error('Failed to send confirmation emails:', emailError);
+              // Don't fail the webhook - emails are non-critical
+            }
+          }
         }
         break;
 

@@ -39,8 +39,10 @@ const isLocal = window.location.hostname === 'localhost'
 const API_BASE_URL = isLocal ? 'http://localhost:3002' : '';
 console.log(`🔗 API URL: ${API_BASE_URL || window.location.origin} (${isLocal ? 'local' : 'production'})`);
 
-// NSFW-only models - always tag output as NSFW regardless of content mode
-const NSFW_ONLY_MODELS = ['seedream', 'qwen', 'wan'];
+// NSFW-only models - models that are ONLY available in NSFW mode
+// Content tagging is now primarily based on contentMode, not model
+// Video: wan is NSFW-only. Image models (seedream, qwen) are available in both modes.
+const NSFW_ONLY_MODELS = ['wan'];
 
 // ===========================================
 // AUTHENTICATED API HELPER

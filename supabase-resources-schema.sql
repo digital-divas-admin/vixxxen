@@ -25,14 +25,42 @@ create index idx_resources_access_tier on public.resources(access_tier);
 -- 3. ENABLE ROW LEVEL SECURITY
 alter table public.resources enable row level security;
 
--- 4. RLS POLICY: Anyone can read resources (access control handled in app)
--- We allow reading all resources so the frontend can show locked previews
-create policy "Anyone can view resources"
+-- 4. RLS POLICIES FOR RESOURCES
+-- NOTE: Access control for content is handled by the get_accessible_resources function
+-- The raw table shows metadata only; content is protected by the function
+
+-- Authenticated users can view resource metadata (title, thumbnail, tier info)
+-- Full content access is controlled by the get_accessible_resources function
+create policy "Authenticated users can view resource metadata"
   on public.resources for select
+  to authenticated
   using (true);
 
--- 5. RLS POLICY: Only admins can insert/update/delete (via service role key)
--- No policy needed - service role bypasses RLS
+-- Admins can manage resources
+create policy "Admins can manage resources"
+  on public.resources for all
+  to authenticated
+  using (
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role = 'admin'
+    )
+  );
+
+-- Service role can manage resources (for backend operations)
+create policy "Service role can manage resources"
+  on public.resources for all
+  to service_role
+  using (true)
+  with check (true);
 
 -- 6. FUNCTION: Get resources filtered by user's membership tier
 create or replace function public.get_accessible_resources(p_user_id uuid)
