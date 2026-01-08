@@ -8343,11 +8343,23 @@
                   </button>
                 </div>
 
-                <!-- Words List -->
-                <div class="blocked-words-list" id="blockedWordsList" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 900px; margin: 0 auto; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; min-height: 100px;">
-                  <div class="blocked-words-empty" style="text-align: center; padding: 40px 20px; width: 100%;">
-                    <div style="font-size: 3rem; margin-bottom: 12px;">📝</div>
-                    <div style="color: #888; font-size: 0.95rem;">Loading blocked words...</div>
+                <!-- Words List (Collapsible) -->
+                <div class="blocked-words-accordion" style="max-width: 900px; margin: 0 auto;">
+                  <button onclick="toggleBlockedWordsPanel()" id="blockedWordsToggle" style="width: 100%; padding: 16px 24px; background: rgba(255,255,255,0.02); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 12px; color: #fff; cursor: pointer; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                      <span style="font-size: 1.2rem;">📋</span>
+                      <span>View All Blocked Words</span>
+                      <span id="blockedWordsToggleCount" style="background: rgba(157, 78, 221, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; color: #9d4edd;">0 words</span>
+                    </span>
+                    <span id="blockedWordsToggleIcon" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+                  </button>
+                  <div id="blockedWordsPanel" style="display: none; margin-top: 12px; animation: slideDown 0.3s ease-out;">
+                    <div class="blocked-words-list" id="blockedWordsList" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; min-height: 100px; max-height: 400px; overflow-y: auto;">
+                      <div class="blocked-words-empty" style="text-align: center; padding: 40px 20px; width: 100%;">
+                        <div style="font-size: 3rem; margin-bottom: 12px;">📝</div>
+                        <div style="color: #888; font-size: 0.95rem;">Loading blocked words...</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

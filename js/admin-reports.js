@@ -166,6 +166,28 @@ async function updateReportStatus(reportId, status, action = null) {
 // ===========================================
 
 let adminBlockedWords = []; // Cache for admin view
+let blockedWordsPanelOpen = false; // Track panel state
+
+// Toggle blocked words panel visibility
+function toggleBlockedWordsPanel() {
+  const panel = document.getElementById('blockedWordsPanel');
+  const icon = document.getElementById('blockedWordsToggleIcon');
+  const toggle = document.getElementById('blockedWordsToggle');
+
+  blockedWordsPanelOpen = !blockedWordsPanelOpen;
+
+  if (blockedWordsPanelOpen) {
+    panel.style.display = 'block';
+    icon.style.transform = 'rotate(180deg)';
+    toggle.style.background = 'rgba(157, 78, 221, 0.1)';
+    toggle.style.borderColor = 'rgba(157, 78, 221, 0.5)';
+  } else {
+    panel.style.display = 'none';
+    icon.style.transform = 'rotate(0deg)';
+    toggle.style.background = 'rgba(255,255,255,0.02)';
+    toggle.style.borderColor = 'rgba(157, 78, 221, 0.3)';
+  }
+}
 
 // Load blocked words for admin dashboard
 async function loadBlockedWordsAdmin() {
@@ -201,6 +223,12 @@ async function loadBlockedWordsAdmin() {
     document.getElementById('totalBlockedWords').textContent = total;
     document.getElementById('activeBlockedWords').textContent = active;
     document.getElementById('inactiveBlockedWords').textContent = inactive;
+
+    // Update toggle button count
+    const toggleCount = document.getElementById('blockedWordsToggleCount');
+    if (toggleCount) {
+      toggleCount.textContent = `${total} word${total !== 1 ? 's' : ''}`;
+    }
 
     // Render the words list
     renderBlockedWordsList(adminBlockedWords);
