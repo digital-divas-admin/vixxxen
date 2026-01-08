@@ -659,3 +659,62 @@
   background: #e8e8ed !important;
   color: #1d1d1f !important;
 }
+
+/* Image output action buttons and containers */
+.light-theme .output-actions {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .output-action-btn {
+  background: #f0f0f5 !important;
+  border-color: #d1d1d6 !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .output-action-btn:hover {
+  background: #e8e8ed !important;
+  border-color: #c7c7cc !important;
+}
+
+/* Icon buttons (download, send, delete on images) */
+.light-theme .icon-btn {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #6e6e73 !important;
+}
+
+.light-theme .icon-btn:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .icon-btn.delete-btn:hover {
+  background: rgba(255, 68, 68, 0.15) !important;
+  color: #ff4444 !important;
+}
+
+/* Send-to dropdown menu */
+.light-theme .send-to-menu {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.light-theme .send-to-option {
+  color: #1d1d1f !important;
+}
+
+.light-theme .send-to-option:hover {
+  background: rgba(255, 46, 187, 0.1) !important;
+  color: #ff2ebb !important;
+}
+
+/* Output item overlays */
+.light-theme .output-item-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.light-theme .output-item-actions .icon-btn {
+  background: #f0f0f5 !important;
+  border: 1px solid #d1d1d6 !important;
+}

@@ -16284,6 +16284,9 @@
     }
 
     async function loadManagedChannels() {
+      const listEl = document.getElementById('channelManageList');
+      listEl.innerHTML = '<div class="channel-manage-empty">Loading channels...</div>';
+
       try {
         const { data: channels, error } = await supabaseClient
           .from('channels')
@@ -16293,6 +16296,7 @@
 
         if (error) {
           console.error('Error loading channels:', error);
+          listEl.innerHTML = `<div class="channel-manage-empty" style="color: #ff4444;">Error loading channels: ${error.message}</div>`;
           return;
         }
 
@@ -16300,6 +16304,7 @@
         renderManagedChannels();
       } catch (err) {
         console.error('Error loading channels:', err);
+        listEl.innerHTML = `<div class="channel-manage-empty" style="color: #ff4444;">Error: ${err.message}</div>`;
       }
     }
 
