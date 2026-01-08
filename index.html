@@ -13030,17 +13030,24 @@
           messages: conversationHistory, // Send full conversation history
           model: currentCaptionModel,
           maxTokens: 4096,
-          reasoningEffort: 'medium',
-          verbosity: 'medium',
           stream: true
         };
 
         console.log(`Calling ${currentCaptionModel.toUpperCase()} for ${captionImage ? 'vision' : 'text-only'} query (streaming)...`);
 
+        // Get auth token for streaming request
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        if (!token) {
+          throw new Error('Please log in to use AI chat');
+        }
+
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(payload)
         });
