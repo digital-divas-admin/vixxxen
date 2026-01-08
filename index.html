@@ -11201,11 +11201,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
@@ -11980,11 +11977,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
@@ -12139,11 +12133,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
