@@ -10582,9 +10582,8 @@
       verifyBtn.textContent = 'Verifying...';
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/age-verification/verify`, {
+        const response = await authFetch(`${API_BASE_URL}/api/age-verification/verify`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: currentUser.id,
             confirmed: true
@@ -12661,9 +12660,8 @@
           console.log(`🖌️ Generating inpaint ${i + 1}/${numGenerations}...`);
 
           try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const response = await authFetch(`${API_BASE_URL}${endpoint}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 image: imageBase64,
                 mask: maskBase64,
@@ -16636,9 +16634,8 @@
       if (!user) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/starthere/${guideId}/complete`, {
+        const response = await authFetch(`${API_BASE_URL}/api/starthere/${guideId}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: user.id })
         });
 
