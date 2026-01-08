@@ -26,6 +26,7 @@ const complianceRouter = require('./compliance');
 const reportsRouter = require('./reports');
 const inpaintRouter = require('./inpaint');
 const contentFilterRouter = require('./content-filter');
+const emailRouter = require('./email-routes');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 
@@ -100,7 +101,8 @@ app.get('/health', (req, res) => {
       eraser: !!process.env.REPLICATE_API_KEY,
       qwenImageEdit: !!process.env.REPLICATE_API_KEY,
       deepseek: !!process.env.REPLICATE_API_KEY,
-      elevenlabs: !!process.env.ELEVENLABS_API_KEY
+      elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+      email: !!process.env.RESEND_API_KEY
     }
   });
 });
@@ -134,6 +136,7 @@ app.use('/api/policies', policiesRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/content-filter', contentFilterRouter);
+app.use('/api/email', emailRouter);
 
 // Serve static files from the parent directory (frontend)
 app.use(express.static(path.join(__dirname, '..')));
@@ -179,6 +182,7 @@ server.listen(PORT, () => {
   console.log(`   Bria Eraser: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
   console.log(`   851 Labs BG Remover: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
   console.log(`   ElevenLabs TTS: ${process.env.ELEVENLABS_API_KEY ? '✅ Configured' : '❌ Missing ELEVENLABS_API_KEY'}`);
+  console.log(`   Email (Resend): ${process.env.RESEND_API_KEY ? '✅ Configured' : '⚠️  Optional - Set RESEND_API_KEY'}`);
 
   // Debug: Show XAI API Key status
   if (process.env.XAI_API_KEY) {

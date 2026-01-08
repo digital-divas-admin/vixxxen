@@ -14382,6 +14382,17 @@
           // Auto-confirmed (if email confirmation is disabled)
           closeLoginModal();
           console.log('✅ Account created and logged in as:', email);
+
+          // Send welcome email (async, don't wait for it)
+          try {
+            authFetch(`${API_BASE_URL}/api/email/welcome`, { method: 'POST' })
+              .then(res => {
+                if (res.ok) console.log('📧 Welcome email sent');
+              })
+              .catch(err => console.log('📧 Welcome email skipped:', err.message));
+          } catch (e) {
+            // Ignore email errors - non-critical
+          }
         }
       } catch (err) {
         console.error('Sign up error:', err);
