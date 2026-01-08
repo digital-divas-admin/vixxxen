@@ -6,7 +6,7 @@ const openrouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
-// OpenRouter model
+// OpenRouter model - handles both text and vision
 const GROK_MODEL = "x-ai/grok-4.1-fast";
 
 router.post('/caption', async (req, res) => {
@@ -25,12 +25,12 @@ router.post('/caption', async (req, res) => {
       });
     }
 
-    // Check if the latest message has an image
+    // Check if any message has an image
     const lastMessage = messages[messages.length - 1];
-    const hasImage = !!lastMessage.image;
+    const hasImage = messages.some(msg => !!msg.image);
 
     console.log(`Received Grok ${hasImage ? 'vision' : 'text-only'} request via OpenRouter:`, {
-      hasImage,
+      model: GROK_MODEL,
       messageCount: messages.length,
       latestMessage: lastMessage.content?.substring(0, 100),
       streaming: stream
