@@ -13107,9 +13107,11 @@
       } catch (error) {
         console.error('Caption generation failed:', error);
 
-        let errorMessage = 'Sorry, there was an error analyzing the image. Please try again.';
+        let errorMessage = 'Sorry, there was an error. Please try again.';
         if (error.message?.includes('Failed to fetch')) {
           errorMessage = 'Connection failed - make sure the backend server is running';
+        } else if (error.message?.includes('API')) {
+          errorMessage = 'AI service error - please try again in a moment';
         }
 
         // Clear typing indicator before showing error

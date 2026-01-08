@@ -324,10 +324,19 @@ router.post('/caption', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Vision analysis error:', error);
+    console.error('Caption/chat error:', error);
+
+    // Check if headers already sent (streaming failed mid-way)
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to analyze image'
+      error: error.message || 'Failed to process request'
     });
   }
 });
