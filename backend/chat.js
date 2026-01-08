@@ -110,7 +110,7 @@ function initializeChat(io) {
         const messages = await getChannelMessages(channelId, 50);
 
         // Get online users in this channel
-        const onlineUsers = getOnlineUsersInChannel(channelId);
+        const onlineUsers = getOnlineUsersInChannel(channelId, io);
 
         socket.emit('channel_joined', {
           channelId,
@@ -534,15 +534,28 @@ async function getChannelMessages(channelId, limit = 50) {
   }
 }
 
-function getOnlineUsersInChannel(channelId) {
+function getOnlineUsersInChannel(channelId, io) {
   const users = [];
-  connectedUsers.forEach((user, socketId) => {
-    // This is a simplified check - in production you'd track which channel each user is in
-    users.push({
-      displayName: user.displayName,
-      avatar: user.avatar
+  const seenUserIds = new Set();
+
+  // Get all sockets in this channel room
+  const socketsInRoom = io?.sockets?.adapter?.rooms?.get(channelId);
+
+  if (socketsInRoom) {
+    socketsInRoom.forEach(socketId => {
+      const user = connectedUsers.get(socketId);
+      // Only add each user once (dedupe by userId)
+      if (user && !seenUserIds.has(user.userId)) {
+        seenUserIds.add(user.userId);
+        users.push({
+          userId: user.userId,
+          displayName: user.displayName,
+          avatar: user.avatar
+        });
+      }
     });
-  });
+  }
+
   return users;
 }
 
