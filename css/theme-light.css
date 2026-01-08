@@ -487,3 +487,175 @@
 .light-theme .membership-btn {
   color: #ffffff !important;
 }
+
+/* Learn tab top bar (education subtabs) */
+.light-theme .education-subtabs {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .education-subtab {
+  color: #6e6e73 !important;
+}
+
+.light-theme .education-subtab:hover {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .education-subtab.active {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border-color: #ff2ebb !important;
+}
+
+/* Image tab bulk action buttons */
+.light-theme .bulk-action-btn {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .bulk-action-btn:hover {
+  background: #d1d1d6 !important;
+}
+
+.light-theme .bulk-action-btn.select-all {
+  background: #e8e8ed !important;
+}
+
+.light-theme .bulk-action-btn.select-all:hover {
+  background: #d1d1d6 !important;
+}
+
+.light-theme .bulk-action-btn.download {
+  background: rgba(74, 222, 128, 0.15) !important;
+  color: #22c55e !important;
+  border-color: rgba(74, 222, 128, 0.3) !important;
+}
+
+.light-theme .bulk-action-btn.download:hover {
+  background: rgba(74, 222, 128, 0.25) !important;
+}
+
+.light-theme .bulk-action-btn.delete {
+  background: rgba(255, 68, 68, 0.1) !important;
+  color: #ff4444 !important;
+  border-color: rgba(255, 68, 68, 0.3) !important;
+}
+
+.light-theme .bulk-action-btn.delete:hover {
+  background: rgba(255, 68, 68, 0.2) !important;
+}
+
+.light-theme .bulk-action-btn.cancel {
+  background: #f0f0f5 !important;
+  color: #6e6e73 !important;
+}
+
+.light-theme .bulk-action-btn.cancel:hover {
+  background: #e8e8ed !important;
+}
+
+/* Caption tab model selector (top right buttons) */
+.light-theme .caption-model-tab {
+  color: #6e6e73 !important;
+}
+
+.light-theme .caption-model-tab:hover {
+  color: #1d1d1f !important;
+  background: #e8e8ed !important;
+}
+
+.light-theme .caption-model-tab.active {
+  color: #ffffff !important;
+  background: #ff2ebb !important;
+}
+
+/* Caption/Edit tool selector container */
+.light-theme .tool-selector-container {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+/* Caption tab input bar */
+.light-theme .caption-input-container {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .caption-input-wrapper {
+  background: #f0f0f5 !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .caption-input-wrapper:focus-within {
+  border-color: #ff2ebb !important;
+}
+
+.light-theme .caption-input {
+  color: #1d1d1f !important;
+}
+
+.light-theme .caption-input::placeholder {
+  color: #8e8e93 !important;
+}
+
+.light-theme .caption-attach-btn {
+  color: #6e6e73 !important;
+}
+
+.light-theme .caption-attach-btn:hover {
+  color: #1d1d1f !important;
+  background: #e8e8ed !important;
+}
+
+.light-theme .caption-send-btn {
+  background: linear-gradient(135deg, #9d4edd, #ff2ebb) !important;
+  color: #ffffff !important;
+}
+
+/* Caption messages */
+.light-theme .caption-message.user .caption-message-content {
+  background: #e8e8ed !important;
+}
+
+.light-theme .caption-message-text {
+  color: #1d1d1f !important;
+}
+
+/* Marketplace page background */
+.light-theme .marketplace-page {
+  background: #f5f5f7 !important;
+}
+
+.light-theme .marketplace-header {
+  color: #1d1d1f !important;
+}
+
+.light-theme .marketplace-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .marketplace-subtitle {
+  color: #6e6e73 !important;
+}
+
+.light-theme .marketplace-tabs {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .marketplace-tab {
+  color: #6e6e73 !important;
+}
+
+.light-theme .marketplace-tab:hover {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .marketplace-tab.active {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+}
