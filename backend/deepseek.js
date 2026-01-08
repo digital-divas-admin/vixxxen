@@ -55,10 +55,10 @@ router.post('/caption', async (req, res) => {
     for (const msg of messages) {
       if (msg.role === 'user') {
         if (msg.image) {
-          // Vision request with image
-          let imageUrl = msg.image;
+          // Vision request with image - OpenRouter SDK uses camelCase
+          let imageData = msg.image;
           if (!msg.image.startsWith('data:')) {
-            imageUrl = `data:image/jpeg;base64,${msg.image}`;
+            imageData = `data:image/jpeg;base64,${msg.image}`;
           }
 
           openrouterMessages.push({
@@ -66,8 +66,8 @@ router.post('/caption', async (req, res) => {
             content: [
               {
                 type: 'image_url',
-                image_url: {
-                  url: imageUrl
+                imageUrl: {
+                  url: imageData
                 }
               },
               {
