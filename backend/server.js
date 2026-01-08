@@ -84,6 +84,15 @@ const generationLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Wrapper that only applies generation limiter to POST requests
+// This allows status polling (GET) to bypass the strict generation rate limit
+const generationLimiterPostOnly = (req, res, next) => {
+  if (req.method === 'POST') {
+    return generationLimiter(req, res, next);
+  }
+  next();
+};
+
 // Apply general rate limiting to all API routes
 app.use('/api/', generalLimiter);
 
@@ -109,20 +118,21 @@ app.get('/health', (req, res) => {
 
 // API Routes
 
-// Generation endpoints - require auth + rate limiter (30/min)
+// Generation endpoints - require auth + rate limiter (30/min for POST only)
 // All generation endpoints require login to prevent abuse
-app.use('/api/seedream', requireAuth, generationLimiter, seedreamRouter);
-app.use('/api/nano-banana', requireAuth, generationLimiter, nanoBananaRouter);
-app.use('/api/kling', requireAuth, generationLimiter, klingRouter);
-app.use('/api/wan', requireAuth, generationLimiter, wanRouter);
-app.use('/api/veo', requireAuth, generationLimiter, veoRouter);
-app.use('/api/eraser', requireAuth, generationLimiter, eraserRouter);
-app.use('/api/qwen-image-edit', requireAuth, generationLimiter, qwenImageEditRouter);
-app.use('/api/qwen', requireAuth, generationLimiter, qwenRouter);
-app.use('/api/deepseek', requireAuth, generationLimiter, deepseekRouter);
-app.use('/api/bg-remover', requireAuth, generationLimiter, bgRemoverRouter);
-app.use('/api/elevenlabs', requireAuth, generationLimiter, elevenlabsRouter);
-app.use('/api/inpaint', requireAuth, generationLimiter, inpaintRouter);
+// Status polling (GET) uses the general rate limiter (100/min) to avoid 429 errors
+app.use('/api/seedream', requireAuth, generationLimiterPostOnly, seedreamRouter);
+app.use('/api/nano-banana', requireAuth, generationLimiterPostOnly, nanoBananaRouter);
+app.use('/api/kling', requireAuth, generationLimiterPostOnly, klingRouter);
+app.use('/api/wan', requireAuth, generationLimiterPostOnly, wanRouter);
+app.use('/api/veo', requireAuth, generationLimiterPostOnly, veoRouter);
+app.use('/api/eraser', requireAuth, generationLimiterPostOnly, eraserRouter);
+app.use('/api/qwen-image-edit', requireAuth, generationLimiterPostOnly, qwenImageEditRouter);
+app.use('/api/qwen', requireAuth, generationLimiterPostOnly, qwenRouter);
+app.use('/api/deepseek', requireAuth, generationLimiterPostOnly, deepseekRouter);
+app.use('/api/bg-remover', requireAuth, generationLimiterPostOnly, bgRemoverRouter);
+app.use('/api/elevenlabs', requireAuth, generationLimiterPostOnly, elevenlabsRouter);
+app.use('/api/inpaint', requireAuth, generationLimiterPostOnly, inpaintRouter);
 
 // Sensitive endpoints - apply strict rate limiter (10/15min)
 app.use('/api/payments', strictLimiter, paymentsRouter);
