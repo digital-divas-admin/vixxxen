@@ -97,7 +97,7 @@ async function sendWelcomeEmail(email, name) {
         🎁 Your Welcome Bonus
       </h3>
       <p style="margin: 0; font-size: 16px; color: ${BRAND.text};">
-        You've received <strong style="color: ${BRAND.primary};">1,250 free credits</strong> to start creating!
+        You've received <strong style="color: ${BRAND.primary};">20 free credits</strong> to start creating!
       </p>
     </div>
 
