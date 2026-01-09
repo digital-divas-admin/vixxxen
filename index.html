@@ -2644,6 +2644,168 @@
       display: none;
     }
 
+    /* Admin Panel Sidebar Layout */
+    .admin-panel-layout {
+      display: flex;
+      gap: 0;
+      min-height: 600px;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .admin-sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: linear-gradient(180deg, rgba(157, 78, 221, 0.05) 0%, rgba(255, 46, 187, 0.02) 100%);
+      border-right: 1px solid var(--border-color);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-sidebar-header {
+      padding: 0 20px 20px 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 12px;
+    }
+
+    .admin-sidebar-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #9d4edd, #ff2ebb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+    }
+
+    .admin-sidebar-nav {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 12px;
+    }
+
+    .admin-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .admin-nav-item:hover {
+      background: rgba(157, 78, 221, 0.1);
+      color: var(--text-primary);
+    }
+
+    .admin-nav-item.active {
+      background: linear-gradient(135deg, rgba(157, 78, 221, 0.2), rgba(255, 46, 187, 0.1));
+      color: #fff;
+      border-color: rgba(157, 78, 221, 0.3);
+    }
+
+    .admin-nav-icon {
+      font-size: 1.2rem;
+      width: 24px;
+      text-align: center;
+    }
+
+    .admin-nav-badge {
+      margin-left: auto;
+      background: rgba(255, 165, 0, 0.2);
+      color: #ffa500;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .admin-content-area {
+      flex: 1;
+      padding: 24px 32px;
+      overflow-y: auto;
+      max-height: calc(100vh - 300px);
+    }
+
+    .admin-section {
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .admin-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .admin-section-header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .admin-section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 8px 0;
+    }
+
+    .admin-section-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    /* Responsive Admin Panel */
+    @media (max-width: 900px) {
+      .admin-panel-layout {
+        flex-direction: column;
+      }
+
+      .admin-sidebar {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 12px 0;
+      }
+
+      .admin-sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 12px;
+      }
+
+      .admin-nav-item {
+        padding: 10px 14px;
+        font-size: 0.8rem;
+      }
+
+      .admin-nav-icon {
+        font-size: 1rem;
+      }
+
+      .admin-content-area {
+        padding: 16px;
+        max-height: none;
+      }
+    }
+
     .policy-admin-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
@@ -8329,14 +8491,45 @@
 
           <!-- Policies Sub-tab Content (Admin Only) -->
           <div class="education-subtab-content" id="policiesContent">
-            <div class="policies-admin-container">
-
-              <!-- Analytics Dashboard Section -->
-              <div class="analytics-dashboard">
-                <div class="policies-admin-header">
-                  <h2 class="policies-admin-title">Analytics Dashboard</h2>
-                  <p class="policies-admin-subtitle">Platform metrics and usage statistics</p>
+            <div class="admin-panel-layout">
+              <!-- Admin Sidebar -->
+              <div class="admin-sidebar">
+                <div class="admin-sidebar-header">
+                  <h3 class="admin-sidebar-title">Admin Panel</h3>
                 </div>
+                <nav class="admin-sidebar-nav">
+                  <div class="admin-nav-item active" onclick="switchAdminSection('analytics')" data-section="analytics">
+                    <span class="admin-nav-icon">📊</span>
+                    <span>Analytics</span>
+                  </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('gpu')" data-section="gpu">
+                    <span class="admin-nav-icon">⚡</span>
+                    <span>GPU Config</span>
+                  </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('reports')" data-section="reports">
+                    <span class="admin-nav-icon">🚨</span>
+                    <span>Reports</span>
+                    <span class="admin-nav-badge" id="adminReportsBadge" style="display: none;">0</span>
+                  </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('policies')" data-section="policies">
+                    <span class="admin-nav-icon">📜</span>
+                    <span>Policies</span>
+                  </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('content-filter')" data-section="content-filter">
+                    <span class="admin-nav-icon">🚫</span>
+                    <span>Content Filter</span>
+                  </div>
+                </nav>
+              </div>
+
+              <!-- Admin Content Area -->
+              <div class="admin-content-area">
+                <!-- Analytics Section -->
+                <div class="admin-section active" id="adminAnalyticsSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Analytics Dashboard</h2>
+                    <p class="admin-section-subtitle">Platform metrics and usage statistics</p>
+                  </div>
 
                 <!-- Summary Cards -->
                 <div class="analytics-cards">
@@ -8414,15 +8607,15 @@
                     🔄 Refresh Analytics
                   </button>
                 </div>
-              </div>
-              <!-- End Analytics Dashboard -->
-
-              <!-- GPU Configuration Section -->
-              <div class="gpu-config-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
-                <div class="policies-admin-header">
-                  <h2 class="policies-admin-title">⚡ GPU Configuration</h2>
-                  <p class="policies-admin-subtitle">Manage GPU routing between dedicated and serverless infrastructure</p>
                 </div>
+                <!-- End Analytics Section -->
+
+                <!-- GPU Configuration Section -->
+                <div class="admin-section" id="adminGpuSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">GPU Configuration</h2>
+                    <p class="admin-section-subtitle">Manage GPU routing between dedicated and serverless infrastructure</p>
+                  </div>
 
                 <!-- GPU Status Cards -->
                 <div class="gpu-status-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; max-width: 900px; margin-left: auto; margin-right: auto;">
@@ -8484,24 +8677,15 @@
 
                   <div id="gpuTestResult" style="margin-top: 16px; padding: 12px 16px; border-radius: 10px; display: none;"></div>
                 </div>
-              </div>
-              <!-- End GPU Configuration -->
-
-              <div class="policies-admin-header" style="margin-top: 40px;">
-                <h2 class="policies-admin-title">Manage Site Policies</h2>
-                <p class="policies-admin-subtitle">Edit your Terms of Service, Privacy Policy, and Refund Policy</p>
-              </div>
-
-              <div class="policies-admin-grid" id="policiesAdminGrid">
-                <!-- Policy cards will be rendered here -->
-              </div>
-
-              <!-- Reports Dashboard -->
-              <div class="reports-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
-                <div class="policies-admin-header">
-                  <h2 class="policies-admin-title">Content Reports</h2>
-                  <p class="policies-admin-subtitle">Review and moderate reported content</p>
                 </div>
+                <!-- End GPU Configuration Section -->
+
+                <!-- Reports Section -->
+                <div class="admin-section" id="adminReportsSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Content Reports</h2>
+                    <p class="admin-section-subtitle">Review and moderate reported content</p>
+                  </div>
 
                 <div class="reports-stats" id="reportsStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; max-width: 900px; margin-left: auto; margin-right: auto;">
                   <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(255, 165, 0, 0.1), rgba(255, 165, 0, 0.05)); border: 1px solid rgba(255, 165, 0, 0.2); padding: 24px; border-radius: 16px; text-align: center; transition: transform 0.2s, border-color 0.2s;">
@@ -8553,14 +8737,27 @@
                     <div style="color: #888; font-size: 0.95rem;">No content reports to review at this time.</div>
                   </div>
                 </div>
-              </div>
-
-              <!-- Blocked Words Management Dashboard -->
-              <div class="blocked-words-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
-                <div class="policies-admin-header">
-                  <h2 class="policies-admin-title">🚫 Content Filter - Blocked Words</h2>
-                  <p class="policies-admin-subtitle">Manage words/phrases blocked in Safe Mode and/or NSFW Mode prompts</p>
                 </div>
+                <!-- End Reports Section -->
+
+                <!-- Policies Section -->
+                <div class="admin-section" id="adminPoliciesSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Site Policies</h2>
+                    <p class="admin-section-subtitle">Edit your Terms of Service, Privacy Policy, and Refund Policy</p>
+                  </div>
+                  <div class="policies-admin-grid" id="policiesAdminGrid">
+                    <!-- Policy cards will be rendered here -->
+                  </div>
+                </div>
+                <!-- End Policies Section -->
+
+                <!-- Content Filter Section -->
+                <div class="admin-section" id="adminContentFilterSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Content Filter - Blocked Words</h2>
+                    <p class="admin-section-subtitle">Manage words/phrases blocked in Safe Mode and/or NSFW Mode prompts</p>
+                  </div>
 
                 <!-- Stats -->
                 <div class="blocked-words-stats" id="blockedWordsStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">
@@ -8672,8 +8869,13 @@
                     </div>
                   </div>
                 </div>
+                </div>
+                <!-- End Content Filter Section -->
+
               </div>
+              <!-- End Admin Content Area -->
             </div>
+            <!-- End Admin Panel Layout -->
           </div>
           <!-- End Policies Sub-tab Content -->
 
@@ -16902,13 +17104,73 @@
           if (adminStarthereBtn) adminStarthereBtn.classList.add('visible');
         }
       } else if (tab === 'policies') {
-        renderPoliciesAdminGrid();
-        loadAdminReports(); // Load reports dashboard
-        loadBlockedWordsAdmin(); // Load blocked words management
-        loadAnalyticsDashboard(); // Load analytics dashboard
-        loadGpuConfigInline(); // Load GPU configuration
+        // Initialize admin panel with the currently selected section
+        switchAdminSection(currentAdminSection);
       }
       // Note: community tab doesn't have an add button (channel management is separate)
+    }
+
+    // ==================== ADMIN PANEL NAVIGATION ====================
+
+    let currentAdminSection = 'analytics';
+
+    function switchAdminSection(section) {
+      currentAdminSection = section;
+
+      // Update nav items
+      document.querySelectorAll('.admin-nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.section === section) {
+          item.classList.add('active');
+        }
+      });
+
+      // Update section visibility
+      document.querySelectorAll('.admin-section').forEach(sec => {
+        sec.classList.remove('active');
+      });
+
+      const sectionMap = {
+        'analytics': 'adminAnalyticsSection',
+        'gpu': 'adminGpuSection',
+        'reports': 'adminReportsSection',
+        'policies': 'adminPoliciesSection',
+        'content-filter': 'adminContentFilterSection'
+      };
+
+      const targetSection = document.getElementById(sectionMap[section]);
+      if (targetSection) {
+        targetSection.classList.add('active');
+      }
+
+      // Load section-specific data
+      if (section === 'analytics') {
+        loadAnalyticsDashboard();
+      } else if (section === 'gpu') {
+        loadGpuConfigInline();
+      } else if (section === 'reports') {
+        loadAdminReports();
+        updateReportsBadge();
+      } else if (section === 'policies') {
+        renderPoliciesAdminGrid();
+      } else if (section === 'content-filter') {
+        loadBlockedWordsAdmin();
+      }
+    }
+
+    function updateReportsBadge() {
+      // Update the badge in sidebar with pending reports count
+      const badge = document.getElementById('adminReportsBadge');
+      const pendingCount = document.getElementById('pendingReportsCount');
+      if (badge && pendingCount) {
+        const count = parseInt(pendingCount.textContent) || 0;
+        if (count > 0) {
+          badge.textContent = count;
+          badge.style.display = 'inline';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
     }
 
     // ==================== START HERE FUNCTIONS ====================
