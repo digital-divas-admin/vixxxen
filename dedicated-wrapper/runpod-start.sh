@@ -81,29 +81,18 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Setup Wrapper (if not already set up)
+# Setup Wrapper (always update from repo to get latest changes)
 # -----------------------------------------------------------------------------
 log_info "Setting up API wrapper..."
 
 mkdir -p "$WRAPPER_DIR"
 
-# Copy wrapper files if they don't exist or are outdated
-if [ ! -f "$WRAPPER_DIR/server.js" ] || [ ! -f "$WRAPPER_DIR/package.json" ]; then
-    log_info "Wrapper not found, setting up..."
-
-    # Check if we have the files in /app (from Docker) or need to download
-    if [ -f "/app/server.js" ]; then
-        cp /app/server.js "$WRAPPER_DIR/"
-        cp /app/package.json "$WRAPPER_DIR/"
-        log_success "Copied wrapper from /app"
-    else
-        log_warn "Wrapper files not found - downloading from repo..."
-        cd "$WRAPPER_DIR"
-        curl -sO https://raw.githubusercontent.com/digital-divas-admin/vixxxen/main/dedicated-wrapper/server.js
-        curl -sO https://raw.githubusercontent.com/digital-divas-admin/vixxxen/main/dedicated-wrapper/package.json
-        log_success "Downloaded wrapper files"
-    fi
-fi
+# Always update wrapper files from repo (ensures latest version)
+log_info "Updating wrapper files from repo..."
+cd "$WRAPPER_DIR"
+curl -sO https://raw.githubusercontent.com/digital-divas-admin/vixxxen/main/dedicated-wrapper/server.js
+curl -sO https://raw.githubusercontent.com/digital-divas-admin/vixxxen/main/dedicated-wrapper/package.json
+log_success "Wrapper files updated"
 
 # Install npm dependencies
 cd "$WRAPPER_DIR"
