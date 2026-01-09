@@ -188,13 +188,17 @@ app.post('/run', async (req, res) => {
     const jobId = uuidv4();
 
     // Upload images if provided (for inpainting)
+    // Track mapping from original filename to actual uploaded filename
+    const uploadedFileMap = {};
     if (input.images && Array.isArray(input.images) && input.images.length > 0) {
       console.log(`📤 Uploading ${input.images.length} images to ComfyUI...`);
 
       for (const img of input.images) {
         if (img.name && img.image) {
           try {
-            await uploadImageToComfyUI(img.name, img.image);
+            const result = await uploadImageToComfyUI(img.name, img.image);
+            // Store mapping from original name to actual uploaded name
+            uploadedFileMap[img.name] = result.name;
           } catch (uploadError) {
             console.error(`❌ Failed to upload ${img.name}:`, uploadError.message);
             return res.status(500).json({
@@ -206,12 +210,28 @@ app.post('/run', async (req, res) => {
       }
     }
 
+    // Update workflow LoadImage nodes with actual uploaded filenames
+    let workflow = input.workflow;
+    if (Object.keys(uploadedFileMap).length > 0) {
+      console.log(`📝 Updating workflow with actual filenames:`, uploadedFileMap);
+      for (const [originalName, actualName] of Object.entries(uploadedFileMap)) {
+        // Find and update any LoadImage nodes that reference this filename
+        for (const nodeId of Object.keys(workflow)) {
+          const node = workflow[nodeId];
+          if (node.class_type === 'LoadImage' && node.inputs && node.inputs.image === originalName) {
+            console.log(`   → Node ${nodeId}: ${originalName} -> ${actualName}`);
+            node.inputs.image = actualName;
+          }
+        }
+      }
+    }
+
     // Submit to ComfyUI
     const response = await fetch(`${COMFYUI_URL}/prompt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: input.workflow,
+        prompt: workflow,
         client_id: jobId // Use our jobId as client_id for tracking
       })
     });

@@ -411,11 +411,11 @@ async function submitJob(workflow, mode, images = []) {
   }
 
   // NSFW inpaint uses SDXL on serverless, SFW uses Qwen on dedicated
-  // Force NSFW to serverless, let SFW use normal hybrid routing (dedicated first)
-  const forceEndpoint = mode === 'NSFW' ? 'serverless' : null;
+  // Force each to the correct endpoint based on model availability
+  const forceEndpoint = mode === 'NSFW' ? 'serverless' : 'dedicated';
 
   if (forceEndpoint) {
-    console.log(`   Forcing endpoint: ${forceEndpoint} (SDXL model)`);
+    console.log(`   Forcing endpoint: ${forceEndpoint} (${mode === 'NSFW' ? 'SDXL' : 'Qwen'} model)`);
   }
 
   // Route through GPU router (handles dedicated/serverless/hybrid)
