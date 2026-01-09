@@ -410,12 +410,21 @@ async function submitJob(workflow, mode, images = []) {
     console.log(`   Image names: ${images.map(i => i.name).join(', ')}`);
   }
 
+  // NSFW inpaint uses SDXL on serverless, SFW uses Qwen on dedicated
+  // Force NSFW to serverless, let SFW use normal hybrid routing (dedicated first)
+  const forceEndpoint = mode === 'NSFW' ? 'serverless' : null;
+
+  if (forceEndpoint) {
+    console.log(`   Forcing endpoint: ${forceEndpoint} (SDXL model)`);
+  }
+
   // Route through GPU router (handles dedicated/serverless/hybrid)
   const result = await routeGenerationRequest({
     workflow,
     runpodUrl: RUNPOD_BASE_URL,
     runpodApiKey: RUNPOD_API_KEY,
-    images: images.length > 0 ? images : null
+    images: images.length > 0 ? images : null,
+    forceEndpoint
   });
 
   if (!result.success) {

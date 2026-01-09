@@ -160,12 +160,35 @@ async function submitToServerless(runpodUrl, runpodApiKey, workflow, images = nu
  * @param {string} options.runpodUrl - RunPod serverless URL
  * @param {string} options.runpodApiKey - RunPod API key
  * @param {array} options.images - Optional array of {name, image} for inpainting
+ * @param {string} options.forceEndpoint - Force routing to 'serverless' or 'dedicated' (bypasses config)
  * @returns {Promise<{ success, jobId, status, endpoint, error?, usedFallback? }>}
  */
-async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, images = null }) {
+async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, images = null, forceEndpoint = null }) {
   const config = await getGpuConfig();
 
-  console.log(`🔀 GPU Router: mode=${config.mode}, dedicated=${config.dedicatedUrl ? 'configured' : 'not set'}${images ? `, images=${images.length}` : ''}`);
+  console.log(`🔀 GPU Router: mode=${config.mode}, dedicated=${config.dedicatedUrl ? 'configured' : 'not set'}${images ? `, images=${images.length}` : ''}${forceEndpoint ? `, forced=${forceEndpoint}` : ''}`);
+
+  // Force endpoint override (bypasses all config logic)
+  if (forceEndpoint === 'serverless') {
+    console.log('   → Forced to serverless');
+    const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
+    if (result.success) {
+      trackJob(result.jobId, 'serverless');
+    }
+    return result;
+  }
+
+  if (forceEndpoint === 'dedicated') {
+    console.log('   → Forced to dedicated');
+    if (!config.dedicatedUrl) {
+      return { success: false, error: 'Dedicated URL not configured', endpoint: 'dedicated' };
+    }
+    const result = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout, images);
+    if (result.success) {
+      trackJob(result.jobId, 'dedicated');
+    }
+    return result;
+  }
 
   // Mode: serverless - always use serverless (current behavior)
   if (config.mode === 'serverless' || !config.dedicatedUrl) {
