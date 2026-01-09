@@ -358,6 +358,14 @@ app.post('/warmup', async (req, res) => {
         },
         "class_type": "ModelSamplingAuraFlow",
         "_meta": { "title": "ModelSamplingAuraFlow" }
+      },
+      "60": {
+        "inputs": {
+          "filename_prefix": "warmup",
+          "images": ["8", 0]
+        },
+        "class_type": "SaveImage",
+        "_meta": { "title": "Save Image" }
       }
     };
 
