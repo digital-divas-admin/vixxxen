@@ -27,6 +27,7 @@ const reportsRouter = require('./reports');
 const inpaintRouter = require('./inpaint');
 const contentFilterRouter = require('./content-filter');
 const emailRouter = require('./email-routes');
+const adminRouter = require('./admin');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 
@@ -84,6 +85,15 @@ const generationLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Wrapper that only applies generation limiter to POST requests
+// This allows status polling (GET) to bypass the strict generation rate limit
+const generationLimiterPostOnly = (req, res, next) => {
+  if (req.method === 'POST') {
+    return generationLimiter(req, res, next);
+  }
+  next();
+};
+
 // Apply general rate limiting to all API routes
 app.use('/api/', generalLimiter);
 
@@ -109,20 +119,47 @@ app.get('/health', (req, res) => {
 
 // API Routes
 
-// Generation endpoints - require auth + rate limiter (30/min)
+// Generation endpoints - require auth + rate limiter (30/min for POST only)
 // All generation endpoints require login to prevent abuse
-app.use('/api/seedream', requireAuth, generationLimiter, seedreamRouter);
-app.use('/api/nano-banana', requireAuth, generationLimiter, nanoBananaRouter);
-app.use('/api/kling', requireAuth, generationLimiter, klingRouter);
-app.use('/api/wan', requireAuth, generationLimiter, wanRouter);
-app.use('/api/veo', requireAuth, generationLimiter, veoRouter);
-app.use('/api/eraser', requireAuth, generationLimiter, eraserRouter);
-app.use('/api/qwen-image-edit', requireAuth, generationLimiter, qwenImageEditRouter);
-app.use('/api/qwen', requireAuth, generationLimiter, qwenRouter);
-app.use('/api/deepseek', requireAuth, generationLimiter, deepseekRouter);
-app.use('/api/bg-remover', requireAuth, generationLimiter, bgRemoverRouter);
-app.use('/api/elevenlabs', requireAuth, generationLimiter, elevenlabsRouter);
-app.use('/api/inpaint', requireAuth, generationLimiter, inpaintRouter);
+// Status polling (GET) uses the general rate limiter (100/min) to avoid 429 errors
+app.use('/api/seedream', requireAuth, generationLimiterPostOnly, seedreamRouter);
+app.use('/api/nano-banana', requireAuth, generationLimiterPostOnly, nanoBananaRouter);
+app.use('/api/kling', requireAuth, generationLimiterPostOnly, klingRouter);
+app.use('/api/wan', requireAuth, generationLimiterPostOnly, wanRouter);
+app.use('/api/veo', requireAuth, generationLimiterPostOnly, veoRouter);
+app.use('/api/eraser', requireAuth, generationLimiterPostOnly, eraserRouter);
+app.use('/api/qwen-image-edit', requireAuth, generationLimiterPostOnly, qwenImageEditRouter);
+app.use('/api/qwen', requireAuth, generationLimiterPostOnly, qwenRouter);
+app.use('/api/deepseek', requireAuth, generationLimiterPostOnly, deepseekRouter);
+app.use('/api/bg-remover', requireAuth, generationLimiterPostOnly, bgRemoverRouter);
+app.use('/api/elevenlabs', requireAuth, generationLimiterPostOnly, elevenlabsRouter);
+
+// Public image proxy for inpaint (allows img tags to load cross-origin images)
+app.get('/api/inpaint/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+    console.log(`🖼️ Proxying image: ${url.substring(0, 100)}...`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch image' });
+    }
+    const contentType = response.headers.get('content-type');
+    const buffer = await response.arrayBuffer();
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', contentType || 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('❌ Image proxy failed:', error.message);
+    res.status(500).json({ error: 'Proxy failed', message: error.message });
+  }
+});
+
+// Inpaint routes (protected, except proxy-image above)
+app.use('/api/inpaint', requireAuth, generationLimiterPostOnly, inpaintRouter);
 
 // Sensitive endpoints - apply strict rate limiter (10/15min)
 app.use('/api/payments', strictLimiter, paymentsRouter);
@@ -137,6 +174,7 @@ app.use('/api/compliance', complianceRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/content-filter', contentFilterRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/admin', adminRouter);
 
 // Serve static files from the parent directory (frontend)
 app.use(express.static(path.join(__dirname, '..')));

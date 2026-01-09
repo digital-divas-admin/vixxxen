@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
 
 // RunPod Configuration
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -156,7 +157,7 @@ function buildLoraConfig(userLoras = []) {
   return defaultLoras;
 }
 
-// POST /api/qwen/generate - Submit a generation job to RunPod
+// POST /api/qwen/generate - Submit a generation job via GPU router
 router.post('/generate', async (req, res) => {
   try {
     const { prompt, negativePrompt, loras, width, height, seed } = req.body;
@@ -190,43 +191,32 @@ router.post('/generate', async (req, res) => {
       loras
     });
 
-    // RunPod request body
-    const requestBody = {
-      input: {
-        workflow
-      }
-    };
-
-    console.log('\n📤 Submitting job to RunPod:');
-    console.log(`   Endpoint: ${RUNPOD_BASE_URL}/run`);
+    console.log('\n📤 Submitting job via GPU router...');
     console.log(`   Prompt: ${prompt.substring(0, 100)}...`);
 
-    // Submit job to RunPod
-    const response = await fetch(`${RUNPOD_BASE_URL}/run`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RUNPOD_API_KEY}`
-      },
-      body: JSON.stringify(requestBody)
+    // Route through GPU router (handles dedicated/serverless/hybrid)
+    const result = await routeGenerationRequest({
+      workflow,
+      runpodUrl: RUNPOD_BASE_URL,
+      runpodApiKey: RUNPOD_API_KEY
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ RunPod error:', errorText);
-      return res.status(response.status).json({
-        error: 'Failed to submit job to RunPod',
-        details: errorText
+    if (!result.success) {
+      console.error('❌ GPU router error:', result.error);
+      return res.status(500).json({
+        error: 'Failed to submit job',
+        details: result.error
       });
     }
 
-    const data = await response.json();
-    console.log('📋 RunPod job submitted:', data);
+    console.log(`📋 Job submitted: ${result.jobId} via ${result.endpoint}${result.usedFallback ? ' (fallback)' : ''}`);
 
     // Return job ID for status polling
     res.json({
-      jobId: data.id,
-      status: data.status
+      jobId: result.jobId,
+      status: result.status,
+      endpoint: result.endpoint,
+      usedFallback: result.usedFallback || false
     });
 
   } catch (error) {
@@ -235,7 +225,7 @@ router.post('/generate', async (req, res) => {
   }
 });
 
-// GET /api/qwen/status/:jobId - Check job status on RunPod
+// GET /api/qwen/status/:jobId - Check job status via GPU router
 router.get('/status/:jobId', async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -248,21 +238,21 @@ router.get('/status/:jobId', async (req, res) => {
       return res.status(500).json({ error: 'RunPod not configured' });
     }
 
-    const response = await fetch(`${RUNPOD_BASE_URL}/status/${jobId}`, {
-      headers: {
-        'Authorization': `Bearer ${RUNPOD_API_KEY}`
-      }
+    // Get status via GPU router (routes to correct endpoint)
+    const statusResult = await getJobStatus({
+      jobId,
+      runpodUrl: RUNPOD_BASE_URL,
+      runpodApiKey: RUNPOD_API_KEY
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({
+    if (!statusResult.success) {
+      return res.status(500).json({
         error: 'Failed to get job status',
-        details: errorText
+        details: statusResult.error
       });
     }
 
-    const data = await response.json();
+    const data = statusResult.data;
 
     // Map RunPod status to our expected format
     const statusMap = {

@@ -2643,6 +2643,65 @@
       transform: scale(1.02);
     }
 
+    /* GPU Status Grid */
+    .gpu-status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .gpu-status-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .gpu-status-label {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 8px;
+    }
+
+    .gpu-status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gpu-status-indicator .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #666;
+    }
+
+    .gpu-status-indicator .status-dot.online {
+      background: #4caf50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    }
+
+    .gpu-status-indicator .status-dot.offline {
+      background: #f44336;
+      box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+    }
+
+    .gpu-status-indicator .status-dot.checking {
+      background: #ff9800;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .gpu-status-indicator .status-text {
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     .admin-preview-toggle.active {
       background: #ff9800;
       color: #000;
@@ -8167,6 +8226,76 @@
               </div>
               <!-- End Analytics Dashboard -->
 
+              <!-- GPU Configuration Section -->
+              <div class="gpu-config-dashboard" style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border-color);">
+                <div class="policies-admin-header">
+                  <h2 class="policies-admin-title">⚡ GPU Configuration</h2>
+                  <p class="policies-admin-subtitle">Manage GPU routing between dedicated and serverless infrastructure</p>
+                </div>
+
+                <!-- GPU Status Cards -->
+                <div class="gpu-status-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; max-width: 900px; margin-left: auto; margin-right: auto;">
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.1), rgba(157, 78, 221, 0.05)); border: 1px solid rgba(157, 78, 221, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">🔀</div>
+                    <div class="report-stat-value" id="gpuModeDisplay" style="font-size: 1.2rem; font-weight: 700; color: #9d4edd; text-transform: capitalize;">-</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Current Mode</div>
+                  </div>
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(0, 178, 255, 0.1), rgba(0, 178, 255, 0.05)); border: 1px solid rgba(0, 178, 255, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">☁️</div>
+                    <div class="report-stat-value" id="serverlessStatusDisplay" style="font-size: 1rem; font-weight: 700; color: #00b2ff;">-</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Serverless</div>
+                  </div>
+                  <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.05)); border: 1px solid rgba(74, 222, 128, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 1.3rem; margin-bottom: 8px;">🖥️</div>
+                    <div class="report-stat-value" id="dedicatedStatusDisplay" style="font-size: 1rem; font-weight: 700; color: #4ade80;">-</div>
+                    <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Dedicated</div>
+                  </div>
+                </div>
+
+                <!-- GPU Config Form -->
+                <div class="gpu-config-form" style="max-width: 600px; margin: 0 auto; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid var(--border-color);">
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Routing Mode</label>
+                    <select id="gpuModeSelect" style="width: 100%; padding: 12px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; cursor: pointer;">
+                      <option value="serverless">Serverless Only</option>
+                      <option value="dedicated">Dedicated Only</option>
+                      <option value="hybrid">Hybrid (Dedicated first, Serverless fallback)</option>
+                      <option value="serverless-primary">Serverless Primary (Dedicated fallback)</option>
+                    </select>
+                    <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                      <strong>Hybrid:</strong> Uses dedicated GPU, falls back to serverless if unavailable<br>
+                      <strong>Serverless Primary:</strong> Uses serverless, falls back to dedicated if needed
+                    </p>
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Dedicated GPU URL</label>
+                    <input type="text" id="gpuDedicatedUrl" placeholder="https://your-pod-id-3000.proxy.runpod.net" style="width: 100%; padding: 12px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 24px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">Timeout (ms)</label>
+                    <input type="number" id="gpuTimeout" value="5000" min="1000" max="30000" step="1000" style="width: 100%; padding: 12px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; box-sizing: border-box;">
+                    <p style="margin-top: 8px; font-size: 0.8rem; color: #666;">How long to wait for dedicated GPU before falling back (1000-30000ms)</p>
+                  </div>
+
+                  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button onclick="testGpuEndpoint()" style="flex: 1; min-width: 120px; padding: 12px 20px; background: linear-gradient(135deg, rgba(0, 178, 255, 0.2), rgba(0, 178, 255, 0.1)); border: 1px solid rgba(0, 178, 255, 0.3); border-radius: 10px; color: #00b2ff; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: all 0.2s;">
+                      🧪 Test Connection
+                    </button>
+                    <button onclick="saveGpuConfig()" style="flex: 1; min-width: 120px; padding: 12px 20px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: all 0.2s;">
+                      💾 Save Configuration
+                    </button>
+                    <button onclick="loadGpuConfigInline()" style="flex: 1; min-width: 120px; padding: 12px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-secondary); cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: all 0.2s;">
+                      🔄 Refresh
+                    </button>
+                  </div>
+
+                  <div id="gpuTestResult" style="margin-top: 16px; padding: 12px 16px; border-radius: 10px; display: none;"></div>
+                </div>
+              </div>
+              <!-- End GPU Configuration -->
+
               <div class="policies-admin-header" style="margin-top: 40px;">
                 <h2 class="policies-admin-title">Manage Site Policies</h2>
                 <p class="policies-admin-subtitle">Edit your Terms of Service, Privacy Policy, and Refund Policy</p>
@@ -9244,6 +9373,69 @@
       <source id="modalVideoSource" src="" type="video/mp4">
       Your browser does not support video playback.
     </video>
+  </div>
+
+  <!-- GPU Configuration Modal (Admin) -->
+  <div class="resource-form-modal" id="gpuConfigModal">
+    <div class="resource-form-content" style="max-width: 600px;">
+      <div class="resource-form-header">
+        <h3 class="resource-form-title">GPU Configuration</h3>
+        <button class="resource-form-close" onclick="closeGpuConfigModal()">✕</button>
+      </div>
+      <div class="resource-form-body">
+        <!-- Status Indicators -->
+        <div class="gpu-status-grid" id="gpuStatusGrid">
+          <div class="gpu-status-card">
+            <div class="gpu-status-label">Serverless</div>
+            <div class="gpu-status-indicator" id="serverlessStatus">
+              <span class="status-dot"></span>
+              <span class="status-text">Checking...</span>
+            </div>
+          </div>
+          <div class="gpu-status-card">
+            <div class="gpu-status-label">Dedicated</div>
+            <div class="gpu-status-indicator" id="dedicatedStatus">
+              <span class="status-dot"></span>
+              <span class="status-text">Not configured</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuration Form -->
+        <form id="gpuConfigForm" onsubmit="saveGpuConfig(event)">
+          <div class="resource-form-group">
+            <label class="resource-form-label">Routing Mode</label>
+            <select class="resource-form-input" id="gpuModeSelect">
+              <option value="serverless">Serverless Only (Current)</option>
+              <option value="dedicated">Dedicated Only</option>
+              <option value="hybrid">Hybrid (Dedicated + Serverless Overflow)</option>
+              <option value="serverless-primary">Serverless Primary (Dedicated Overflow)</option>
+            </select>
+            <div class="resource-form-hint" id="gpuModeHint">All jobs route to RunPod Serverless</div>
+          </div>
+
+          <div class="resource-form-group">
+            <label class="resource-form-label">Dedicated GPU URL</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" class="resource-form-input" id="gpuDedicatedUrlModal" placeholder="https://your-pod-id.runpod.ai" style="flex: 1;">
+              <button type="button" class="resource-form-btn" onclick="testDedicatedGpu()" style="width: auto; padding: 0 16px;">Test</button>
+            </div>
+            <div class="resource-form-hint">URL of your dedicated ComfyUI Pod wrapper</div>
+          </div>
+
+          <div class="resource-form-group">
+            <label class="resource-form-label">Fallback Timeout (ms)</label>
+            <input type="number" class="resource-form-input" id="gpuTimeoutModal" value="5000" min="1000" max="30000" step="500">
+            <div class="resource-form-hint">How long to wait for dedicated GPU before falling back (1000-30000ms)</div>
+          </div>
+
+          <div class="resource-form-actions">
+            <button type="button" class="resource-form-btn cancel" onclick="closeGpuConfigModal()">Cancel</button>
+            <button type="submit" class="resource-form-btn save" id="gpuConfigSaveBtn">Save Configuration</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- External JavaScript Modules (load in order) -->
@@ -10582,9 +10774,8 @@
       verifyBtn.textContent = 'Verifying...';
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/age-verification/verify`, {
+        const response = await authFetch(`${API_BASE_URL}/api/age-verification/verify`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: currentUser.id,
             confirmed: true
@@ -11202,11 +11393,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
@@ -11981,11 +12169,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
@@ -12005,30 +12190,40 @@
 
         // Add result to output
         const resultImage = data.image;
-        editedImages.unshift(resultImage);
+        const timestamp = Date.now();
+        editedImages.unshift({ url: resultImage, model: 'bg-remover', timestamp });
 
         const imageCard = document.createElement('div');
-        imageCard.className = 'output-card';
+        imageCard.className = 'output-item';
         imageCard.innerHTML = `
-          <img src="${resultImage}" alt="Edited image" class="output-image">
-          <div class="output-actions">
-            <button onclick="downloadImage('${resultImage}', 'bg-removed-${Date.now()}.png')" class="output-action-btn" title="Download">
-              ⬇️
-            </button>
-            <div class="send-to-container" style="flex: 1; position: relative;">
-              <button onclick="toggleSendToMenu(event, this)" class="output-action-btn" title="Send to...">
-                📤
+          <img src="${resultImage}" alt="Edited image" crossorigin="anonymous" onclick="showImageModal('${resultImage}')" title="Click to view full size">
+          <div class="output-item-overlay">
+            <div class="output-item-info">
+              851 Labs BG Remover
+            </div>
+            <div class="output-item-actions">
+              <button class="icon-btn" onclick="downloadImage('${resultImage}', 'bg-removed-${timestamp}.png')" title="Download">
+                <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
               </button>
-              <div class="send-to-menu">
-                <button class="send-to-option" onclick="sendToVideo('${resultImage}', event)">📹 Send to Video</button>
-                <button class="send-to-option" onclick="sendToEdit('${resultImage}', event)">✂️ Send to Edit</button>
-                <button class="send-to-option" onclick="sendToCaption('${resultImage}', event)">💬 Send to Caption</button>
-                <button class="send-to-option" onclick="sendToInpaint('${resultImage}', event)">🖌️ Send to Inpaint</button>
+              <div class="send-to-container">
+                <button class="icon-btn" onclick="toggleSendToMenu(event, this)" title="Send to...">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+                <div class="send-to-menu">
+                  <button class="send-to-option" onclick="sendToVideo('${resultImage}', event)">📹 Send to Video</button>
+                  <button class="send-to-option" onclick="sendToEdit('${resultImage}', event)">✂️ Send to Edit</button>
+                  <button class="send-to-option" onclick="sendToCaption('${resultImage}', event)">💬 Send to Caption</button>
+                  <button class="send-to-option" onclick="sendToInpaint('${resultImage}', event)">🖌️ Send to Inpaint</button>
+                </div>
               </div>
             </div>
-            <button onclick="deleteEditedImage(this)" class="output-action-btn" title="Delete">
-              🗑️
-            </button>
           </div>
         `;
 
@@ -12140,11 +12335,8 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-        const response = await fetch(endpoint, {
+        const response = await authFetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
@@ -12661,9 +12853,8 @@
           console.log(`🖌️ Generating inpaint ${i + 1}/${numGenerations}...`);
 
           try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const response = await authFetch(`${API_BASE_URL}${endpoint}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 image: imageBase64,
                 mask: maskBase64,
@@ -16500,6 +16691,7 @@
         loadAdminReports(); // Load reports dashboard
         loadBlockedWordsAdmin(); // Load blocked words management
         loadAnalyticsDashboard(); // Load analytics dashboard
+        loadGpuConfigInline(); // Load GPU configuration
       }
       // Note: community tab doesn't have an add button (channel management is separate)
     }
@@ -16636,9 +16828,8 @@
       if (!user) return;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/starthere/${guideId}/complete`, {
+        const response = await authFetch(`${API_BASE_URL}/api/starthere/${guideId}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: user.id })
         });
 
@@ -17288,6 +17479,375 @@
 
       // Re-render resources with preview mode applied
       renderResources();
+    }
+
+    // ==================== GPU CONFIG FUNCTIONS ====================
+
+    const gpuModeDescriptions = {
+      'serverless': 'All jobs route to RunPod Serverless (current behavior)',
+      'dedicated': 'All jobs route to dedicated GPU (fails if unavailable)',
+      'hybrid': 'Try dedicated first, fall back to serverless if busy/unavailable',
+      'serverless-primary': 'Try serverless first, fall back to dedicated if unavailable'
+    };
+
+    async function openGpuConfigModal() {
+      const modal = document.getElementById('gpuConfigModal');
+      modal.classList.add('active');
+
+      // Reset status indicators to checking
+      setStatusIndicator('serverlessStatus', 'checking', 'Checking...');
+      setStatusIndicator('dedicatedStatus', 'checking', 'Checking...');
+
+      // Load current config and status
+      try {
+        const [configRes, statusRes] = await Promise.all([
+          authFetch(`${API_BASE_URL}/api/admin/gpu-config`),
+          authFetch(`${API_BASE_URL}/api/admin/gpu-status`)
+        ]);
+
+        if (configRes.ok) {
+          const data = await configRes.json();
+          const config = data.config;
+
+          document.getElementById('gpuModeSelect').value = config.mode || 'serverless';
+          document.getElementById('gpuDedicatedUrl').value = config.dedicatedUrl || '';
+          document.getElementById('gpuTimeout').value = config.dedicatedTimeout || 5000;
+          document.getElementById('gpuModeHint').textContent = gpuModeDescriptions[config.mode] || '';
+        }
+
+        if (statusRes.ok) {
+          const status = await statusRes.json();
+
+          // Update serverless status
+          if (status.serverless?.configured) {
+            setStatusIndicator('serverlessStatus', 'online', `Online (${status.serverless.endpoint})`);
+          } else {
+            setStatusIndicator('serverlessStatus', 'offline', 'Not configured');
+          }
+
+          // Update dedicated status
+          if (status.dedicated?.configured) {
+            if (status.dedicated.health?.healthy) {
+              const queueInfo = status.dedicated.health.queueDepth > 0
+                ? ` (queue: ${status.dedicated.health.queueDepth})`
+                : '';
+              setStatusIndicator('dedicatedStatus', 'online', `Online${queueInfo}`);
+            } else {
+              setStatusIndicator('dedicatedStatus', 'offline', status.dedicated.health?.reason || 'Unhealthy');
+            }
+          } else {
+            setStatusIndicator('dedicatedStatus', 'offline', 'Not configured');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load GPU config:', error);
+        setStatusIndicator('serverlessStatus', 'offline', 'Error loading');
+        setStatusIndicator('dedicatedStatus', 'offline', 'Error loading');
+      }
+    }
+
+    function closeGpuConfigModal() {
+      document.getElementById('gpuConfigModal').classList.remove('active');
+    }
+
+    function setStatusIndicator(elementId, status, text) {
+      const indicator = document.getElementById(elementId);
+      if (!indicator) return;
+
+      const dot = indicator.querySelector('.status-dot');
+      const textEl = indicator.querySelector('.status-text');
+
+      dot.className = 'status-dot ' + status;
+      textEl.textContent = text;
+    }
+
+    // Update hint when mode changes
+    document.getElementById('gpuModeSelect')?.addEventListener('change', function() {
+      document.getElementById('gpuModeHint').textContent = gpuModeDescriptions[this.value] || '';
+    });
+
+    async function saveGpuConfig(event) {
+      event.preventDefault();
+
+      const saveBtn = document.getElementById('gpuConfigSaveBtn');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+
+      try {
+        const config = {
+          mode: document.getElementById('gpuModeSelect').value,
+          dedicatedUrl: document.getElementById('gpuDedicatedUrl').value || null,
+          dedicatedTimeout: parseInt(document.getElementById('gpuTimeout').value, 10)
+        };
+
+        const response = await authFetch(`${API_BASE_URL}/api/admin/gpu-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+
+        if (response.ok) {
+          showNotification('GPU configuration saved successfully', 'success');
+          closeGpuConfigModal();
+        } else {
+          const error = await response.json();
+          showNotification(error.error || 'Failed to save configuration', 'error');
+        }
+      } catch (error) {
+        console.error('Failed to save GPU config:', error);
+        showNotification('Failed to save configuration', 'error');
+      } finally {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+      }
+    }
+
+    async function testDedicatedGpu() {
+      const url = document.getElementById('gpuDedicatedUrl').value;
+      if (!url) {
+        showNotification('Please enter a dedicated GPU URL first', 'warning');
+        return;
+      }
+
+      setStatusIndicator('dedicatedStatus', 'checking', 'Testing...');
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/admin/gpu-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const result = await response.json();
+
+        if (result.healthy) {
+          const queueInfo = result.queueDepth > 0 ? ` (queue: ${result.queueDepth})` : '';
+          setStatusIndicator('dedicatedStatus', 'online', `Healthy${queueInfo}`);
+          showNotification('Dedicated GPU is reachable and healthy!', 'success');
+        } else {
+          setStatusIndicator('dedicatedStatus', 'offline', result.reason || 'Unhealthy');
+          showNotification(`Dedicated GPU test failed: ${result.reason}`, 'error');
+        }
+      } catch (error) {
+        console.error('GPU test failed:', error);
+        setStatusIndicator('dedicatedStatus', 'offline', 'Test failed');
+        showNotification('Failed to test dedicated GPU', 'error');
+      }
+    }
+
+    // Close GPU config modal when clicking outside
+    document.getElementById('gpuConfigModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeGpuConfigModal();
+      }
+    });
+
+    // ========================================
+    // Inline GPU Config Functions (Admin Panel)
+    // ========================================
+
+    async function loadGpuConfigInline() {
+      try {
+        // Update status displays to loading
+        const modeDisplay = document.getElementById('gpuModeDisplay');
+        const serverlessDisplay = document.getElementById('serverlessStatusDisplay');
+        const dedicatedDisplay = document.getElementById('dedicatedStatusDisplay');
+
+        if (modeDisplay) modeDisplay.textContent = 'Loading...';
+        if (serverlessDisplay) serverlessDisplay.textContent = 'Checking...';
+        if (dedicatedDisplay) dedicatedDisplay.textContent = 'Checking...';
+
+        const [configRes, statusRes] = await Promise.all([
+          authFetch(`${API_BASE_URL}/api/admin/gpu-config`),
+          authFetch(`${API_BASE_URL}/api/admin/gpu-status`)
+        ]);
+
+        if (configRes.ok) {
+          const data = await configRes.json();
+          const config = data.config;
+
+          // Update form fields
+          const modeSelect = document.getElementById('gpuModeSelect');
+          const urlInput = document.getElementById('gpuDedicatedUrl');
+          const timeoutInput = document.getElementById('gpuTimeout');
+
+          if (modeSelect) modeSelect.value = config.mode || 'serverless';
+          if (urlInput) urlInput.value = config.dedicatedUrl || '';
+          if (timeoutInput) timeoutInput.value = config.dedicatedTimeout || 5000;
+
+          // Update mode display
+          if (modeDisplay) {
+            const modeLabels = {
+              'serverless': 'Serverless',
+              'dedicated': 'Dedicated',
+              'hybrid': 'Hybrid',
+              'serverless-primary': 'Serverless Primary'
+            };
+            modeDisplay.textContent = modeLabels[config.mode] || config.mode;
+          }
+        }
+
+        if (statusRes.ok) {
+          const status = await statusRes.json();
+
+          // Update serverless status display
+          if (serverlessDisplay) {
+            if (status.serverless?.configured) {
+              serverlessDisplay.textContent = 'Configured';
+              serverlessDisplay.style.color = '#4ade80';
+            } else {
+              serverlessDisplay.textContent = 'Not Set';
+              serverlessDisplay.style.color = '#ffa500';
+            }
+          }
+
+          // Update dedicated status display
+          if (dedicatedDisplay) {
+            if (status.dedicated?.configured) {
+              if (status.dedicated.health?.healthy) {
+                dedicatedDisplay.textContent = 'Online';
+                dedicatedDisplay.style.color = '#4ade80';
+              } else {
+                dedicatedDisplay.textContent = 'Offline';
+                dedicatedDisplay.style.color = '#ff4444';
+              }
+            } else {
+              dedicatedDisplay.textContent = 'Not Set';
+              dedicatedDisplay.style.color = '#888';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load GPU config:', error);
+      }
+    }
+
+    async function testGpuEndpoint() {
+      const url = document.getElementById('gpuDedicatedUrl')?.value;
+      const resultDiv = document.getElementById('gpuTestResult');
+
+      if (!url) {
+        if (resultDiv) {
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = 'rgba(255, 165, 0, 0.1)';
+          resultDiv.style.border = '1px solid rgba(255, 165, 0, 0.3)';
+          resultDiv.style.color = '#ffa500';
+          resultDiv.innerHTML = '⚠️ Please enter a dedicated GPU URL first';
+        }
+        return;
+      }
+
+      if (resultDiv) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = 'rgba(0, 178, 255, 0.1)';
+        resultDiv.style.border = '1px solid rgba(0, 178, 255, 0.3)';
+        resultDiv.style.color = '#00b2ff';
+        resultDiv.innerHTML = '🔄 Testing connection...';
+      }
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/admin/gpu-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const result = await response.json();
+
+        if (resultDiv) {
+          if (result.healthy) {
+            resultDiv.style.background = 'rgba(74, 222, 128, 0.1)';
+            resultDiv.style.border = '1px solid rgba(74, 222, 128, 0.3)';
+            resultDiv.style.color = '#4ade80';
+            const queueInfo = result.queueDepth > 0 ? ` | Queue: ${result.queueDepth}` : '';
+            const wsInfo = result.websocket ? ' | WebSocket: ✓' : '';
+            resultDiv.innerHTML = `✅ Connection successful!${wsInfo}${queueInfo}`;
+
+            // Update status display
+            const dedicatedDisplay = document.getElementById('dedicatedStatusDisplay');
+            if (dedicatedDisplay) {
+              dedicatedDisplay.textContent = 'Online';
+              dedicatedDisplay.style.color = '#4ade80';
+            }
+          } else {
+            resultDiv.style.background = 'rgba(255, 68, 68, 0.1)';
+            resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
+            resultDiv.style.color = '#ff4444';
+            resultDiv.innerHTML = `❌ Connection failed: ${result.reason || 'Unknown error'}`;
+          }
+        }
+      } catch (error) {
+        console.error('GPU test failed:', error);
+        if (resultDiv) {
+          resultDiv.style.background = 'rgba(255, 68, 68, 0.1)';
+          resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
+          resultDiv.style.color = '#ff4444';
+          resultDiv.innerHTML = '❌ Test failed: Network error';
+        }
+      }
+    }
+
+    // Override saveGpuConfig to work without modal
+    async function saveGpuConfig(event) {
+      if (event) event.preventDefault();
+
+      const resultDiv = document.getElementById('gpuTestResult');
+
+      try {
+        const config = {
+          mode: document.getElementById('gpuModeSelect')?.value || 'serverless',
+          dedicatedUrl: document.getElementById('gpuDedicatedUrl')?.value || null,
+          dedicatedTimeout: parseInt(document.getElementById('gpuTimeout')?.value, 10) || 5000
+        };
+
+        if (resultDiv) {
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = 'rgba(0, 178, 255, 0.1)';
+          resultDiv.style.border = '1px solid rgba(0, 178, 255, 0.3)';
+          resultDiv.style.color = '#00b2ff';
+          resultDiv.innerHTML = '💾 Saving configuration...';
+        }
+
+        const response = await authFetch(`${API_BASE_URL}/api/admin/gpu-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+
+        if (response.ok) {
+          if (resultDiv) {
+            resultDiv.style.background = 'rgba(74, 222, 128, 0.1)';
+            resultDiv.style.border = '1px solid rgba(74, 222, 128, 0.3)';
+            resultDiv.style.color = '#4ade80';
+            resultDiv.innerHTML = '✅ Configuration saved successfully!';
+          }
+
+          // Refresh the display
+          loadGpuConfigInline();
+        } else {
+          const error = await response.json();
+          if (resultDiv) {
+            resultDiv.style.background = 'rgba(255, 68, 68, 0.1)';
+            resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
+            resultDiv.style.color = '#ff4444';
+            resultDiv.innerHTML = `❌ Failed: ${error.error || 'Unknown error'}`;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save GPU config:', error);
+        if (resultDiv) {
+          resultDiv.style.background = 'rgba(255, 68, 68, 0.1)';
+          resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
+          resultDiv.style.color = '#ff4444';
+          resultDiv.innerHTML = '❌ Failed to save configuration';
+        }
+      }
+    }
+
+    // Load GPU config when admin panel is shown
+    function onAdminPanelShown() {
+      loadGpuConfigInline();
     }
 
     function openResourceForm(resourceId = null) {
