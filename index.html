@@ -4715,6 +4715,12 @@
       gap: 12px;
       padding: 16px;
       color: #888;
+      flex-direction: column;
+    }
+
+    .inpaint-loading-status {
+      font-size: 0.85rem;
+      color: #666;
     }
 
     .inpaint-spinner {
@@ -4728,6 +4734,88 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    /* GPU Status Banner */
+    .gpu-status-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .gpu-status-banner.online {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+
+    .gpu-status-banner.offline {
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+
+    .gpu-status-banner.loading {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #3b82f6;
+    }
+
+    .gpu-status-banner.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    .gpu-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .gpu-status-banner.online .gpu-status-dot {
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+    }
+
+    .gpu-status-banner.offline .gpu-status-dot {
+      background: #fbbf24;
+      animation: pulse-yellow 2s infinite;
+    }
+
+    .gpu-status-banner.loading .gpu-status-dot {
+      background: #3b82f6;
+      animation: pulse-blue 1.5s infinite;
+    }
+
+    .gpu-status-banner.error .gpu-status-dot {
+      background: #ef4444;
+    }
+
+    @keyframes pulse-yellow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes pulse-blue {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    .gpu-status-text {
+      flex: 1;
+    }
+
+    .gpu-status-subtext {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-top: 2px;
     }
 
     /* Loading spinner for infinite scroll */
@@ -8015,6 +8103,15 @@
 
           <div class="inpaint-divider"></div>
 
+          <!-- GPU Status Banner -->
+          <div class="gpu-status-banner loading" id="gpuStatusBanner" style="display: none;">
+            <div class="gpu-status-dot"></div>
+            <div class="gpu-status-text">
+              <div id="gpuStatusMessage">Checking GPU status...</div>
+              <div class="gpu-status-subtext" id="gpuStatusSubtext"></div>
+            </div>
+          </div>
+
           <!-- Generate Button -->
           <button class="inpaint-generate-btn" id="inpaintGenerateBtn" onclick="generateInpaint()">
             <span class="inpaint-generate-icon">✨</span>
@@ -8024,7 +8121,8 @@
           <!-- Loading State -->
           <div class="inpaint-loading" id="inpaintLoading" style="display: none;">
             <div class="inpaint-spinner"></div>
-            <span>Generating...</span>
+            <span id="inpaintLoadingText">Generating...</span>
+            <div class="inpaint-loading-status" id="inpaintLoadingStatus"></div>
           </div>
         </div>
 
@@ -11263,6 +11361,8 @@
       } else if (tab === 'inpaint') {
         document.getElementById('inpaintSection').classList.add('active');
         document.getElementById('inpaintNavTab').classList.add('active');
+        // Start GPU status polling when entering inpaint tab
+        startGpuStatusPolling();
       } else if (tab === 'caption') {
         document.getElementById('captionSection').classList.add('active');
         document.getElementById('captionNavTab').classList.add('active');
@@ -13116,6 +13216,16 @@
         try {
           console.log(`🖌️ Polling inpaint job (attempt ${attempt + 1}/${maxAttempts})...`);
 
+          // Update loading status
+          const elapsedSecs = attempt * 5;
+          if (elapsedSecs < 10) {
+            updateLoadingStatus('Queued, waiting for GPU...');
+          } else if (elapsedSecs < 30) {
+            updateLoadingStatus('Processing image...');
+          } else {
+            updateLoadingStatus(`Processing... (${elapsedSecs}s)`);
+          }
+
           const response = await fetch(statusUrl);
           const data = await response.json();
 
@@ -13164,6 +13274,83 @@
 
       console.error('Inpaint job timed out after 5 minutes');
       return null;
+    }
+
+    // GPU Status Management
+    let gpuStatusCache = null;
+    let gpuStatusCheckInterval = null;
+
+    async function checkGpuStatus() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/gpu-status`);
+        const data = await response.json();
+        gpuStatusCache = data;
+        updateGpuStatusBanner(data);
+        return data;
+      } catch (error) {
+        console.error('GPU status check failed:', error);
+        gpuStatusCache = { dedicated: { status: 'error', reason: error.message } };
+        updateGpuStatusBanner(gpuStatusCache);
+        return gpuStatusCache;
+      }
+    }
+
+    function updateGpuStatusBanner(status) {
+      const banner = document.getElementById('gpuStatusBanner');
+      const message = document.getElementById('gpuStatusMessage');
+      const subtext = document.getElementById('gpuStatusSubtext');
+
+      if (!banner || !status) return;
+
+      // Only show banner if dedicated GPU is configured
+      if (!status.dedicated?.configured && status.mode === 'serverless') {
+        banner.style.display = 'none';
+        return;
+      }
+
+      banner.style.display = 'flex';
+      banner.className = 'gpu-status-banner';
+
+      if (status.dedicated?.healthy) {
+        banner.classList.add('online');
+        message.textContent = 'Dedicated GPU Online';
+        const queueText = status.dedicated.queueDepth > 0
+          ? `Queue: ${status.dedicated.queueDepth} job(s)`
+          : 'Ready for fast generation';
+        subtext.textContent = queueText;
+      } else if (status.dedicated?.status === 'offline') {
+        banner.classList.add('offline');
+        message.textContent = 'Dedicated GPU Starting...';
+        subtext.textContent = status.dedicated.reason || 'Using serverless as fallback';
+      } else if (status.dedicated?.status === 'error') {
+        banner.classList.add('error');
+        message.textContent = 'GPU Connection Issue';
+        subtext.textContent = 'Using serverless as fallback';
+      } else {
+        banner.classList.add('loading');
+        message.textContent = 'Checking GPU status...';
+        subtext.textContent = '';
+      }
+    }
+
+    function startGpuStatusPolling(intervalMs = 30000) {
+      // Initial check
+      checkGpuStatus();
+
+      // Clear any existing interval
+      if (gpuStatusCheckInterval) {
+        clearInterval(gpuStatusCheckInterval);
+      }
+
+      // Poll every 30 seconds
+      gpuStatusCheckInterval = setInterval(checkGpuStatus, intervalMs);
+    }
+
+    function updateLoadingStatus(text) {
+      const statusEl = document.getElementById('inpaintLoadingStatus');
+      if (statusEl) {
+        statusEl.textContent = text;
+      }
     }
 
     async function generateInpaint() {
@@ -13232,9 +13419,22 @@
       const { image: imageBase64, mask: maskBase64 } = createMaskedImage();
       console.log('🖌️ Image:', Math.round(imageBase64.length / 1024), 'KB, Mask:', Math.round(maskBase64.length / 1024), 'KB');
 
-      // Show loading
+      // Show loading with GPU status
       document.getElementById('inpaintGenerateBtn').disabled = true;
       document.getElementById('inpaintLoading').style.display = 'flex';
+
+      // Update loading text based on GPU status
+      const loadingText = document.getElementById('inpaintLoadingText');
+      if (gpuStatusCache?.dedicated?.healthy) {
+        loadingText.textContent = 'Generating...';
+        updateLoadingStatus('Using dedicated GPU');
+      } else if (gpuStatusCache?.dedicated?.configured) {
+        loadingText.textContent = 'Generating...';
+        updateLoadingStatus('Using serverless (dedicated GPU starting)');
+      } else {
+        loadingText.textContent = 'Generating...';
+        updateLoadingStatus('');
+      }
 
       // Add loading placeholders
       const grid = document.getElementById('inpaintResultsGrid');
