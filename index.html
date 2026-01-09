@@ -2533,6 +2533,117 @@
       max-height: 250px;
     }
 
+    /* GPU Usage Heatmap Styles */
+    .analytics-section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 32px 0 16px 0;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .analytics-section-title::before,
+    .analytics-section-title::after {
+      content: '';
+      flex: 1;
+      max-width: 100px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(157, 78, 221, 0.3), transparent);
+    }
+
+    .analytics-full-width {
+      max-width: 900px;
+      margin: 24px auto;
+    }
+
+    .heatmap-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: 50px repeat(24, 1fr);
+      gap: 2px;
+      min-width: 600px;
+    }
+
+    .heatmap-header {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 4px 0;
+      font-weight: 500;
+    }
+
+    .heatmap-day-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-weight: 500;
+    }
+
+    .heatmap-cell {
+      aspect-ratio: 1;
+      min-height: 20px;
+      border-radius: 3px;
+      background: rgba(157, 78, 221, 0.1);
+      transition: transform 0.1s, box-shadow 0.1s;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .heatmap-cell:hover {
+      transform: scale(1.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    .heatmap-cell[data-level="0"] { background: rgba(157, 78, 221, 0.05); }
+    .heatmap-cell[data-level="1"] { background: rgba(157, 78, 221, 0.2); }
+    .heatmap-cell[data-level="2"] { background: rgba(157, 78, 221, 0.4); }
+    .heatmap-cell[data-level="3"] { background: rgba(157, 78, 221, 0.6); }
+    .heatmap-cell[data-level="4"] { background: rgba(255, 46, 187, 0.7); }
+    .heatmap-cell[data-level="5"] { background: rgba(255, 46, 187, 0.9); }
+
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .heatmap-legend-item {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+    }
+
+    .heatmap-tooltip {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+    }
+
     .policy-admin-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
@@ -8263,6 +8374,40 @@
                   </div>
                 </div>
 
+                <!-- Serverless GPU Usage Section -->
+                <h3 class="analytics-section-title">Serverless GPU Usage (Qwen + Inpaint)</h3>
+
+                <!-- Hourly Bar Chart -->
+                <div class="analytics-full-width">
+                  <div class="analytics-chart-container">
+                    <h3 class="analytics-chart-title">Generations by Hour of Day (Mountain Time)</h3>
+                    <canvas id="serverlessHourlyChart"></canvas>
+                  </div>
+                </div>
+
+                <!-- Weekly Heatmap -->
+                <div class="analytics-full-width">
+                  <div class="heatmap-container">
+                    <h3 class="analytics-chart-title">Weekly Usage Heatmap (Last 7 Days)</h3>
+                    <div class="heatmap-grid" id="serverlessHeatmap">
+                      <!-- Header row with hours -->
+                      <div class="heatmap-header"></div>
+                      <!-- Hours 0-23 will be rendered by JS -->
+                    </div>
+                    <div class="heatmap-legend">
+                      <span>Less</span>
+                      <div class="heatmap-legend-item" style="background: rgba(157, 78, 221, 0.05);"></div>
+                      <div class="heatmap-legend-item" style="background: rgba(157, 78, 221, 0.2);"></div>
+                      <div class="heatmap-legend-item" style="background: rgba(157, 78, 221, 0.4);"></div>
+                      <div class="heatmap-legend-item" style="background: rgba(157, 78, 221, 0.6);"></div>
+                      <div class="heatmap-legend-item" style="background: rgba(255, 46, 187, 0.7);"></div>
+                      <div class="heatmap-legend-item" style="background: rgba(255, 46, 187, 0.9);"></div>
+                      <span>More</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="heatmap-tooltip" id="heatmapTooltip"></div>
+
                 <!-- Refresh Button -->
                 <div style="text-align: center; margin-top: 20px;">
                   <button onclick="loadAnalyticsDashboard()" style="padding: 10px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 500;">
@@ -13047,6 +13192,14 @@
         </div>
       `;
       placeholder.replaceWith(resultDiv);
+
+      // Upload to Supabase Storage for analytics tracking (async, don't block UI)
+      const inpaintPromptValue = document.getElementById('inpaintPrompt')?.value || '';
+      uploadImageToStorage(imageUrl, {
+        prompt: inpaintPromptValue,
+        model: inpaintMode === 'nsfw' ? 'inpaint-nsfw' : 'inpaint-sfw',
+        type: 'inpaint'
+      });
     }
 
     function displayInpaintResults(results) {
