@@ -9417,7 +9417,7 @@
           <div class="resource-form-group">
             <label class="resource-form-label">Dedicated GPU URL</label>
             <div style="display: flex; gap: 8px;">
-              <input type="url" class="resource-form-input" id="gpuDedicatedUrl" placeholder="https://your-pod-id.runpod.ai" style="flex: 1;">
+              <input type="url" class="resource-form-input" id="gpuDedicatedUrlModal" placeholder="https://your-pod-id.runpod.ai" style="flex: 1;">
               <button type="button" class="resource-form-btn" onclick="testDedicatedGpu()" style="width: auto; padding: 0 16px;">Test</button>
             </div>
             <div class="resource-form-hint">URL of your dedicated ComfyUI Pod wrapper</div>
@@ -9425,7 +9425,7 @@
 
           <div class="resource-form-group">
             <label class="resource-form-label">Fallback Timeout (ms)</label>
-            <input type="number" class="resource-form-input" id="gpuTimeout" value="5000" min="1000" max="30000" step="500">
+            <input type="number" class="resource-form-input" id="gpuTimeoutModal" value="5000" min="1000" max="30000" step="500">
             <div class="resource-form-hint">How long to wait for dedicated GPU before falling back (1000-30000ms)</div>
           </div>
 
