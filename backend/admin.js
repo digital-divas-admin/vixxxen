@@ -184,4 +184,99 @@ router.post('/gpu-test', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/warmup-status
+ * Check warmup/model loading status on dedicated GPU
+ */
+router.get('/warmup-status', async (req, res) => {
+  try {
+    const config = await getGpuConfig();
+
+    if (!config.dedicatedUrl) {
+      return res.json({
+        gpuOnline: false,
+        status: 'not_configured',
+        message: 'No dedicated GPU configured'
+      });
+    }
+
+    // Check if GPU is online
+    const health = await checkDedicatedHealth(config.dedicatedUrl);
+
+    if (!health.healthy) {
+      return res.json({
+        gpuOnline: false,
+        status: 'offline',
+        message: health.reason || 'Dedicated GPU is offline'
+      });
+    }
+
+    // GPU is online - models are loaded if it's healthy (warmup runs on startup)
+    res.json({
+      gpuOnline: true,
+      status: 'ready',
+      queueDepth: health.queueDepth || 0,
+      message: 'GPU online, models loaded'
+    });
+  } catch (error) {
+    console.error('Warmup status error:', error);
+    res.status(500).json({ error: 'Failed to check warmup status' });
+  }
+});
+
+/**
+ * POST /api/admin/warmup
+ * Trigger model warmup on dedicated GPU
+ */
+router.post('/warmup', async (req, res) => {
+  try {
+    const config = await getGpuConfig();
+    const { model = 'qwen' } = req.body;
+
+    if (!config.dedicatedUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'No dedicated GPU configured'
+      });
+    }
+
+    console.log(`🔥 Admin ${req.user.email} triggering warmup for model: ${model}`);
+
+    // Call the dedicated GPU's warmup endpoint
+    const warmupUrl = `${config.dedicatedUrl}/warmup`;
+    const response = await fetch(warmupUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Warmup request failed:', errorText);
+      return res.status(500).json({
+        success: false,
+        error: 'Warmup request failed',
+        details: errorText
+      });
+    }
+
+    const result = await response.json();
+
+    console.log(`✅ Warmup complete for ${model}:`, result);
+
+    res.json({
+      success: true,
+      model,
+      loadTimeSeconds: result.loadTimeSeconds,
+      message: result.message || `${model} model loaded successfully`
+    });
+  } catch (error) {
+    console.error('Warmup trigger error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to trigger warmup'
+    });
+  }
+});
+
 module.exports = router;

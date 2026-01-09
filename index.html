@@ -4736,88 +4736,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* GPU Status Banner */
-    .gpu-status-banner {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-bottom: 12px;
-      transition: all 0.3s ease;
-    }
-
-    .gpu-status-banner.online {
-      background: rgba(34, 197, 94, 0.15);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      color: #22c55e;
-    }
-
-    .gpu-status-banner.offline {
-      background: rgba(251, 191, 36, 0.15);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      color: #fbbf24;
-    }
-
-    .gpu-status-banner.loading {
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: #3b82f6;
-    }
-
-    .gpu-status-banner.error {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #ef4444;
-    }
-
-    .gpu-status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .gpu-status-banner.online .gpu-status-dot {
-      background: #22c55e;
-      box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
-    }
-
-    .gpu-status-banner.offline .gpu-status-dot {
-      background: #fbbf24;
-      animation: pulse-yellow 2s infinite;
-    }
-
-    .gpu-status-banner.loading .gpu-status-dot {
-      background: #3b82f6;
-      animation: pulse-blue 1.5s infinite;
-    }
-
-    .gpu-status-banner.error .gpu-status-dot {
-      background: #ef4444;
-    }
-
-    @keyframes pulse-yellow {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    @keyframes pulse-blue {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(0.85); }
-    }
-
-    .gpu-status-text {
-      flex: 1;
-    }
-
-    .gpu-status-subtext {
-      font-size: 0.75rem;
-      opacity: 0.8;
-      margin-top: 2px;
-    }
-
     /* Loading spinner for infinite scroll */
     .loading-spinner {
       display: inline-block;
@@ -8103,15 +8021,6 @@
 
           <div class="inpaint-divider"></div>
 
-          <!-- GPU Status Banner -->
-          <div class="gpu-status-banner loading" id="gpuStatusBanner" style="display: none;">
-            <div class="gpu-status-dot"></div>
-            <div class="gpu-status-text">
-              <div id="gpuStatusMessage">Checking GPU status...</div>
-              <div class="gpu-status-subtext" id="gpuStatusSubtext"></div>
-            </div>
-          </div>
-
           <!-- Generate Button -->
           <button class="inpaint-generate-btn" id="inpaintGenerateBtn" onclick="generateInpaint()">
             <span class="inpaint-generate-icon">✨</span>
@@ -8774,6 +8683,29 @@
                   </div>
 
                   <div id="gpuTestResult" style="margin-top: 16px; padding: 12px 16px; border-radius: 10px; display: none;"></div>
+                </div>
+
+                <!-- GPU Warmup Section -->
+                <div style="margin-top: 32px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                  <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">Model Warmup</h3>
+                  <div style="padding: 20px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                      <div id="warmupStatusDot" style="width: 10px; height: 10px; border-radius: 50%; background: #666; flex-shrink: 0;"></div>
+                      <div>
+                        <div id="warmupStatusText" style="font-weight: 500; color: var(--text-primary);">Unknown</div>
+                        <div id="warmupStatusSubtext" style="font-size: 0.8rem; color: #888; margin-top: 2px;">Check status to see current state</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                      <button onclick="checkWarmupStatus()" style="flex: 1; min-width: 120px; padding: 12px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-secondary); cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                        🔍 Check Status
+                      </button>
+                      <button onclick="triggerWarmup()" id="warmupTriggerBtn" style="flex: 1; min-width: 120px; padding: 12px 20px; background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(255, 165, 0, 0.1)); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 10px; color: #ffa500; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                        🔥 Trigger Warmup
+                      </button>
+                    </div>
+                    <div id="warmupResult" style="margin-top: 16px; padding: 12px 16px; border-radius: 10px; display: none;"></div>
+                  </div>
                 </div>
                 </div>
                 <!-- End GPU Configuration Section -->
@@ -11361,8 +11293,6 @@
       } else if (tab === 'inpaint') {
         document.getElementById('inpaintSection').classList.add('active');
         document.getElementById('inpaintNavTab').classList.add('active');
-        // Start GPU status polling when entering inpaint tab
-        startGpuStatusPolling();
       } else if (tab === 'caption') {
         document.getElementById('captionSection').classList.add('active');
         document.getElementById('captionNavTab').classList.add('active');
@@ -13274,76 +13204,6 @@
 
       console.error('Inpaint job timed out after 5 minutes');
       return null;
-    }
-
-    // GPU Status Management
-    let gpuStatusCache = null;
-    let gpuStatusCheckInterval = null;
-
-    async function checkGpuStatus() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/gpu-status`);
-        const data = await response.json();
-        gpuStatusCache = data;
-        updateGpuStatusBanner(data);
-        return data;
-      } catch (error) {
-        console.error('GPU status check failed:', error);
-        gpuStatusCache = { dedicated: { status: 'error', reason: error.message } };
-        updateGpuStatusBanner(gpuStatusCache);
-        return gpuStatusCache;
-      }
-    }
-
-    function updateGpuStatusBanner(status) {
-      const banner = document.getElementById('gpuStatusBanner');
-      const message = document.getElementById('gpuStatusMessage');
-      const subtext = document.getElementById('gpuStatusSubtext');
-
-      if (!banner || !status) return;
-
-      // Only show banner if dedicated GPU is configured
-      if (!status.dedicated?.configured && status.mode === 'serverless') {
-        banner.style.display = 'none';
-        return;
-      }
-
-      banner.style.display = 'flex';
-      banner.className = 'gpu-status-banner';
-
-      if (status.dedicated?.healthy) {
-        banner.classList.add('online');
-        message.textContent = 'Dedicated GPU Online';
-        const queueText = status.dedicated.queueDepth > 0
-          ? `Queue: ${status.dedicated.queueDepth} job(s)`
-          : 'Ready for fast generation';
-        subtext.textContent = queueText;
-      } else if (status.dedicated?.status === 'offline') {
-        banner.classList.add('offline');
-        message.textContent = 'Dedicated GPU Starting...';
-        subtext.textContent = status.dedicated.reason || 'Using serverless as fallback';
-      } else if (status.dedicated?.status === 'error') {
-        banner.classList.add('error');
-        message.textContent = 'GPU Connection Issue';
-        subtext.textContent = 'Using serverless as fallback';
-      } else {
-        banner.classList.add('loading');
-        message.textContent = 'Checking GPU status...';
-        subtext.textContent = '';
-      }
-    }
-
-    function startGpuStatusPolling(intervalMs = 30000) {
-      // Initial check
-      checkGpuStatus();
-
-      // Clear any existing interval
-      if (gpuStatusCheckInterval) {
-        clearInterval(gpuStatusCheckInterval);
-      }
-
-      // Poll every 30 seconds
-      gpuStatusCheckInterval = setInterval(checkGpuStatus, intervalMs);
     }
 
     function updateLoadingStatus(text) {
@@ -18461,6 +18321,132 @@
           resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
           resultDiv.style.color = '#ff4444';
           resultDiv.innerHTML = '❌ Test failed: Network error';
+        }
+      }
+    }
+
+    // Warmup status tracking
+    let warmupState = { status: 'unknown', lastCheck: null };
+
+    async function checkWarmupStatus() {
+      const statusDot = document.getElementById('warmupStatusDot');
+      const statusText = document.getElementById('warmupStatusText');
+      const statusSubtext = document.getElementById('warmupStatusSubtext');
+      const resultDiv = document.getElementById('warmupResult');
+
+      if (statusText) statusText.textContent = 'Checking...';
+      if (statusSubtext) statusSubtext.textContent = '';
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/admin/warmup-status`);
+        const result = await response.json();
+
+        warmupState = { ...result, lastCheck: new Date() };
+        updateWarmupUI(result);
+
+        if (resultDiv && result.message) {
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = 'rgba(0, 178, 255, 0.1)';
+          resultDiv.style.border = '1px solid rgba(0, 178, 255, 0.3)';
+          resultDiv.style.color = '#00b2ff';
+          resultDiv.innerHTML = result.message;
+        }
+      } catch (error) {
+        console.error('Warmup status check failed:', error);
+        if (statusDot) statusDot.style.background = '#ef4444';
+        if (statusText) statusText.textContent = 'Error';
+        if (statusSubtext) statusSubtext.textContent = 'Failed to check status';
+      }
+    }
+
+    function updateWarmupUI(result) {
+      const statusDot = document.getElementById('warmupStatusDot');
+      const statusText = document.getElementById('warmupStatusText');
+      const statusSubtext = document.getElementById('warmupStatusSubtext');
+      const triggerBtn = document.getElementById('warmupTriggerBtn');
+
+      if (!result.gpuOnline) {
+        if (statusDot) statusDot.style.background = '#666';
+        if (statusText) statusText.textContent = 'GPU Offline';
+        if (statusSubtext) statusSubtext.textContent = 'Dedicated GPU is not connected';
+        if (triggerBtn) triggerBtn.disabled = true;
+        return;
+      }
+
+      if (triggerBtn) triggerBtn.disabled = false;
+
+      if (result.status === 'ready') {
+        if (statusDot) statusDot.style.background = '#22c55e';
+        if (statusText) statusText.textContent = 'Models Loaded';
+        if (statusSubtext) statusSubtext.textContent = 'Ready for fast generation';
+      } else if (result.status === 'warming') {
+        if (statusDot) {
+          statusDot.style.background = '#fbbf24';
+          statusDot.style.animation = 'pulse-yellow 1s infinite';
+        }
+        if (statusText) statusText.textContent = 'Warming Up...';
+        if (statusSubtext) statusSubtext.textContent = 'Loading models into VRAM';
+      } else {
+        if (statusDot) statusDot.style.background = '#666';
+        if (statusText) statusText.textContent = 'Cold';
+        if (statusSubtext) statusSubtext.textContent = 'Models not loaded - first request will be slow';
+      }
+    }
+
+    async function triggerWarmup() {
+      const resultDiv = document.getElementById('warmupResult');
+      const triggerBtn = document.getElementById('warmupTriggerBtn');
+
+      if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = '🔄 Warming up...';
+      }
+
+      if (resultDiv) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = 'rgba(255, 165, 0, 0.1)';
+        resultDiv.style.border = '1px solid rgba(255, 165, 0, 0.3)';
+        resultDiv.style.color = '#ffa500';
+        resultDiv.innerHTML = '🔥 Triggering warmup... This may take 1-2 minutes.';
+      }
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/admin/warmup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'qwen' })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          if (resultDiv) {
+            resultDiv.style.background = 'rgba(74, 222, 128, 0.1)';
+            resultDiv.style.border = '1px solid rgba(74, 222, 128, 0.3)';
+            resultDiv.style.color = '#4ade80';
+            resultDiv.innerHTML = `✅ ${result.message || 'Warmup complete!'} (${result.loadTimeSeconds || 0}s)`;
+          }
+          updateWarmupUI({ gpuOnline: true, status: 'ready' });
+        } else {
+          if (resultDiv) {
+            resultDiv.style.background = 'rgba(255, 68, 68, 0.1)';
+            resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
+            resultDiv.style.color = '#ff4444';
+            resultDiv.innerHTML = `❌ Warmup failed: ${result.error || 'Unknown error'}`;
+          }
+        }
+      } catch (error) {
+        console.error('Warmup trigger failed:', error);
+        if (resultDiv) {
+          resultDiv.style.background = 'rgba(255, 68, 68, 0.1)';
+          resultDiv.style.border = '1px solid rgba(255, 68, 68, 0.3)';
+          resultDiv.style.color = '#ff4444';
+          resultDiv.innerHTML = '❌ Warmup failed: Network error';
+        }
+      } finally {
+        if (triggerBtn) {
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = '🔥 Trigger Warmup';
         }
       }
     }
