@@ -125,6 +125,54 @@ function handleComfyUIMessage(message) {
 connectWebSocket();
 
 /**
+ * Upload an image to ComfyUI
+ * @param {string} name - Filename (e.g., 'input_image.png')
+ * @param {string} base64Data - Base64-encoded image data
+ */
+async function uploadImageToComfyUI(name, base64Data) {
+  // Convert base64 to buffer
+  const imageBuffer = Buffer.from(base64Data, 'base64');
+
+  // Create multipart form data manually
+  const boundary = '----FormBoundary' + Date.now().toString(16);
+
+  // Build the multipart body
+  const bodyParts = [];
+
+  // Image file part
+  bodyParts.push(`--${boundary}`);
+  bodyParts.push(`Content-Disposition: form-data; name="image"; filename="${name}"`);
+  bodyParts.push('Content-Type: image/png');
+  bodyParts.push('');
+
+  // Combine text parts with proper line endings
+  const headerBuffer = Buffer.from(bodyParts.join('\r\n') + '\r\n');
+
+  // End boundary
+  const endBoundary = Buffer.from(`\r\n--${boundary}--\r\n`);
+
+  // Concatenate all parts
+  const fullBody = Buffer.concat([headerBuffer, imageBuffer, endBoundary]);
+
+  const response = await fetch(`${COMFYUI_URL}/upload/image`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': `multipart/form-data; boundary=${boundary}`
+    },
+    body: fullBody
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to upload image ${name}: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log(`   ✅ Uploaded ${name}: ${JSON.stringify(result)}`);
+  return result;
+}
+
+/**
  * POST /run - Submit a generation job
  * Matches RunPod serverless API format
  */
@@ -138,6 +186,25 @@ app.post('/run', async (req, res) => {
 
     // Generate our own job ID
     const jobId = uuidv4();
+
+    // Upload images if provided (for inpainting)
+    if (input.images && Array.isArray(input.images) && input.images.length > 0) {
+      console.log(`📤 Uploading ${input.images.length} images to ComfyUI...`);
+
+      for (const img of input.images) {
+        if (img.name && img.image) {
+          try {
+            await uploadImageToComfyUI(img.name, img.image);
+          } catch (uploadError) {
+            console.error(`❌ Failed to upload ${img.name}:`, uploadError.message);
+            return res.status(500).json({
+              error: `Failed to upload image: ${img.name}`,
+              details: uploadError.message
+            });
+          }
+        }
+      }
+    }
 
     // Submit to ComfyUI
     const response = await fetch(`${COMFYUI_URL}/prompt`, {
