@@ -197,10 +197,37 @@ echo "  Wrapper:  http://0.0.0.0:$WRAPPER_PORT (PID: $WRAPPER_PID)"
 echo ""
 echo "  API Endpoints:"
 echo "    POST /run          - Submit generation job"
+echo "    POST /warmup       - Pre-load models"
 echo "    GET  /status/:id   - Check job status"
 echo "    GET  /health       - Health check"
 echo ""
 echo "=============================================="
+echo ""
+
+# -----------------------------------------------------------------------------
+# Warmup: Pre-load Qwen Model
+# -----------------------------------------------------------------------------
+log_info "Warming up Qwen model (this saves time for the first user)..."
+
+# Run warmup in background so we can start monitoring
+(
+    sleep 5  # Give services a moment to stabilize
+
+    WARMUP_RESPONSE=$(curl -s -X POST "http://127.0.0.1:$WRAPPER_PORT/warmup" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "qwen"}' \
+        --max-time 330)
+
+    if echo "$WARMUP_RESPONSE" | grep -q '"success":true'; then
+        LOAD_TIME=$(echo "$WARMUP_RESPONSE" | grep -o '"loadTimeSeconds":[0-9]*' | grep -o '[0-9]*')
+        echo -e "${GREEN}[OK]${NC} Qwen model loaded and ready! (took ${LOAD_TIME}s)"
+    else
+        echo -e "${YELLOW}[WARN]${NC} Warmup may have failed: $WARMUP_RESPONSE"
+    fi
+) &
+WARMUP_PID=$!
+
+log_info "Warmup running in background (PID: $WARMUP_PID)"
 echo ""
 
 # -----------------------------------------------------------------------------
