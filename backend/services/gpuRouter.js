@@ -77,13 +77,19 @@ async function submitToDedicated(dedicatedUrl, workflow, timeout = 5000, images 
       input.images = images;
     }
 
-    const response = await fetch(`${dedicatedUrl}/run`, {
+    const targetUrl = `${dedicatedUrl}/run`;
+    console.log(`   → Dedicated POST to: ${targetUrl}`);
+
+    const response = await fetch(targetUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input }),
-      signal: controller.signal
+      signal: controller.signal,
+      redirect: 'follow'
     });
     clearTimeout(timeoutId);
+
+    console.log(`   → Dedicated response: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const errorText = await response.text();
