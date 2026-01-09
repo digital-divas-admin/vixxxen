@@ -13283,18 +13283,9 @@
       document.getElementById('inpaintGenerateBtn').disabled = true;
       document.getElementById('inpaintLoading').style.display = 'flex';
 
-      // Update loading text based on GPU status
+      // Update loading text
       const loadingText = document.getElementById('inpaintLoadingText');
-      if (gpuStatusCache?.dedicated?.healthy) {
-        loadingText.textContent = 'Generating...';
-        updateLoadingStatus('Using dedicated GPU');
-      } else if (gpuStatusCache?.dedicated?.configured) {
-        loadingText.textContent = 'Generating...';
-        updateLoadingStatus('Using serverless (dedicated GPU starting)');
-      } else {
-        loadingText.textContent = 'Generating...';
-        updateLoadingStatus('');
-      }
+      loadingText.textContent = 'Generating...';
 
       // Add loading placeholders
       const grid = document.getElementById('inpaintResultsGrid');
