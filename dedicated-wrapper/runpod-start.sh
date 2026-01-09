@@ -65,6 +65,21 @@ if [ -d "$COMFYUI_DIR/models/loras" ]; then
     log_info "Found $LORA_COUNT LoRA model(s)"
 fi
 
+# Check/Install Node.js
+if ! command -v node &> /dev/null; then
+    log_warn "Node.js not found, installing..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null 2>&1
+    apt-get install -y nodejs > /dev/null 2>&1
+    if command -v node &> /dev/null; then
+        log_success "Node.js installed: $(node --version)"
+    else
+        log_error "Failed to install Node.js"
+        exit 1
+    fi
+else
+    log_info "Node.js found: $(node --version)"
+fi
+
 # -----------------------------------------------------------------------------
 # Setup Wrapper (if not already set up)
 # -----------------------------------------------------------------------------
