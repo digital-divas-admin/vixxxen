@@ -30,6 +30,8 @@ const emailRouter = require('./email-routes');
 const adminRouter = require('./admin');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
+const { checkDedicatedHealth } = require('./services/gpuRouter');
+const { getGpuConfig } = require('./services/settingsService');
 
 const app = express();
 const server = http.createServer(app);
@@ -115,6 +117,59 @@ app.get('/health', (req, res) => {
       email: !!process.env.RESEND_API_KEY
     }
   });
+});
+
+// GPU status endpoint - returns dedicated GPU health for frontend status indicator
+app.get('/api/gpu-status', async (req, res) => {
+  try {
+    const config = await getGpuConfig();
+
+    // If no dedicated GPU configured or mode is serverless-only
+    if (!config.dedicatedUrl || config.mode === 'serverless') {
+      return res.json({
+        mode: config.mode || 'serverless',
+        dedicated: {
+          configured: false,
+          healthy: false,
+          status: 'not_configured'
+        },
+        serverless: {
+          available: true
+        }
+      });
+    }
+
+    // Check dedicated GPU health
+    const health = await checkDedicatedHealth(config.dedicatedUrl);
+
+    res.json({
+      mode: config.mode,
+      dedicated: {
+        configured: true,
+        healthy: health.healthy,
+        status: health.healthy ? 'online' : 'offline',
+        queueDepth: health.queueDepth || 0,
+        reason: health.reason || null
+      },
+      serverless: {
+        available: true
+      }
+    });
+  } catch (error) {
+    console.error('GPU status check error:', error);
+    res.json({
+      mode: 'unknown',
+      dedicated: {
+        configured: false,
+        healthy: false,
+        status: 'error',
+        reason: error.message
+      },
+      serverless: {
+        available: true
+      }
+    });
+  }
 });
 
 // API Routes

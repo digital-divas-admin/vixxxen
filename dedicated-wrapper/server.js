@@ -267,6 +267,194 @@ app.get('/status/:jobId', async (req, res) => {
 });
 
 /**
+ * POST /warmup - Pre-load models into VRAM
+ * Submits a minimal workflow to load Qwen models
+ */
+app.post('/warmup', async (req, res) => {
+  try {
+    const { model = 'qwen' } = req.body;
+
+    console.log(`🔥 Warmup request received for model: ${model}`);
+
+    // Minimal Qwen workflow - loads all models but generates tiny 64x64 image
+    const warmupWorkflow = {
+      "3": {
+        "inputs": {
+          "seed": 1,
+          "steps": 1,
+          "cfg": 1,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 1,
+          "model": ["66", 0],
+          "positive": ["6", 0],
+          "negative": ["7", 0],
+          "latent_image": ["58", 0]
+        },
+        "class_type": "KSampler",
+        "_meta": { "title": "KSampler" }
+      },
+      "6": {
+        "inputs": {
+          "text": "warmup",
+          "clip": ["38", 0]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": { "title": "CLIP Text Encode (Positive)" }
+      },
+      "7": {
+        "inputs": {
+          "text": "",
+          "clip": ["38", 0]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": { "title": "CLIP Text Encode (Negative)" }
+      },
+      "8": {
+        "inputs": {
+          "samples": ["3", 0],
+          "vae": ["39", 0]
+        },
+        "class_type": "VAEDecode",
+        "_meta": { "title": "VAE Decode" }
+      },
+      "37": {
+        "inputs": {
+          "unet_name": "qwen_image_bf16.safetensors",
+          "weight_dtype": "default"
+        },
+        "class_type": "UNETLoader",
+        "_meta": { "title": "Load Diffusion Model" }
+      },
+      "38": {
+        "inputs": {
+          "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+          "type": "qwen_image",
+          "device": "default"
+        },
+        "class_type": "CLIPLoader",
+        "_meta": { "title": "Load CLIP" }
+      },
+      "39": {
+        "inputs": {
+          "vae_name": "qwen_image_vae.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": { "title": "Load VAE" }
+      },
+      "58": {
+        "inputs": {
+          "width": 64,
+          "height": 64,
+          "batch_size": 1
+        },
+        "class_type": "EmptySD3LatentImage",
+        "_meta": { "title": "EmptySD3LatentImage" }
+      },
+      "66": {
+        "inputs": {
+          "shift": 2,
+          "model": ["37", 0]
+        },
+        "class_type": "ModelSamplingAuraFlow",
+        "_meta": { "title": "ModelSamplingAuraFlow" }
+      }
+    };
+
+    // Submit warmup workflow to ComfyUI
+    const response = await fetch(`${COMFYUI_URL}/prompt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: warmupWorkflow,
+        client_id: 'warmup-' + Date.now()
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Warmup submission failed:', errorText);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to submit warmup workflow',
+        details: errorText
+      });
+    }
+
+    const data = await response.json();
+    console.log(`🔥 Warmup job submitted: ${data.prompt_id}`);
+
+    // Poll for completion (model loading can take a while)
+    const maxWaitMs = 300000; // 5 minutes max
+    const pollIntervalMs = 2000;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitMs) {
+      await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+
+      // Check if job is done
+      const historyResponse = await fetch(`${COMFYUI_URL}/history/${data.prompt_id}`);
+      if (historyResponse.ok) {
+        const history = await historyResponse.json();
+        if (history[data.prompt_id]) {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          console.log(`✅ Warmup complete! Model loaded in ${elapsed}s`);
+          return res.json({
+            success: true,
+            model: model,
+            loadTimeSeconds: elapsed,
+            message: `${model} model loaded successfully`
+          });
+        }
+      }
+
+      // Check queue to see if still processing
+      const queueResponse = await fetch(`${COMFYUI_URL}/queue`);
+      if (queueResponse.ok) {
+        const queue = await queueResponse.json();
+        const inQueue = queue.queue_pending?.some(item => item[1] === data.prompt_id);
+        const running = queue.queue_running?.some(item => item[1] === data.prompt_id);
+
+        if (!inQueue && !running) {
+          // Not in queue and not in history yet, check history again
+          const finalCheck = await fetch(`${COMFYUI_URL}/history/${data.prompt_id}`);
+          if (finalCheck.ok) {
+            const finalHistory = await finalCheck.json();
+            if (finalHistory[data.prompt_id]) {
+              const elapsed = Math.round((Date.now() - startTime) / 1000);
+              console.log(`✅ Warmup complete! Model loaded in ${elapsed}s`);
+              return res.json({
+                success: true,
+                model: model,
+                loadTimeSeconds: elapsed,
+                message: `${model} model loaded successfully`
+              });
+            }
+          }
+        }
+      }
+
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      console.log(`🔥 Warmup in progress... (${elapsed}s)`);
+    }
+
+    console.error('❌ Warmup timed out after 5 minutes');
+    res.status(504).json({
+      success: false,
+      error: 'Warmup timed out',
+      message: 'Model loading took longer than expected'
+    });
+
+  } catch (error) {
+    console.error('❌ Warmup error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Warmup failed'
+    });
+  }
+});
+
+/**
  * GET /health - Health check
  * Returns queue depth and connection status
  */
