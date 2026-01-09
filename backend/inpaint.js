@@ -13,7 +13,7 @@ const MAX_POLL_ATTEMPTS = 200; // Max ~10 minutes of polling
 // ============================================================================
 // SFW INPAINT WORKFLOW (Qwen-based) - Uses separate image and mask
 // ============================================================================
-const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [] }) => {
+const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [], denoise = 0.6 }) => {
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'sfw');
 
@@ -27,7 +27,7 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
         "cfg": 1,
         "sampler_name": "euler",
         "scheduler": "simple",
-        "denoise": 0.6,
+        "denoise": denoise,
         "model": ["15", 0],
         "positive": ["6", 0],
         "negative": ["7", 0],
@@ -145,7 +145,7 @@ const getSfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras
 // ============================================================================
 // NSFW INPAINT WORKFLOW (SDXL-based) - Uses separate image and mask
 // ============================================================================
-const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [] }) => {
+const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, loras = [], denoise = 0.6 }) => {
   const actualSeed = seed ?? Math.floor(Math.random() * 999999999999999);
   const loraConfig = buildLoraConfig(loras, 'nsfw');
 
@@ -167,7 +167,7 @@ const getNsfwInpaintWorkflow = ({ prompt, negativePrompt = '', seed = null, lora
         "cfg": 7,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
-        "denoise": 0.6,
+        "denoise": denoise,
         "model": ["9", 0],
         "positive": ["12", 0],
         "negative": ["5", 0],
@@ -475,7 +475,7 @@ router.get('/proxy-image', async (req, res) => {
 // ============================================================================
 router.post('/inpaint-sfw', async (req, res) => {
   try {
-    const { image, mask, prompt, loras = [] } = req.body;
+    const { image, mask, prompt, loras = [], denoise = 0.6 } = req.body;
 
     if (!image) {
       return res.status(400).json({ error: 'Image is required' });
@@ -492,6 +492,7 @@ router.post('/inpaint-sfw', async (req, res) => {
     console.log(`🎨 Starting SFW inpaint...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
+    console.log(`   Denoise: ${denoise}`);
     console.log(`   Image: ${Math.round(image.length / 1024)}KB, Mask: ${Math.round(mask.length / 1024)}KB`);
 
     // Strip data URL prefix if present
@@ -508,7 +509,8 @@ router.post('/inpaint-sfw', async (req, res) => {
     const workflow = getSfwInpaintWorkflow({
       prompt,
       negativePrompt: '',
-      loras
+      loras,
+      denoise
     });
 
     // Prepare images array (image + mask)
@@ -553,7 +555,7 @@ router.post('/inpaint-sfw', async (req, res) => {
 // ============================================================================
 router.post('/inpaint-nsfw', async (req, res) => {
   try {
-    const { image, mask, prompt, loras = [] } = req.body;
+    const { image, mask, prompt, loras = [], denoise = 0.6 } = req.body;
 
     if (!image) {
       return res.status(400).json({ error: 'Image is required' });
@@ -570,6 +572,7 @@ router.post('/inpaint-nsfw', async (req, res) => {
     console.log(`🎨 Starting NSFW inpaint...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
+    console.log(`   Denoise: ${denoise}`);
     console.log(`   Image: ${Math.round(image.length / 1024)}KB, Mask: ${Math.round(mask.length / 1024)}KB`);
 
     // Strip data URL prefix if present
@@ -586,7 +589,8 @@ router.post('/inpaint-nsfw', async (req, res) => {
     const workflow = getNsfwInpaintWorkflow({
       prompt,
       negativePrompt: '',
-      loras
+      loras,
+      denoise
     });
 
     // Prepare images array (image + mask)

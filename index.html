@@ -4249,8 +4249,8 @@
     }
 
     .inpaint-brush-preview {
-      width: 60px;
-      height: 60px;
+      width: 110px;
+      height: 110px;
       border: 1px solid #333;
       border-radius: 8px;
       background: #0a0a0a;
@@ -4258,6 +4258,40 @@
       align-items: center;
       justify-content: center;
       margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .inpaint-intensity-slider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .inpaint-intensity-slider input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: linear-gradient(to right, #444, #ff2ebb);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .inpaint-intensity-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ff2ebb;
+      cursor: pointer;
+    }
+
+    .inpaint-intensity-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 4px;
     }
 
     .inpaint-button-row {
@@ -7663,7 +7697,7 @@
           <!-- Prompt -->
           <div class="inpaint-control-section">
             <div class="inpaint-control-label">Prompt</div>
-            <textarea id="inpaintPrompt" class="inpaint-textarea" placeholder="Describe what should appear in the masked area..."></textarea>
+            <textarea id="inpaintPrompt" class="inpaint-textarea" placeholder="a beautiful woman"></textarea>
           </div>
 
           <!-- LoRA Selection -->
@@ -7680,6 +7714,18 @@
             <div class="inpaint-mode-toggle">
               <button class="inpaint-mode-btn active" id="inpaintSfwBtn" onclick="setInpaintMode('sfw')">SFW</button>
               <button class="inpaint-mode-btn" id="inpaintNsfwBtn" onclick="setInpaintMode('nsfw')">NSFW</button>
+            </div>
+          </div>
+
+          <!-- Change Intensity -->
+          <div class="inpaint-control-section">
+            <div class="inpaint-control-label">Change Intensity</div>
+            <div class="inpaint-intensity-slider">
+              <input type="range" id="inpaintIntensity" min="0" max="100" value="25" oninput="updateInpaintIntensity(this.value)">
+            </div>
+            <div class="inpaint-intensity-labels">
+              <span>Minor</span>
+              <span>Major</span>
             </div>
           </div>
 
@@ -12460,6 +12506,7 @@
     let inpaintImage = null;
     let inpaintMode = 'sfw';
     let inpaintBrushSize = 30;
+    let inpaintIntensity = 25; // 0-100 maps to 0.5-0.9 denoise
     let isInpaintDrawing = false;
     let inpaintMaskHistory = [];
     let inpaintResultUrl = null;
@@ -12610,11 +12657,22 @@
       inpaintBrushSize = parseInt(value);
       document.getElementById('inpaintBrushSizeValue').textContent = value + 'px';
 
-      // Update preview
+      // Update preview - scale to fit in 100px container
       const preview = document.getElementById('inpaintBrushPreview');
-      const size = Math.min(value, 50);
+      const size = Math.round(value * 1); // 1:1 scale, container is now 110px
       preview.innerHTML = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:rgba(255,46,187,0.7);"></div>`;
     }
+
+    function updateInpaintIntensity(value) {
+      inpaintIntensity = parseInt(value);
+    }
+
+    // Initialize brush preview on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        updateInpaintBrushSize(30);
+      }, 100);
+    });
 
     function clearInpaintMask() {
       const maskCanvas = document.getElementById('inpaintMaskCanvas');
@@ -12853,13 +12911,17 @@
           console.log(`🖌️ Generating inpaint ${i + 1}/${numGenerations}...`);
 
           try {
+            // Map intensity 0-100 to denoise 0.5-0.9
+            const denoise = 0.5 + (inpaintIntensity / 100) * 0.4;
+
             const response = await authFetch(`${API_BASE_URL}${endpoint}`, {
               method: 'POST',
               body: JSON.stringify({
                 image: imageBase64,
                 mask: maskBase64,
                 prompt: inpaintPrompt,
-                loras: loras
+                loras: loras,
+                denoise: denoise
               })
             });
 
