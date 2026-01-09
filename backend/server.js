@@ -133,6 +133,32 @@ app.use('/api/qwen', requireAuth, generationLimiterPostOnly, qwenRouter);
 app.use('/api/deepseek', requireAuth, generationLimiterPostOnly, deepseekRouter);
 app.use('/api/bg-remover', requireAuth, generationLimiterPostOnly, bgRemoverRouter);
 app.use('/api/elevenlabs', requireAuth, generationLimiterPostOnly, elevenlabsRouter);
+
+// Public image proxy for inpaint (allows img tags to load cross-origin images)
+app.get('/api/inpaint/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+    console.log(`🖼️ Proxying image: ${url.substring(0, 100)}...`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch image' });
+    }
+    const contentType = response.headers.get('content-type');
+    const buffer = await response.arrayBuffer();
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', contentType || 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('❌ Image proxy failed:', error.message);
+    res.status(500).json({ error: 'Proxy failed', message: error.message });
+  }
+});
+
+// Inpaint routes (protected, except proxy-image above)
 app.use('/api/inpaint', requireAuth, generationLimiterPostOnly, inpaintRouter);
 
 // Sensitive endpoints - apply strict rate limiter (10/15min)
