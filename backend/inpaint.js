@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
 
 // RunPod Configuration (shared with qwen.js)
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -296,29 +297,39 @@ function buildLoraConfig(userLoras = [], mode = 'sfw') {
 }
 
 // ============================================================================
-// RUNPOD JOB POLLING
+// JOB POLLING (uses GPU router for endpoint-aware status checks)
 // ============================================================================
-async function pollRunPodJob(jobId) {
-  console.log(`🔄 Polling RunPod job: ${jobId}`);
+async function pollJob(jobId) {
+  console.log(`🔄 Polling job: ${jobId}`);
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     try {
-      console.log(`   Polling attempt ${attempt + 1}/${MAX_POLL_ATTEMPTS}...`);
+      // Only log every 5th attempt to reduce noise
+      if (attempt % 5 === 0 || attempt < 3) {
+        console.log(`   Polling attempt ${attempt + 1}/${MAX_POLL_ATTEMPTS}...`);
+      }
 
-      const response = await fetch(`${RUNPOD_BASE_URL}/status/${jobId}`, {
-        headers: { 'Authorization': `Bearer ${RUNPOD_API_KEY}` }
+      // Use GPU router to get status (routes to correct endpoint)
+      const statusResult = await getJobStatus({
+        jobId,
+        runpodUrl: RUNPOD_BASE_URL,
+        runpodApiKey: RUNPOD_API_KEY
       });
 
-      if (!response.ok) {
-        console.error(`   Poll failed with status ${response.status}`);
+      if (!statusResult.success) {
+        console.error(`   Poll failed: ${statusResult.error}`);
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
         continue;
       }
 
-      const data = await response.json();
-      console.log(`   Job status: ${data.status}`);
+      const data = statusResult.data;
+      const status = data.status;
 
-      if (data.status === 'COMPLETED') {
+      if (attempt % 5 === 0 || attempt < 3) {
+        console.log(`   Job status: ${status} (via ${statusResult.endpoint})`);
+      }
+
+      if (status === 'COMPLETED') {
         console.log(`✅ Job completed!`);
         console.log(`   Output keys:`, data.output ? Object.keys(data.output) : 'none');
 
@@ -359,16 +370,16 @@ async function pollRunPodJob(jobId) {
 
         if (imageUrl) {
           console.log(`   ✅ Extracted image (length: ${imageUrl.length})`);
-          return { success: true, image: imageUrl };
+          return { success: true, image: imageUrl, endpoint: statusResult.endpoint };
         } else {
           console.error('❌ Job completed but no image in output:', JSON.stringify(data.output, null, 2).substring(0, 500));
           return { success: false, error: 'No image in output', fullResponse: data };
         }
-      } else if (data.status === 'FAILED') {
+      } else if (status === 'FAILED') {
         console.error(`❌ Job failed:`, data.error);
         console.error(`   Full failed response:`, JSON.stringify(data, null, 2).substring(0, 1000));
         return { success: false, error: data.error || 'Job failed', fullResponse: data };
-      } else if (data.status === 'CANCELLED') {
+      } else if (status === 'CANCELLED') {
         return { success: false, error: 'Job was cancelled' };
       }
 
@@ -385,43 +396,35 @@ async function pollRunPodJob(jobId) {
 }
 
 // ============================================================================
-// SUBMIT JOB TO RUNPOD
+// SUBMIT JOB VIA GPU ROUTER (supports dedicated + serverless)
 // ============================================================================
-async function submitToRunPod(workflow, mode, images = []) {
+async function submitJob(workflow, mode, images = []) {
   if (!RUNPOD_API_KEY || !RUNPOD_ENDPOINT_ID) {
     throw new Error('RunPod not configured. Set RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID.');
   }
 
-  console.log(`📤 Submitting ${mode} inpaint job to RunPod...`);
+  console.log(`📤 Submitting ${mode} inpaint job via GPU router...`);
   console.log(`   Images to upload: ${images.length}`);
 
-  // Build input payload
-  const input = { workflow };
-
-  // Add images if provided (for inpainting)
   if (images.length > 0) {
-    input.images = images;
     console.log(`   Image names: ${images.map(i => i.name).join(', ')}`);
   }
 
-  const response = await fetch(`${RUNPOD_BASE_URL}/run`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${RUNPOD_API_KEY}`
-    },
-    body: JSON.stringify({ input })
+  // Route through GPU router (handles dedicated/serverless/hybrid)
+  const result = await routeGenerationRequest({
+    workflow,
+    runpodUrl: RUNPOD_BASE_URL,
+    runpodApiKey: RUNPOD_API_KEY,
+    images: images.length > 0 ? images : null
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`RunPod submission failed: ${errorText}`);
+  if (!result.success) {
+    throw new Error(`Job submission failed: ${result.error}`);
   }
 
-  const data = await response.json();
-  console.log(`📋 Job submitted: ${data.id}`);
+  console.log(`📋 Job submitted: ${result.jobId} via ${result.endpoint}${result.usedFallback ? ' (fallback)' : ''}`);
 
-  return data.id;
+  return result.jobId;
 }
 
 // ============================================================================
@@ -499,23 +502,24 @@ router.post('/inpaint-sfw', async (req, res) => {
       loras
     });
 
-    // Prepare images array for RunPod (image + mask)
+    // Prepare images array (image + mask)
     const images = [
       { name: 'input_image.png', image: base64Image },
       { name: 'mask_image.png', image: base64Mask }
     ];
 
-    // Submit to RunPod with images
-    const jobId = await submitToRunPod(workflow, 'SFW', images);
+    // Submit via GPU router (handles dedicated/serverless routing)
+    const jobId = await submitJob(workflow, 'SFW', images);
 
-    // Poll for completion
-    const result = await pollRunPodJob(jobId);
+    // Poll for completion (uses router to query correct endpoint)
+    const result = await pollJob(jobId);
 
     if (result.success) {
       return res.json({
         success: true,
         mode: 'sfw',
         image: result.image,
+        endpoint: result.endpoint,
         timestamp: new Date().toISOString()
       });
     } else {
@@ -576,23 +580,24 @@ router.post('/inpaint-nsfw', async (req, res) => {
       loras
     });
 
-    // Prepare images array for RunPod (image + mask)
+    // Prepare images array (image + mask)
     const images = [
       { name: 'input_image.png', image: base64Image },
       { name: 'mask_image.png', image: base64Mask }
     ];
 
-    // Submit to RunPod with images
-    const jobId = await submitToRunPod(workflow, 'NSFW', images);
+    // Submit via GPU router (handles dedicated/serverless routing)
+    const jobId = await submitJob(workflow, 'NSFW', images);
 
-    // Poll for completion
-    const result = await pollRunPodJob(jobId);
+    // Poll for completion (uses router to query correct endpoint)
+    const result = await pollJob(jobId);
 
     if (result.success) {
       return res.json({
         success: true,
         mode: 'nsfw',
         image: result.image,
+        endpoint: result.endpoint,
         timestamp: new Date().toISOString()
       });
     } else {

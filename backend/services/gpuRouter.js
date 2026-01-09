@@ -61,16 +61,26 @@ async function checkDedicatedHealth(dedicatedUrl) {
 
 /**
  * Submit job to dedicated GPU
+ * @param {string} dedicatedUrl - URL of dedicated GPU wrapper
+ * @param {object} workflow - ComfyUI workflow
+ * @param {number} timeout - Request timeout in ms
+ * @param {array} images - Optional array of {name, image} for inpainting
  */
-async function submitToDedicated(dedicatedUrl, workflow, timeout = 5000) {
+async function submitToDedicated(dedicatedUrl, workflow, timeout = 5000, images = null) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    // Build input payload
+    const input = { workflow };
+    if (images && images.length > 0) {
+      input.images = images;
+    }
+
     const response = await fetch(`${dedicatedUrl}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: { workflow } }),
+      body: JSON.stringify({ input }),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -99,16 +109,26 @@ async function submitToDedicated(dedicatedUrl, workflow, timeout = 5000) {
 
 /**
  * Submit job to serverless (RunPod)
+ * @param {string} runpodUrl - RunPod API URL
+ * @param {string} runpodApiKey - RunPod API key
+ * @param {object} workflow - ComfyUI workflow
+ * @param {array} images - Optional array of {name, image} for inpainting
  */
-async function submitToServerless(runpodUrl, runpodApiKey, workflow) {
+async function submitToServerless(runpodUrl, runpodApiKey, workflow, images = null) {
   try {
+    // Build input payload
+    const input = { workflow };
+    if (images && images.length > 0) {
+      input.images = images;
+    }
+
     const response = await fetch(`${runpodUrl}/run`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${runpodApiKey}`
       },
-      body: JSON.stringify({ input: { workflow } })
+      body: JSON.stringify({ input })
     });
 
     if (!response.ok) {
@@ -139,17 +159,18 @@ async function submitToServerless(runpodUrl, runpodApiKey, workflow) {
  * @param {object} options.workflow - The ComfyUI workflow
  * @param {string} options.runpodUrl - RunPod serverless URL
  * @param {string} options.runpodApiKey - RunPod API key
+ * @param {array} options.images - Optional array of {name, image} for inpainting
  * @returns {Promise<{ success, jobId, status, endpoint, error?, usedFallback? }>}
  */
-async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
+async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, images = null }) {
   const config = await getGpuConfig();
 
-  console.log(`🔀 GPU Router: mode=${config.mode}, dedicated=${config.dedicatedUrl ? 'configured' : 'not set'}`);
+  console.log(`🔀 GPU Router: mode=${config.mode}, dedicated=${config.dedicatedUrl ? 'configured' : 'not set'}${images ? `, images=${images.length}` : ''}`);
 
   // Mode: serverless - always use serverless (current behavior)
   if (config.mode === 'serverless' || !config.dedicatedUrl) {
     console.log('   → Using serverless (mode or no dedicated URL)');
-    const result = await submitToServerless(runpodUrl, runpodApiKey, workflow);
+    const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (result.success) {
       trackJob(result.jobId, 'serverless');
     }
@@ -159,7 +180,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
   // Mode: dedicated - always use dedicated, fail if unavailable
   if (config.mode === 'dedicated') {
     console.log('   → Using dedicated only');
-    const result = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout);
+    const result = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout, images);
     if (result.success) {
       trackJob(result.jobId, 'dedicated');
     }
@@ -174,7 +195,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
     const health = await checkDedicatedHealth(config.dedicatedUrl);
     if (!health.healthy) {
       console.log(`   → Dedicated unhealthy (${health.reason}), using serverless`);
-      const result = await submitToServerless(runpodUrl, runpodApiKey, workflow);
+      const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
       if (result.success) {
         trackJob(result.jobId, 'serverless');
       }
@@ -182,7 +203,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
     }
 
     // Try dedicated
-    const dedicatedResult = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout);
+    const dedicatedResult = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout, images);
     if (dedicatedResult.success) {
       trackJob(dedicatedResult.jobId, 'dedicated');
       return dedicatedResult;
@@ -190,7 +211,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
 
     // Fall back to serverless
     console.log(`   → Dedicated failed (${dedicatedResult.error}), falling back to serverless`);
-    const serverlessResult = await submitToServerless(runpodUrl, runpodApiKey, workflow);
+    const serverlessResult = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (serverlessResult.success) {
       trackJob(serverlessResult.jobId, 'serverless');
     }
@@ -201,7 +222,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
   if (config.mode === 'serverless-primary') {
     console.log('   → Trying serverless first (serverless-primary mode)');
 
-    const serverlessResult = await submitToServerless(runpodUrl, runpodApiKey, workflow);
+    const serverlessResult = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (serverlessResult.success) {
       trackJob(serverlessResult.jobId, 'serverless');
       return serverlessResult;
@@ -213,7 +234,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
       return serverlessResult; // No dedicated to fall back to
     }
 
-    const dedicatedResult = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout);
+    const dedicatedResult = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout, images);
     if (dedicatedResult.success) {
       trackJob(dedicatedResult.jobId, 'dedicated');
     }
@@ -222,7 +243,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
 
   // Unknown mode - default to serverless
   console.log('   → Unknown mode, using serverless');
-  const result = await submitToServerless(runpodUrl, runpodApiKey, workflow);
+  const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
   if (result.success) {
     trackJob(result.jobId, 'serverless');
   }
