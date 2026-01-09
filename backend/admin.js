@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAdmin } = require('./middleware/auth');
 const { getSetting, setSetting, getGpuConfig, DEFAULTS } = require('./services/settingsService');
-const { checkDedicatedHealth } = require('./services/gpuRouter');
+const { checkDedicatedHealth, getDedicatedLoRAStatus, resetDedicatedLoRA } = require('./services/gpuRouter');
 
 // All admin routes require admin authentication
 router.use(requireAdmin);
@@ -181,6 +181,52 @@ router.post('/gpu-test', async (req, res) => {
   } catch (error) {
     console.error('Admin GPU test error:', error);
     res.status(500).json({ error: 'Failed to test GPU endpoint' });
+  }
+});
+
+/**
+ * GET /api/admin/gpu-lora-status
+ * Get current LoRA loaded on dedicated GPU (for smart routing)
+ * This helps avoid the ~35 second LoRA switch penalty
+ */
+router.get('/gpu-lora-status', async (req, res) => {
+  try {
+    const loraStatus = getDedicatedLoRAStatus();
+    const config = await getGpuConfig();
+
+    res.json({
+      smartRouting: {
+        enabled: config.mode === 'hybrid',
+        description: 'When enabled, requests for different characters are routed to serverless to avoid 35s LoRA switch'
+      },
+      dedicatedGpu: loraStatus,
+      tip: loraStatus.currentLoRA
+        ? `Generating with ${loraStatus.currentLoRA.split('/').pop()} will be fast (~2s)`
+        : 'First generation will be routed to dedicated and cache the LoRA'
+    });
+  } catch (error) {
+    console.error('Admin GPU LoRA status error:', error);
+    res.status(500).json({ error: 'Failed to get LoRA status' });
+  }
+});
+
+/**
+ * POST /api/admin/gpu-lora-reset
+ * Reset LoRA tracking (use when pod restarts or to force fresh tracking)
+ */
+router.post('/gpu-lora-reset', async (req, res) => {
+  try {
+    console.log(`🔄 Admin ${req.user.email} resetting GPU LoRA tracking`);
+
+    resetDedicatedLoRA();
+
+    res.json({
+      success: true,
+      message: 'LoRA tracking reset. Next generation will set the baseline.'
+    });
+  } catch (error) {
+    console.error('Admin GPU LoRA reset error:', error);
+    res.status(500).json({ error: 'Failed to reset LoRA tracking' });
   }
 });
 

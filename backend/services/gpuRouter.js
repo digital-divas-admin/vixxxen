@@ -16,6 +16,51 @@ const { getGpuConfig } = require('./settingsService');
 // Job tracking: maps jobId to { endpoint: 'dedicated' | 'serverless', ... }
 const jobEndpoints = new Map();
 
+// Track which character LoRA is currently loaded on dedicated GPU
+// This helps avoid the ~35 second LoRA switch penalty
+let dedicatedCurrentLoRA = null;
+let dedicatedLoRATimestamp = 0;
+
+/**
+ * Extract the character LoRA from a ComfyUI workflow
+ * Character LoRA is in node 76 (Power Lora Loader), lora_1 slot
+ */
+function extractCharacterLoRA(workflow) {
+  try {
+    // Look for Power Lora Loader node (node 76)
+    const loraNode = workflow?.['76']?.inputs;
+    if (!loraNode) return null;
+
+    // Character LoRA is in lora_1
+    const lora1 = loraNode.lora_1;
+    if (lora1 && lora1.on && lora1.lora && lora1.lora !== 'character') {
+      return lora1.lora;
+    }
+
+    return null;
+  } catch (error) {
+    console.log('   → Could not extract character LoRA:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Update tracking for which LoRA is loaded on dedicated
+ */
+function updateDedicatedLoRA(loraName) {
+  dedicatedCurrentLoRA = loraName;
+  dedicatedLoRATimestamp = Date.now();
+  console.log(`   → Dedicated GPU now has LoRA: ${loraName || 'none'}`);
+}
+
+/**
+ * Check if a different LoRA would require a switch on dedicated
+ */
+function wouldRequireLoRASwitch(requestedLoRA) {
+  if (!dedicatedCurrentLoRA || !requestedLoRA) return false;
+  return dedicatedCurrentLoRA !== requestedLoRA;
+}
+
 // Clean up old job mappings (older than 1 hour)
 setInterval(() => {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
@@ -167,8 +212,14 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
   }
 
   // Mode: hybrid - try dedicated first, fall back to serverless
+  // Smart LoRA routing: avoid dedicated if it would require a LoRA switch (~35s penalty)
   if (config.mode === 'hybrid') {
-    console.log('   → Trying dedicated first (hybrid mode)');
+    console.log('   → Hybrid mode with smart LoRA routing');
+
+    // Extract which character LoRA this request needs
+    const requestedLoRA = extractCharacterLoRA(workflow);
+    console.log(`   → Requested LoRA: ${requestedLoRA || 'none'}`);
+    console.log(`   → Dedicated current LoRA: ${dedicatedCurrentLoRA || 'none'}`);
 
     // Check dedicated health first
     const health = await checkDedicatedHealth(config.dedicatedUrl);
@@ -181,9 +232,25 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey }) {
       return { ...result, usedFallback: true, fallbackReason: health.reason };
     }
 
-    // Try dedicated
+    // Smart routing: if this would require a LoRA switch, use serverless instead
+    // This avoids the ~35 second switch penalty on dedicated
+    if (requestedLoRA && wouldRequireLoRASwitch(requestedLoRA)) {
+      console.log(`   → LoRA switch detected (${dedicatedCurrentLoRA} → ${requestedLoRA})`);
+      console.log(`   → Routing to serverless to avoid 35s switch penalty`);
+      const result = await submitToServerless(runpodUrl, runpodApiKey, workflow);
+      if (result.success) {
+        trackJob(result.jobId, 'serverless');
+      }
+      return { ...result, loraRouted: true, routingReason: 'Avoided LoRA switch on dedicated' };
+    }
+
+    // Try dedicated (no LoRA switch or same LoRA)
     const dedicatedResult = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout);
     if (dedicatedResult.success) {
+      // Track that this LoRA is now loaded on dedicated
+      if (requestedLoRA) {
+        updateDedicatedLoRA(requestedLoRA);
+      }
       trackJob(dedicatedResult.jobId, 'dedicated');
       return dedicatedResult;
     }
@@ -290,9 +357,31 @@ async function getStatusFromServerless(runpodUrl, runpodApiKey, jobId) {
   }
 }
 
+/**
+ * Get current dedicated GPU LoRA status
+ */
+function getDedicatedLoRAStatus() {
+  return {
+    currentLoRA: dedicatedCurrentLoRA,
+    lastUpdated: dedicatedLoRATimestamp ? new Date(dedicatedLoRATimestamp).toISOString() : null,
+    ageMs: dedicatedLoRATimestamp ? Date.now() - dedicatedLoRATimestamp : null
+  };
+}
+
+/**
+ * Reset dedicated LoRA tracking (e.g., when pod restarts)
+ */
+function resetDedicatedLoRA() {
+  dedicatedCurrentLoRA = null;
+  dedicatedLoRATimestamp = 0;
+  console.log('   → Dedicated GPU LoRA tracking reset');
+}
+
 module.exports = {
   routeGenerationRequest,
   getJobStatus,
   getJobEndpoint,
-  checkDedicatedHealth
+  checkDedicatedHealth,
+  getDedicatedLoRAStatus,
+  resetDedicatedLoRA
 };
