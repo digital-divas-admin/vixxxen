@@ -200,15 +200,58 @@
   }
 
   .inpaint-canvas-area {
-    flex: none;
+    flex: none !important;
     width: 100% !important;
     max-width: 100%;
     height: auto;
-    min-height: 250px;
+    min-height: 200px;
+    padding: 16px;
   }
 
-  .inpaint-right-panel {
+  .inpaint-sidebar {
+    flex: none !important;
     width: 100% !important;
+    overflow-y: visible !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 16px;
+    gap: 12px;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .inpaint-control-section {
+    gap: 6px;
+  }
+
+  .inpaint-control-label {
+    font-size: 0.8rem;
+  }
+
+  .inpaint-textarea {
+    min-height: 60px;
+  }
+
+  .inpaint-divider {
+    margin: 8px 0;
+  }
+
+  .inpaint-result-section {
+    width: 100% !important;
+    min-width: auto;
+    padding: 16px;
+  }
+
+  .inpaint-header {
+    margin-bottom: 12px;
+  }
+
+  .inpaint-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .inpaint-subtitle {
+    font-size: 0.8rem;
   }
 
   /* Caption container */
@@ -614,6 +657,58 @@
   .generate-btn {
     padding: 12px;
     font-size: 0.9rem;
+  }
+
+  /* Inpaint - extra compact on small phones */
+  .inpaint-canvas-area {
+    padding: 12px;
+    min-height: 180px;
+  }
+
+  .inpaint-sidebar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .inpaint-control-label {
+    font-size: 0.75rem;
+  }
+
+  .inpaint-textarea {
+    min-height: 50px;
+    font-size: 0.85rem;
+  }
+
+  .inpaint-select {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+
+  .inpaint-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .inpaint-generate-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .inpaint-mode-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .inpaint-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .inpaint-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .inpaint-result-section {
+    padding: 12px;
   }
 
   /* Compact footer */
