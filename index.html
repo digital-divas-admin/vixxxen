@@ -9153,18 +9153,6 @@
 
             <div class="character-modal-tags" id="modalCharacterTags"></div>
 
-            <div class="character-stats">
-              <div class="character-rating">
-                <span>⭐</span>
-                <span id="modalCharacterRating">4.8</span>
-              </div>
-              <div class="character-purchases">
-                <span>📦</span>
-                <span id="modalCharacterPurchases">2,341</span>
-                <span>purchases</span>
-              </div>
-            </div>
-
             <div class="character-modal-purchase">
               <div class="character-modal-price" id="modalCharacterPrice">$14.99</div>
               <button class="character-modal-buy-btn" id="modalBuyBtn" onclick="purchaseCharacter()">
@@ -15564,16 +15552,6 @@
           <div class="character-info">
             <div class="character-name">${character.name}</div>
             <div class="character-category">${character.category}</div>
-            <div class="character-stats">
-              <div class="character-rating">
-                <span>⭐</span>
-                <span>${character.rating}</span>
-              </div>
-              <div class="character-purchases">
-                <span>📦</span>
-                <span>${character.purchases.toLocaleString()}</span>
-              </div>
-            </div>
             <div class="character-footer">
               <div>
                 <div class="character-price">${isOwned ? 'Owned' : (character.price === 0 ? 'Free' : '$' + character.price.toFixed(2))}</div>
@@ -15670,8 +15648,6 @@
       document.getElementById('modalCharacterCategory').textContent = character.category;
       document.getElementById('modalCharacterDescription').textContent = character.description;
       document.getElementById('modalCharacterImage').src = character.image;
-      document.getElementById('modalCharacterRating').textContent = character.rating;
-      document.getElementById('modalCharacterPurchases').textContent = character.purchases.toLocaleString();
       document.getElementById('modalCharacterPrice').textContent = isOwned ? 'Owned' : '$' + character.price.toFixed(2);
 
       // Render tags
