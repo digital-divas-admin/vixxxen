@@ -257,7 +257,13 @@
   /* Caption container */
   .caption-container {
     height: auto !important;
-    min-height: 60vh;
+    min-height: auto;
+    flex: 1;
+  }
+
+  .caption-chat-area {
+    flex: 1;
+    min-height: 200px;
   }
 
   .caption-welcome {
@@ -268,6 +274,11 @@
   .caption-input-wrapper {
     max-width: 100%;
     padding: 0 12px 20px;
+  }
+
+  .caption-input-container {
+    position: relative;
+    padding: 12px;
   }
 
   /* =========================================
@@ -738,7 +749,11 @@
 
   /* Caption section */
   .caption-container {
-    min-height: 50vh;
+    min-height: auto;
+  }
+
+  .caption-welcome {
+    margin-top: 3vh;
   }
 
   .caption-welcome h1 {
