@@ -524,4 +524,71 @@ router.get('/history', requireAuth, async (req, res) => {
   }
 });
 
+// ==================== MEMBERSHIP RULES ACKNOWLEDGMENT ====================
+
+// Check if user has acknowledged community rules
+router.get('/membership/rules-status', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const { data: membership, error } = await supabase
+      .from('memberships')
+      .select('rules_acknowledged_at')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error checking rules status:', error);
+      return res.status(500).json({ error: 'Failed to check rules status' });
+    }
+
+    // User has acknowledged if they have a timestamp
+    const acknowledged = !!(membership?.rules_acknowledged_at);
+
+    res.json({ acknowledged });
+
+  } catch (error) {
+    console.error('Rules status error:', error);
+    res.status(500).json({ error: 'Failed to check rules status' });
+  }
+});
+
+// Acknowledge community rules
+router.post('/membership/acknowledge-rules', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Update the user's active membership with acknowledgment timestamp
+    const { data: membership, error: fetchError } = await supabase
+      .from('memberships')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (fetchError) {
+      console.error('Error finding membership:', fetchError);
+      return res.status(404).json({ error: 'No active membership found' });
+    }
+
+    const { error: updateError } = await supabase
+      .from('memberships')
+      .update({ rules_acknowledged_at: new Date().toISOString() })
+      .eq('id', membership.id);
+
+    if (updateError) {
+      console.error('Error acknowledging rules:', updateError);
+      return res.status(500).json({ error: 'Failed to save acknowledgment' });
+    }
+
+    console.log(`✅ User ${userId} acknowledged community rules`);
+    res.json({ success: true, acknowledged_at: new Date().toISOString() });
+
+  } catch (error) {
+    console.error('Acknowledge rules error:', error);
+    res.status(500).json({ error: 'Failed to acknowledge rules' });
+  }
+});
+
 module.exports = router;

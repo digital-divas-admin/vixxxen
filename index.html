@@ -9084,7 +9084,7 @@
       </div>
     </div>
 
-    <!-- Community Rules Modal -->
+    <!-- Community Rules Modal (for viewing rules anytime) -->
     <div class="rules-modal" id="rulesModal">
       <div class="rules-modal-content">
         <button class="rules-modal-close" onclick="closeRulesModal()">✕</button>
@@ -9093,49 +9093,35 @@
           <h2 class="rules-title">Community Rules</h2>
           <p class="rules-subtitle">Welcome to Vixxxen Academy! Please familiarize yourself with our rules:</p>
         </div>
-        <div class="rules-list">
-          <div class="rule-item rule-highlight">
-            <span class="rule-number">#1</span>
-            <span class="rule-text"><strong>The #1 rule:</strong> Do as Aika says, not as she does.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">📵</span>
-            <span class="rule-text"><strong>Anti-deep-fake stance:</strong> Celebrity deep-fakes or content theft are frowned upon. Lawful uses (e.g., putting your own face on Animatediff outputs) are fine—keep them clearly lawful.</span>
-          </div>
-          <div class="rule-item rule-critical">
-            <span class="rule-number">🚫</span>
-            <span class="rule-text"><strong>No depictions of under-age characters:</strong> Any sexual, suggestive, or otherwise exploitative portrayal of minors is strictly forbidden.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">🖼️</span>
-            <span class="rule-text"><strong>Respect creators' images:</strong> Don't run peers' photos through ControlNet or img2img without their explicit permission.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">💜</span>
-            <span class="rule-text"><strong>Be kind & respect everyone's business:</strong> Personal attacks, harassment, hate speech, or discrimination are not tolerated.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">🔇</span>
-            <span class="rule-text"><strong>Limit spam:</strong> No excessive messaging, unnecessary pings, or unsolicited ads.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">👮</span>
-            <span class="rule-text"><strong>Follow staff instructions:</strong> Mods and admins are here to keep things safe—heed their guidance.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">🔒</span>
-            <span class="rule-text"><strong>Protect privacy:</strong> No doxxing or sharing anyone's personal info (real names, addresses, private photos, etc.) without consent.</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-number">🚨</span>
-            <span class="rule-text"><strong>Report violations:</strong> If you see a rules breach, notify an organizer or admin right away.</span>
-          </div>
-          <div class="rule-item rule-contact">
-            <span class="rule-number">✉️</span>
-            <span class="rule-text"><strong>Need support?</strong> Please do not DM the instructors. Send an email to <a href="mailto:admin@vixxxen.ai">admin@vixxxen.ai</a></span>
-          </div>
+        <div class="rules-list" id="rulesListContent">
+          <!-- Rules will be loaded from database -->
+          <div style="text-align: center; padding: 40px; color: #666;">Loading rules...</div>
         </div>
         <button class="rules-accept-btn" onclick="closeRulesModal()">I Understand</button>
+      </div>
+    </div>
+
+    <!-- Rules Acknowledgment Modal (for first-time subscribers) -->
+    <div class="rules-modal" id="rulesAcknowledgeModal" style="z-index: 100001;">
+      <div class="rules-modal-content">
+        <div class="rules-modal-header">
+          <div class="rules-icon">📋</div>
+          <h2 class="rules-title">Community Rules</h2>
+          <p class="rules-subtitle">Before accessing the community, please read and acknowledge our rules:</p>
+        </div>
+        <div class="rules-list" id="rulesAcknowledgeContent">
+          <!-- Rules will be loaded from database -->
+          <div style="text-align: center; padding: 40px; color: #666;">Loading rules...</div>
+        </div>
+        <div style="margin-top: 20px; padding: 16px; background: rgba(255, 46, 187, 0.1); border-radius: 8px; border: 1px solid rgba(255, 46, 187, 0.2);">
+          <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+            <input type="checkbox" id="rulesAcknowledgeCheckbox" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;">
+            <span style="color: #ccc; font-size: 0.9rem; line-height: 1.5;">I have read and agree to abide by these community rules. I understand that violating these rules may result in removal from the community.</span>
+          </label>
+        </div>
+        <button class="rules-accept-btn" id="rulesAcknowledgeBtn" onclick="acknowledgeRules()" disabled style="opacity: 0.5;">
+          Accept & Continue
+        </button>
       </div>
     </div>
 
@@ -17131,7 +17117,15 @@
     let currentResourceFilters = { type: 'all', topic: 'all' };
     let previewMode = false; // Admin preview mode to test purchase UI
 
-    function switchEducationSubtab(tab) {
+    async function switchEducationSubtab(tab) {
+      // Check rules acknowledgment when accessing community tab (for members)
+      if (tab === 'community' && currentUser && !userHasAcknowledgedRules) {
+        const needsAcknowledgment = await showRulesAcknowledgmentIfNeeded();
+        if (needsAcknowledgment) {
+          return; // Don't switch tabs until rules are acknowledged
+        }
+      }
+
       // Update subtab buttons
       document.querySelectorAll('.education-subtab').forEach(btn => btn.classList.remove('active'));
       document.getElementById(tab + 'Subtab').classList.add('active');
@@ -18885,12 +18879,152 @@
     checkPaymentStatus();
 
     // Rules Modal Functions
+    let communityRulesContent = null;
+    let userHasAcknowledgedRules = false;
+
+    async function loadCommunityRules() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/policies/community_rules`);
+        if (response.ok) {
+          const data = await response.json();
+          communityRulesContent = data.policy?.content || getDefaultRulesContent();
+        } else {
+          communityRulesContent = getDefaultRulesContent();
+        }
+        // Update both modals with the content
+        const rulesListContent = document.getElementById('rulesListContent');
+        const rulesAcknowledgeContent = document.getElementById('rulesAcknowledgeContent');
+        if (rulesListContent) rulesListContent.innerHTML = communityRulesContent;
+        if (rulesAcknowledgeContent) rulesAcknowledgeContent.innerHTML = communityRulesContent;
+      } catch (error) {
+        console.error('Error loading community rules:', error);
+        communityRulesContent = getDefaultRulesContent();
+      }
+    }
+
+    function getDefaultRulesContent() {
+      return `
+        <div class="rule-item rule-highlight">
+          <span class="rule-number">#1</span>
+          <span class="rule-text"><strong>The #1 rule:</strong> Do as Aika says, not as she does.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-number">📵</span>
+          <span class="rule-text"><strong>Anti-deep-fake stance:</strong> Celebrity deep-fakes or content theft are frowned upon. Lawful uses are fine—keep them clearly lawful.</span>
+        </div>
+        <div class="rule-item rule-critical">
+          <span class="rule-number">🚫</span>
+          <span class="rule-text"><strong>No depictions of under-age characters:</strong> Any sexual, suggestive, or otherwise exploitative portrayal of minors is strictly forbidden.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-number">💜</span>
+          <span class="rule-text"><strong>Be kind & respect everyone's business:</strong> Personal attacks, harassment, hate speech, or discrimination are not tolerated.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-number">👮</span>
+          <span class="rule-text"><strong>Follow staff instructions:</strong> Mods and admins are here to keep things safe—heed their guidance.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-number">🚨</span>
+          <span class="rule-text"><strong>Report violations:</strong> If you see a rules breach, notify an organizer or admin right away.</span>
+        </div>
+      `;
+    }
+
     function openRulesModal() {
+      if (!communityRulesContent) loadCommunityRules();
       document.getElementById('rulesModal').classList.add('active');
     }
 
     function closeRulesModal() {
       document.getElementById('rulesModal').classList.remove('active');
+    }
+
+    // Rules acknowledgment checkbox handler
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'rulesAcknowledgeCheckbox') {
+        const btn = document.getElementById('rulesAcknowledgeBtn');
+        if (btn) {
+          btn.disabled = !e.target.checked;
+          btn.style.opacity = e.target.checked ? '1' : '0.5';
+        }
+      }
+    });
+
+    async function checkRulesAcknowledgment() {
+      if (!currentUser) return true; // Not logged in, skip check
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/membership/rules-status`, {
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          userHasAcknowledgedRules = data.acknowledged;
+          return data.acknowledged;
+        }
+      } catch (error) {
+        console.error('Error checking rules acknowledgment:', error);
+      }
+      return true; // Default to true on error to not block access
+    }
+
+    async function showRulesAcknowledgmentIfNeeded() {
+      if (!currentUser) return false;
+
+      const hasAcknowledged = await checkRulesAcknowledgment();
+      if (!hasAcknowledged) {
+        // Load rules content if not already loaded
+        if (!communityRulesContent) await loadCommunityRules();
+
+        // Reset checkbox
+        const checkbox = document.getElementById('rulesAcknowledgeCheckbox');
+        if (checkbox) checkbox.checked = false;
+        const btn = document.getElementById('rulesAcknowledgeBtn');
+        if (btn) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        }
+
+        document.getElementById('rulesAcknowledgeModal').classList.add('active');
+        return true; // Modal was shown
+      }
+      return false; // No modal needed
+    }
+
+    async function acknowledgeRules() {
+      const btn = document.getElementById('rulesAcknowledgeBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/membership/acknowledge-rules`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          userHasAcknowledgedRules = true;
+          document.getElementById('rulesAcknowledgeModal').classList.remove('active');
+          btn.textContent = 'Accept & Continue';
+          btn.disabled = false;
+        } else {
+          const error = await response.json();
+          alert('Failed to save acknowledgment: ' + (error.message || 'Please try again'));
+          btn.textContent = 'Accept & Continue';
+          btn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Error acknowledging rules:', error);
+        alert('Failed to save acknowledgment. Please try again.');
+        btn.textContent = 'Accept & Continue';
+        btn.disabled = false;
+      }
     }
 
     // Close rules modal when clicking outside
@@ -18899,6 +19033,7 @@
       if (e.target === rulesModal) {
         closeRulesModal();
       }
+      // Note: Don't allow closing acknowledge modal by clicking outside
     });
 
     // ==================== POLICY MODAL FUNCTIONS ====================
@@ -18930,7 +19065,8 @@
       if (!grid) return;
 
       const policyTypes = [
-        { type: 'terms', icon: '📋', title: 'Terms of Service', desc: 'Define the rules and guidelines for using your platform' },
+        { type: 'community_rules', icon: '📋', title: 'Community Rules', desc: 'Rules that members must acknowledge before accessing the community' },
+        { type: 'terms', icon: '📜', title: 'Terms of Service', desc: 'Define the rules and guidelines for using your platform' },
         { type: 'privacy', icon: '🔒', title: 'Privacy Policy', desc: 'Explain how you collect, use, and protect user data' },
         { type: 'refund', icon: '💰', title: 'Refund Policy', desc: 'Outline your refund and cancellation policies' },
         { type: '2257', icon: '⚖️', title: '2257 Compliance', desc: '18 U.S.C. 2257 Record-Keeping Requirements Statement' },

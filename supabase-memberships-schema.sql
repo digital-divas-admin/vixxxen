@@ -9,10 +9,22 @@ CREATE TABLE IF NOT EXISTS memberships (
   tier TEXT NOT NULL,  -- 'supernova', 'mentorship'
   is_active BOOLEAN DEFAULT true,
   expires_at TIMESTAMPTZ,  -- NULL = no expiry (lifetime or recurring)
+  rules_acknowledged_at TIMESTAMPTZ,  -- When user acknowledged community rules
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id)  -- One membership per user
 );
+
+-- Migration: Add rules_acknowledged_at column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'memberships' AND column_name = 'rules_acknowledged_at'
+  ) THEN
+    ALTER TABLE memberships ADD COLUMN rules_acknowledged_at TIMESTAMPTZ;
+  END IF;
+END $$;
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(user_id);
