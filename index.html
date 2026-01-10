@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vixxxen - AI Image Generator</title>
 
+  <!-- Favicons -->
+  <link rel="icon" type="image/x-icon" sizes="16x16" href="/public/favicon/favicon-16px.ico">
+  <link rel="icon" type="image/x-icon" sizes="32x32" href="/public/favicon/favicon-32px.ico">
+  <link rel="icon" type="image/x-icon" sizes="48x48" href="/public/favicon/favicon-48px.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/public/favicon/favicon-180px.ico">
+
   <!-- Resource hints for faster loading -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -1127,7 +1133,7 @@
     #videoSection .left-panel {
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 100px); /* Account for footer */
+      height: calc(100vh - 156px); /* Account for footer + navbar */
       overflow: hidden;
     }
 
@@ -2734,7 +2740,7 @@
       flex: 1;
       padding: 24px 32px;
       overflow-y: auto;
-      max-height: calc(100vh - 300px);
+      max-height: calc(100vh - 356px);
     }
 
     .admin-section {
@@ -4380,7 +4386,7 @@
     /* Inpaint Tab Styles */
     .inpaint-container {
       display: flex;
-      height: calc(100vh - 80px);
+      height: calc(100vh - 136px);
       gap: 0;
     }
 
@@ -6574,7 +6580,7 @@
       flex-direction: column;
       background: #0f0f0f;
       position: relative;
-      height: calc(100vh - 80px);
+      height: calc(100vh - 136px);
       overflow: hidden;
     }
 
@@ -7251,7 +7257,7 @@
 <body>
   <!-- Loading splash (shown while page loads) -->
   <div class="loading-splash" id="loadingSplash">
-    <div class="loading-splash-logo">Vixxxen</div>
+    <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" class="loading-splash-logo" style="height: 48px; width: auto;">
     <div class="loading-splash-spinner"></div>
     <div class="loading-splash-text">Loading...</div>
   </div>
@@ -7261,6 +7267,19 @@
     <div class="spinner"></div>
     <span id="coldStartText">Waking up server... This may take up to 50 seconds on first visit.</span>
   </div>
+
+  <!-- Top Navbar -->
+  <nav class="top-navbar" id="topNavbar">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+    <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" class="navbar-logo">
+  </nav>
+
+  <!-- Mobile overlay for sidebar -->
+  <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
 
   <div class="container">
     <!-- Main Navigation Sidebar -->
@@ -7356,13 +7375,6 @@
     <div class="tab-section active" id="imageSection">
       <div class="left-panel">
       <div class="header">
-        <div class="logo-container">
-          <div>
-            <h1 style="background: linear-gradient(135deg, #ff2ebb, #00b2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin: 0;">Vixxxen</h1>
-            <div class="tagline">AI Image Generation Studio</div>
-          </div>
-        </div>
-
         <!-- Content Mode Toggle -->
         <div class="content-mode-toggle" id="contentModeToggle">
           <span class="content-mode-label">Content Mode:</span>
@@ -9828,6 +9840,42 @@
     // account-page, billing-page, delete-functions
 
     // ===========================================
+    // SIDEBAR TOGGLE
+    // ===========================================
+    function toggleSidebar() {
+      const mainNav = document.querySelector('.main-nav');
+      const siteFooter = document.querySelector('.site-footer');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile) {
+        // On mobile, toggle mobile-open class (sidebar slides in/out)
+        mainNav.classList.toggle('mobile-open');
+        if (mobileOverlay) {
+          mobileOverlay.classList.toggle('active');
+        }
+      } else {
+        // On desktop, toggle collapsed class
+        mainNav.classList.toggle('collapsed');
+        if (siteFooter) {
+          siteFooter.classList.toggle('sidebar-collapsed');
+        }
+      }
+    }
+
+    // Close mobile sidebar when selecting a tab
+    function closeMobileSidebar() {
+      const mainNav = document.querySelector('.main-nav');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+      if (window.innerWidth <= 768) {
+        mainNav.classList.remove('mobile-open');
+        if (mobileOverlay) {
+          mobileOverlay.classList.remove('active');
+        }
+      }
+    }
+
+    // ===========================================
     // SUPABASE STORAGE FUNCTIONS
     // ===========================================
 
@@ -11204,6 +11252,9 @@
 
     // Switch between main navigation tabs (Image, Video, Edit, Inpaint, Caption)
     function switchMainTab(tab) {
+      // Close mobile sidebar when switching tabs
+      closeMobileSidebar();
+
       // Hide all tab sections
       document.querySelectorAll('.tab-section').forEach(section => {
         section.classList.remove('active');

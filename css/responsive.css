@@ -15,25 +15,421 @@
 }
 
 /* Mobile */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
+  /* =========================================
+     CORE LAYOUT - Make everything scrollable
+     ========================================= */
+
+  /* Top Navbar - smaller on mobile */
+  .top-navbar {
+    height: 50px;
+    padding: 0 12px;
+    gap: 12px;
+  }
+
+  .navbar-logo {
+    height: 28px;
+  }
+
+  /* Body - allow scrolling */
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* Container - natural flow, no fixed heights */
   .container {
     flex-direction: column;
+    height: auto !important;
+    min-height: auto;
+    margin-top: 50px;
+    padding-bottom: 0;
+    overflow: visible;
   }
 
-  .left-panel {
+  /* =========================================
+     SIDEBAR - Hidden, slides in as overlay
+     ========================================= */
+  .main-nav {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    bottom: 0;
+    width: 80px;
+    height: calc(100vh - 50px) !important;
+    z-index: 999;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    background: var(--bg-secondary);
+  }
+
+  .main-nav.mobile-open {
+    transform: translateX(0);
+  }
+
+  .main-nav.collapsed {
+    transform: translateX(-100%);
+  }
+
+  /* Mobile overlay */
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+  }
+
+  .mobile-overlay.active {
+    display: block;
+  }
+
+  /* =========================================
+     TAB SECTIONS - Stack vertically
+     ========================================= */
+  .tab-section {
+    flex-direction: column !important;
     width: 100%;
-    max-height: 50vh;
+    min-height: auto;
   }
 
-  .output-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  .tab-section.active {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Left panel (controls) - flows naturally */
+  .left-panel {
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  .left-panel .header {
+    padding: 12px 16px;
+  }
+
+  .left-panel .content {
+    padding: 12px 16px;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Right panel (outputs) - flows below */
+  .right-panel {
+    width: 100% !important;
+    flex: none;
+    min-height: 300px;
+    padding: 12px;
+    overflow: visible !important;
+  }
+
+  /* =========================================
+     FOOTER - At the end of content
+     ========================================= */
+  .site-footer {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100%;
+    padding: 16px;
+    margin-top: auto;
+  }
+
+  .site-footer.sidebar-collapsed {
+    left: auto !important;
+  }
+
+  .footer-main {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    font-size: 0.85rem;
+  }
+
+  .footer-ai-disclosure {
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  /* =========================================
+     SPECIFIC SECTIONS
+     ========================================= */
+
+  /* Video section */
+  #videoSection .left-panel {
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  #videoSection .content {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Inpaint container */
+  .inpaint-container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: auto;
+  }
+
+  .inpaint-canvas-area {
+    flex: none;
+    width: 100% !important;
+    max-width: 100%;
+    height: auto;
+    min-height: 250px;
+  }
+
+  .inpaint-right-panel {
+    width: 100% !important;
+  }
+
+  /* Caption container */
+  .caption-container {
+    height: auto !important;
+    min-height: 60vh;
   }
 
   .caption-welcome {
-    margin-top: 10vh;
+    margin-top: 5vh;
+    padding: 0 16px;
   }
 
   .caption-input-wrapper {
     max-width: 100%;
+    padding: 0 12px 20px;
+  }
+
+  /* =========================================
+     UI COMPONENTS
+     ========================================= */
+
+  /* Output grid */
+  .output-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  /* Model tabs - horizontal scroll */
+  .model-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .model-tab {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Content mode toggle */
+  .content-mode-toggle {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Prompt textarea */
+  .prompt-input {
+    min-height: 80px;
+  }
+
+  /* Generate button */
+  .generate-btn {
+    padding: 14px;
+    font-size: 1rem;
+  }
+
+  /* Settings dropdowns */
+  .settings-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .settings-row select {
+    width: 100%;
+  }
+
+  /* Admin panel */
+  .admin-container {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .admin-content-area {
+    max-height: none !important;
+    padding: 16px;
+  }
+
+  /* Marketplace */
+  .marketplace-page {
+    padding: 16px;
+  }
+
+  .marketplace-title {
+    font-size: 1.5rem;
+  }
+
+  /* Education/Learn section */
+  .education-container {
+    flex-direction: column;
+  }
+
+  .education-sidebar {
+    width: 100%;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  /* Modals */
+  .user-menu {
+    width: calc(100% - 24px);
+    right: 12px;
+    max-width: 300px;
+  }
+
+  .modal-content {
+    width: calc(100% - 24px);
+    max-width: none;
+    margin: 12px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Nav tab styling */
+  .nav-label {
+    font-size: 0.6rem;
+  }
+
+  .nav-icon {
+    font-size: 1.2rem;
+  }
+
+  .nav-tab {
+    padding: 12px 0;
+  }
+
+  /* Reference images */
+  .reference-images-section {
+    padding: 12px;
+  }
+
+  .reference-preview {
+    max-height: 150px;
+  }
+
+  /* Generated images header */
+  .output-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .output-header h2 {
+    font-size: 1.2rem;
+  }
+
+  /* Zoom slider */
+  .zoom-controls {
+    display: none;
+  }
+}
+
+/* =========================================
+   VERY SMALL SCREENS (phones)
+   ========================================= */
+@media (max-width: 480px) {
+  .top-navbar {
+    height: 46px;
+    padding: 0 10px;
+  }
+
+  .navbar-logo {
+    height: 22px;
+  }
+
+  .container {
+    margin-top: 46px;
+  }
+
+  .main-nav {
+    top: 46px;
+    height: calc(100vh - 46px) !important;
+    width: 70px;
+  }
+
+  .mobile-overlay {
+    top: 46px;
+  }
+
+  .output-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+  }
+
+  .model-tabs {
+    gap: 4px;
+  }
+
+  .model-tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .left-panel .header,
+  .left-panel .content {
+    padding: 10px 12px;
+  }
+
+  .right-panel {
+    padding: 10px;
+  }
+
+  .generate-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .content-mode-label {
+    font-size: 0.75rem;
+  }
+
+  .content-mode-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .footer-links {
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .footer-links a {
+    font-size: 0.75rem;
   }
 }
