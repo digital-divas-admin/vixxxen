@@ -7268,6 +7268,16 @@
     <span id="coldStartText">Waking up server... This may take up to 50 seconds on first visit.</span>
   </div>
 
+  <!-- Top Navbar -->
+  <nav class="top-navbar" id="topNavbar">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+    <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" class="navbar-logo">
+  </nav>
+
   <div class="container">
     <!-- Main Navigation Sidebar -->
     <div class="main-nav">
@@ -7362,13 +7372,6 @@
     <div class="tab-section active" id="imageSection">
       <div class="left-panel">
       <div class="header">
-        <div class="logo-container">
-          <div>
-            <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" style="height: 48px; width: auto;">
-            <div class="tagline">AI Image Generation Studio</div>
-          </div>
-        </div>
-
         <!-- Content Mode Toggle -->
         <div class="content-mode-toggle" id="contentModeToggle">
           <span class="content-mode-label">Content Mode:</span>
@@ -9832,6 +9835,22 @@
     // External modules: config, utils, zoom-controls, reporting, theme,
     // admin-reports, payment-modals, analytics, modals, bulk-selection,
     // account-page, billing-page, delete-functions
+
+    // ===========================================
+    // SIDEBAR TOGGLE
+    // ===========================================
+    function toggleSidebar() {
+      const mainNav = document.querySelector('.main-nav');
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const siteFooter = document.querySelector('.site-footer');
+
+      mainNav.classList.toggle('collapsed');
+      hamburgerBtn.classList.toggle('active');
+
+      if (siteFooter) {
+        siteFooter.classList.toggle('sidebar-collapsed');
+      }
+    }
 
     // ===========================================
     // SUPABASE STORAGE FUNCTIONS

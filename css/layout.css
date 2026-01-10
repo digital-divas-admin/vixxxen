@@ -2,10 +2,89 @@
    LAYOUT - Container, Navigation, Panels
    =========================================== */
 
+/* Top Navbar */
+.top-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  z-index: 1000;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.navbar-logo {
+  height: 36px;
+  width: auto;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.hamburger-btn:hover {
+  background: var(--bg-hover);
+}
+
+.hamburger-line {
+  width: 24px;
+  height: 3px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+
+/* Hamburger animation when sidebar is collapsed */
+.hamburger-btn.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
 .container {
   display: flex;
   height: 100vh;
+  padding-top: 56px; /* Space for fixed top navbar */
   padding-bottom: 50px; /* Space for fixed footer */
+}
+
+/* Sidebar collapsed state */
+.main-nav.collapsed {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+.main-nav.collapsed .nav-tab,
+.main-nav.collapsed .user-area {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Adjust footer when sidebar is collapsed */
+.site-footer.sidebar-collapsed {
+  left: 0;
 }
 
 /* Main Navigation Sidebar */
@@ -17,7 +96,7 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 20px 0;
-  transition: background 0.3s, border-color 0.3s;
+  transition: width 0.3s ease, padding 0.3s ease, background 0.3s, border-color 0.3s;
 }
 
 .nav-tabs-container {
