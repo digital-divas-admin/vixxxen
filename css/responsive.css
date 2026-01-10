@@ -454,16 +454,16 @@
 
   /* Model tabs - more compact */
   .model-tabs {
+    flex-direction: column;
     gap: 6px;
   }
 
   .model-tab {
-    padding: 8px 10px;
-    font-size: 0.8rem;
-    min-width: 0;
-    max-width: 130px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    width: 100%;
+    max-width: none;
+    text-align: center;
   }
 
   /* Content mode */
@@ -564,20 +564,14 @@
     gap: 6px;
   }
 
-  /* Compact model tabs */
+  /* Compact model tabs - stacked vertically */
   .model-tabs {
     gap: 4px;
-    justify-content: flex-start;
   }
 
   .model-tab {
-    padding: 6px 8px;
-    font-size: 0.7rem;
-    min-width: 0;
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 8px 10px;
+    font-size: 0.8rem;
   }
 
   /* Reference upload - compact on small phones */
