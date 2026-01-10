@@ -8523,6 +8523,10 @@
                     <span class="admin-nav-icon">🚫</span>
                     <span>Content Filter</span>
                   </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('user-services')" data-section="user-services">
+                    <span class="admin-nav-icon">🎁</span>
+                    <span>User Services</span>
+                  </div>
                 </nav>
               </div>
 
@@ -8898,6 +8902,88 @@
                 </div>
                 </div>
                 <!-- End Content Filter Section -->
+
+                <!-- User Services Section -->
+                <div class="admin-section" id="adminUserServicesSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">User Services</h2>
+                    <p class="admin-section-subtitle">Grant credits and LoRA/character access to users</p>
+                  </div>
+
+                  <!-- User Search -->
+                  <div style="max-width: 600px; margin: 0 auto 24px;">
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                      <input type="email" id="grantUserSearch" placeholder="Search user by email..." style="flex: 1; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                      <button onclick="searchUserForGrant()" style="padding: 12px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                        Search
+                      </button>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="grantUserSearchResults" style="display: none; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+                      <!-- User results will be inserted here -->
+                    </div>
+                  </div>
+
+                  <!-- Selected User & Services -->
+                  <div id="grantUserSelected" style="display: none; max-width: 800px; margin: 0 auto;">
+                    <!-- User Info Card -->
+                    <div style="background: rgba(157, 78, 221, 0.1); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                          <div style="font-weight: 600; color: #fff; font-size: 1.1rem;" id="grantUserEmail">user@example.com</div>
+                          <div style="color: #888; font-size: 0.85rem;" id="grantUserInfo">Plan: Free | Role: user</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                          <div style="text-align: right;">
+                            <div style="font-size: 0.75rem; color: #888;">Current Balance</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #4ade80;" id="grantUserCredits">0</div>
+                          </div>
+                          <button onclick="clearSelectedUser()" style="padding: 8px 16px; background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #888; cursor: pointer; font-size: 0.85rem;">
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Gift Credits Section -->
+                    <div style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                      <h3 style="margin: 0 0 16px; font-size: 1rem; color: #fff;">Gift Credits</h3>
+                      <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                          <input type="number" id="giftCreditsAmount" placeholder="Amount" min="1" style="width: 120px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                          <input type="text" id="giftCreditsReason" placeholder="Reason (required)" style="flex: 1; min-width: 200px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                          <button onclick="giftCredits()" style="padding: 12px 24px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                            Gift Credits
+                          </button>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #666;">Will appear on user's bill as a gift with admin name and reason</div>
+                      </div>
+                    </div>
+
+                    <!-- Grant Character Access -->
+                    <div style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                      <h3 style="margin: 0 0 16px; font-size: 1rem; color: #fff;">Grant Character Access</h3>
+                      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <select id="grantCharacterSelect" style="flex: 1; min-width: 200px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                          <option value="">Select a character...</option>
+                        </select>
+                        <button onclick="grantCharacterAccess()" style="padding: 12px 24px; background: linear-gradient(135deg, #4ade80, #22c55e); border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 500; font-size: 0.9rem;">
+                          Grant Access
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- User's Owned Characters -->
+                    <div style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px;">
+                      <h3 style="margin: 0 0 16px; font-size: 1rem; color: #fff;">Owned Characters</h3>
+                      <div id="grantUserCharacters" style="display: flex; flex-wrap: wrap; gap: 12px;">
+                        <div style="color: #888; font-size: 0.9rem;">Select a user to view their characters</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- End Character Grants Section -->
 
               </div>
               <!-- End Admin Content Area -->
@@ -9846,7 +9932,7 @@
       const mainNav = document.querySelector('.main-nav');
       const siteFooter = document.querySelector('.site-footer');
       const mobileOverlay = document.getElementById('mobileOverlay');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 900;
 
       if (isMobile) {
         // On mobile, toggle mobile-open class (sidebar slides in/out)
@@ -9867,7 +9953,7 @@
     function closeMobileSidebar() {
       const mainNav = document.querySelector('.main-nav');
       const mobileOverlay = document.getElementById('mobileOverlay');
-      if (window.innerWidth <= 768) {
+      if (window.innerWidth <= 900) {
         mainNav.classList.remove('mobile-open');
         if (mobileOverlay) {
           mobileOverlay.classList.remove('active');
@@ -17222,7 +17308,8 @@
         'gpu': 'adminGpuSection',
         'reports': 'adminReportsSection',
         'policies': 'adminPoliciesSection',
-        'content-filter': 'adminContentFilterSection'
+        'content-filter': 'adminContentFilterSection',
+        'user-services': 'adminUserServicesSection'
       };
 
       const targetSection = document.getElementById(sectionMap[section]);
@@ -17242,6 +17329,8 @@
         renderPoliciesAdminGrid();
       } else if (section === 'content-filter') {
         loadBlockedWordsAdmin();
+      } else if (section === 'user-services') {
+        loadUserServicesData();
       }
     }
 
@@ -18989,11 +19078,7 @@
       if (!currentUser) return true; // Not logged in, skip check
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/membership/rules-status`, {
-          headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          }
-        });
+        const response = await authFetch(`${API_BASE_URL}/api/membership/rules-status`);
         if (response.ok) {
           const data = await response.json();
           userHasAcknowledgedRules = data.acknowledged;

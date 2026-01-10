@@ -261,3 +261,13 @@ CREATE POLICY "Service role can manage character ownership" ON user_characters
   TO service_role
   USING (true)
   WITH CHECK (true);
+
+-- ===========================================
+-- MIGRATION: Add 'gift' transaction type
+-- ===========================================
+-- Run this to add 'gift' as a valid transaction type for admin credit gifts
+
+-- Drop the existing constraint and add a new one with 'gift' included
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_type_check;
+ALTER TABLE transactions ADD CONSTRAINT transactions_type_check
+  CHECK (type IN ('credit', 'debit', 'purchase', 'subscription', 'refund', 'gift'));

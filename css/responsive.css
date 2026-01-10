@@ -2,7 +2,7 @@
    RESPONSIVE - Media Queries
    =========================================== */
 
-/* Tablet and below */
+/* Large tablets and small desktops */
 @media (max-width: 1024px) {
   .pricing-cards {
     grid-template-columns: 1fr;
@@ -12,39 +12,52 @@
   .subscription-page {
     padding: 40px 20px;
   }
+
+  /* Slightly reduce left panel width */
+  .left-panel {
+    width: 340px;
+  }
 }
 
-/* Mobile */
-@media (max-width: 768px) {
+/* ===========================================
+   TABLET (900px and below)
+   Main responsive breakpoint - stacks layout
+   =========================================== */
+@media (max-width: 900px) {
   /* =========================================
      CORE LAYOUT - Make everything scrollable
      ========================================= */
 
-  /* Top Navbar - smaller on mobile */
+  /* Top Navbar - slightly smaller */
   .top-navbar {
-    height: 50px;
+    height: 52px;
     padding: 0 12px;
     gap: 12px;
   }
 
   .navbar-logo {
-    height: 28px;
+    height: 36px;
   }
 
-  /* Body - allow scrolling */
+  /* Body - flex column to push footer down */
   body {
+    height: auto;
+    min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Container - natural flow, no fixed heights */
+  /* Container - fills available space */
   .container {
     flex-direction: column;
     height: auto !important;
     min-height: auto;
-    margin-top: 50px;
+    margin-top: 52px;
     padding-bottom: 0;
     overflow: visible;
+    flex: 1;
   }
 
   /* =========================================
@@ -52,11 +65,11 @@
      ========================================= */
   .main-nav {
     position: fixed;
-    top: 50px;
+    top: 52px;
     left: 0;
     bottom: 0;
     width: 80px;
-    height: calc(100vh - 50px) !important;
+    height: calc(100vh - 52px) !important;
     z-index: 999;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
@@ -75,7 +88,7 @@
   .mobile-overlay {
     display: none;
     position: fixed;
-    top: 50px;
+    top: 52px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -115,11 +128,11 @@
   }
 
   .left-panel .header {
-    padding: 12px 16px;
+    padding: 14px 16px;
   }
 
   .left-panel .content {
-    padding: 12px 16px;
+    padding: 14px 16px;
     max-height: none !important;
     height: auto !important;
     overflow: visible !important;
@@ -130,7 +143,7 @@
     width: 100% !important;
     flex: none;
     min-height: 300px;
-    padding: 12px;
+    padding: 14px;
     overflow: visible !important;
   }
 
@@ -144,7 +157,8 @@
     bottom: auto !important;
     width: 100%;
     padding: 16px;
-    margin-top: auto;
+    margin-top: 0;
+    flex-shrink: 0;
   }
 
   .site-footer.sidebar-collapsed {
@@ -164,7 +178,7 @@
   }
 
   .footer-ai-disclosure {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-align: center;
     padding: 8px 12px;
   }
@@ -192,21 +206,70 @@
   }
 
   .inpaint-canvas-area {
-    flex: none;
+    flex: none !important;
     width: 100% !important;
     max-width: 100%;
     height: auto;
-    min-height: 250px;
+    min-height: 200px;
+    padding: 16px;
   }
 
-  .inpaint-right-panel {
+  .inpaint-sidebar {
+    flex: none !important;
     width: 100% !important;
+    overflow-y: visible !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 16px;
+    gap: 12px;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .inpaint-control-section {
+    gap: 6px;
+  }
+
+  .inpaint-control-label {
+    font-size: 0.8rem;
+  }
+
+  .inpaint-textarea {
+    min-height: 60px;
+  }
+
+  .inpaint-divider {
+    margin: 8px 0;
+  }
+
+  .inpaint-result-section {
+    width: 100% !important;
+    min-width: auto;
+    padding: 16px;
+  }
+
+  .inpaint-header {
+    margin-bottom: 12px;
+  }
+
+  .inpaint-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .inpaint-subtitle {
+    font-size: 0.8rem;
   }
 
   /* Caption container */
   .caption-container {
     height: auto !important;
-    min-height: 60vh;
+    min-height: auto;
+    flex: 1;
+  }
+
+  .caption-chat-area {
+    flex: 1;
+    min-height: 200px;
   }
 
   .caption-welcome {
@@ -219,14 +282,19 @@
     padding: 0 12px 20px;
   }
 
+  .caption-input-container {
+    position: relative;
+    padding: 12px;
+  }
+
   /* =========================================
      UI COMPONENTS
      ========================================= */
 
-  /* Output grid */
+  /* Output grid - adjust for tablet */
   .output-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
   }
 
   /* Model tabs - horizontal scroll */
@@ -236,18 +304,24 @@
     gap: 8px;
     padding-bottom: 8px;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
 
   .model-tab {
     flex-shrink: 0;
-    padding: 8px 12px;
-    font-size: 0.8rem;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-width: auto;
   }
 
   /* Content mode toggle */
   .content-mode-toggle {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
+  }
+
+  .content-mode-info {
+    display: none;
   }
 
   /* Prompt textarea */
@@ -271,6 +345,15 @@
     width: 100%;
   }
 
+  /* Settings grid - stack on tablet */
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-item.full {
+    grid-column: span 1;
+  }
+
   /* Admin panel */
   .admin-container {
     flex-direction: column;
@@ -289,11 +372,15 @@
 
   /* Marketplace */
   .marketplace-page {
-    padding: 16px;
+    padding: 20px;
   }
 
   .marketplace-title {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+  }
+
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
 
   /* Education/Learn section */
@@ -311,6 +398,7 @@
   .user-menu {
     width: calc(100% - 24px);
     right: 12px;
+    left: 12px;
     max-width: 300px;
   }
 
@@ -324,15 +412,15 @@
 
   /* Nav tab styling */
   .nav-label {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
   }
 
   .nav-icon {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
   .nav-tab {
-    padding: 12px 0;
+    padding: 14px 0;
   }
 
   /* Reference images */
@@ -344,6 +432,24 @@
     max-height: 150px;
   }
 
+  /* Reference upload - smaller on tablet */
+  .reference-upload {
+    padding: 20px 16px;
+  }
+
+  .reference-upload-icon {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+  }
+
+  .reference-upload-text {
+    font-size: 0.85rem;
+  }
+
+  .reference-upload-hint {
+    font-size: 0.7rem;
+  }
+
   /* Generated images header */
   .output-header {
     flex-wrap: wrap;
@@ -351,26 +457,151 @@
   }
 
   .output-header h2 {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
-  /* Zoom slider */
-  .zoom-controls {
-    display: none;
+  /* Hide selection toggle and zoom slider on tablet */
+  .selection-mode-toggle,
+  .zoom-controls,
+  .zoom-slider-container {
+    display: none !important;
   }
 }
 
-/* =========================================
-   VERY SMALL SCREENS (phones)
-   ========================================= */
-@media (max-width: 480px) {
+/* ===========================================
+   MOBILE PHONES (768px and below)
+   Phone-specific optimizations
+   =========================================== */
+@media (max-width: 768px) {
+  /* Navbar adjustments */
   .top-navbar {
-    height: 46px;
+    height: 50px;
     padding: 0 10px;
+    gap: 10px;
   }
 
   .navbar-logo {
-    height: 22px;
+    height: 34px;
+  }
+
+  .container {
+    margin-top: 50px;
+  }
+
+  .main-nav {
+    top: 50px;
+    height: calc(100vh - 50px) !important;
+  }
+
+  .mobile-overlay {
+    top: 50px;
+  }
+
+  /* Smaller panel padding */
+  .left-panel .header {
+    padding: 12px 14px;
+  }
+
+  .left-panel .content {
+    padding: 12px 14px;
+  }
+
+  .right-panel {
+    padding: 12px;
+  }
+
+  /* Output grid - smaller items */
+  .output-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  /* Model tabs - more compact */
+  .model-tabs {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .model-tab {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    width: 100%;
+    max-width: none;
+    text-align: center;
+  }
+
+  /* Content mode - stack vertically on phones */
+  .content-mode-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .content-mode-label {
+    font-size: 0.8rem;
+  }
+
+  .content-mode-info {
+    display: none;
+  }
+
+  /* Output header */
+  .output-header h2 {
+    font-size: 1.2rem;
+  }
+
+  /* Marketplace adjustments */
+  .marketplace-page {
+    padding: 16px;
+  }
+
+  .marketplace-title {
+    font-size: 1.5rem;
+  }
+
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  /* Footer */
+  .footer-ai-disclosure {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+
+  .footer-links {
+    gap: 10px;
+    font-size: 0.8rem;
+  }
+
+  /* Nav tabs */
+  .nav-label {
+    font-size: 0.6rem;
+  }
+
+  .nav-icon {
+    font-size: 1.2rem;
+  }
+
+  .nav-tab {
+    padding: 12px 0;
+  }
+}
+
+/* ===========================================
+   VERY SMALL SCREENS (480px and below)
+   Compact phone layouts
+   =========================================== */
+@media (max-width: 480px) {
+  .top-navbar {
+    height: 46px;
+    padding: 0 8px;
+  }
+
+  .navbar-logo {
+    height: 30px;
   }
 
   .container {
@@ -387,20 +618,7 @@
     top: 46px;
   }
 
-  .output-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 6px;
-  }
-
-  .model-tabs {
-    gap: 4px;
-  }
-
-  .model-tab {
-    padding: 6px 10px;
-    font-size: 0.75rem;
-  }
-
+  /* Even smaller padding */
   .left-panel .header,
   .left-panel .content {
     padding: 10px 12px;
@@ -408,11 +626,43 @@
 
   .right-panel {
     padding: 10px;
+    min-height: 250px;
   }
 
-  .generate-btn {
-    padding: 12px;
-    font-size: 0.9rem;
+  /* Smaller output grid */
+  .output-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+  }
+
+  /* Compact model tabs - stacked vertically */
+  .model-tabs {
+    gap: 4px;
+  }
+
+  .model-tab {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  /* Reference upload - compact on small phones */
+  .reference-upload {
+    padding: 14px 12px;
+  }
+
+  .reference-upload-icon {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .reference-upload-text {
+    font-size: 0.75rem;
+  }
+
+  /* Compact content mode */
+  .content-mode-toggle {
+    gap: 6px;
+    padding: 8px 10px;
   }
 
   .content-mode-label {
@@ -424,6 +674,65 @@
     font-size: 0.75rem;
   }
 
+  /* Compact generate button */
+  .generate-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  /* Inpaint - extra compact on small phones */
+  .inpaint-canvas-area {
+    padding: 12px;
+    min-height: 180px;
+  }
+
+  .inpaint-sidebar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .inpaint-control-label {
+    font-size: 0.75rem;
+  }
+
+  .inpaint-textarea {
+    min-height: 50px;
+    font-size: 0.85rem;
+  }
+
+  .inpaint-select {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+
+  .inpaint-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .inpaint-generate-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .inpaint-mode-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .inpaint-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .inpaint-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .inpaint-result-section {
+    padding: 12px;
+  }
+
+  /* Compact footer */
   .footer-links {
     gap: 8px;
     font-size: 0.75rem;
@@ -431,5 +740,38 @@
 
   .footer-links a {
     font-size: 0.75rem;
+  }
+
+  .footer-ai-disclosure {
+    font-size: 0.65rem;
+    padding: 6px 8px;
+  }
+
+  /* Marketplace - single column */
+  .marketplace-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .marketplace-title {
+    font-size: 1.3rem;
+  }
+
+  /* Caption section */
+  .caption-container {
+    min-height: auto;
+  }
+
+  .caption-welcome {
+    margin-top: 3vh;
+  }
+
+  .caption-welcome h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Reference grid */
+  .reference-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

@@ -179,5 +179,6 @@ module.exports = {
   optionalAuth,
   requireAdmin,
   verifyOwnership,
-  extractToken
+  extractToken,
+  supabase
 };
