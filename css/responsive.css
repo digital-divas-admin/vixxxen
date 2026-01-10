@@ -39,8 +39,10 @@
     height: 30px;
   }
 
-  /* Body - allow scrolling */
+  /* Body - allow scrolling, no fixed height */
   body {
+    height: auto;
+    min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
   }
