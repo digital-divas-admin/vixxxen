@@ -2,7 +2,7 @@
    RESPONSIVE - Media Queries
    =========================================== */
 
-/* Tablet and below */
+/* Large tablets and small desktops */
 @media (max-width: 1024px) {
   .pricing-cards {
     grid-template-columns: 1fr;
@@ -12,23 +12,31 @@
   .subscription-page {
     padding: 40px 20px;
   }
+
+  /* Slightly reduce left panel width */
+  .left-panel {
+    width: 340px;
+  }
 }
 
-/* Mobile */
-@media (max-width: 768px) {
+/* ===========================================
+   TABLET (900px and below)
+   Main responsive breakpoint - stacks layout
+   =========================================== */
+@media (max-width: 900px) {
   /* =========================================
      CORE LAYOUT - Make everything scrollable
      ========================================= */
 
-  /* Top Navbar - smaller on mobile */
+  /* Top Navbar - slightly smaller */
   .top-navbar {
-    height: 50px;
+    height: 52px;
     padding: 0 12px;
     gap: 12px;
   }
 
   .navbar-logo {
-    height: 28px;
+    height: 30px;
   }
 
   /* Body - allow scrolling */
@@ -42,7 +50,7 @@
     flex-direction: column;
     height: auto !important;
     min-height: auto;
-    margin-top: 50px;
+    margin-top: 52px;
     padding-bottom: 0;
     overflow: visible;
   }
@@ -52,11 +60,11 @@
      ========================================= */
   .main-nav {
     position: fixed;
-    top: 50px;
+    top: 52px;
     left: 0;
     bottom: 0;
     width: 80px;
-    height: calc(100vh - 50px) !important;
+    height: calc(100vh - 52px) !important;
     z-index: 999;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
@@ -75,7 +83,7 @@
   .mobile-overlay {
     display: none;
     position: fixed;
-    top: 50px;
+    top: 52px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -115,11 +123,11 @@
   }
 
   .left-panel .header {
-    padding: 12px 16px;
+    padding: 14px 16px;
   }
 
   .left-panel .content {
-    padding: 12px 16px;
+    padding: 14px 16px;
     max-height: none !important;
     height: auto !important;
     overflow: visible !important;
@@ -130,7 +138,7 @@
     width: 100% !important;
     flex: none;
     min-height: 300px;
-    padding: 12px;
+    padding: 14px;
     overflow: visible !important;
   }
 
@@ -164,7 +172,7 @@
   }
 
   .footer-ai-disclosure {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-align: center;
     padding: 8px 12px;
   }
@@ -223,10 +231,10 @@
      UI COMPONENTS
      ========================================= */
 
-  /* Output grid */
+  /* Output grid - adjust for tablet */
   .output-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
   }
 
   /* Model tabs - horizontal scroll */
@@ -236,18 +244,20 @@
     gap: 8px;
     padding-bottom: 8px;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
 
   .model-tab {
     flex-shrink: 0;
-    padding: 8px 12px;
-    font-size: 0.8rem;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-width: auto;
   }
 
   /* Content mode toggle */
   .content-mode-toggle {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
   }
 
   /* Prompt textarea */
@@ -271,6 +281,15 @@
     width: 100%;
   }
 
+  /* Settings grid - stack on tablet */
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-item.full {
+    grid-column: span 1;
+  }
+
   /* Admin panel */
   .admin-container {
     flex-direction: column;
@@ -289,11 +308,15 @@
 
   /* Marketplace */
   .marketplace-page {
-    padding: 16px;
+    padding: 20px;
   }
 
   .marketplace-title {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+  }
+
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
 
   /* Education/Learn section */
@@ -311,6 +334,7 @@
   .user-menu {
     width: calc(100% - 24px);
     right: 12px;
+    left: 12px;
     max-width: 300px;
   }
 
@@ -324,15 +348,15 @@
 
   /* Nav tab styling */
   .nav-label {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
   }
 
   .nav-icon {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
   .nav-tab {
-    padding: 12px 0;
+    padding: 14px 0;
   }
 
   /* Reference images */
@@ -351,22 +375,134 @@
   }
 
   .output-header h2 {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
-  /* Zoom slider */
+  /* Zoom slider - hide on tablet */
   .zoom-controls {
     display: none;
   }
 }
 
-/* =========================================
-   VERY SMALL SCREENS (phones)
-   ========================================= */
+/* ===========================================
+   MOBILE PHONES (768px and below)
+   Phone-specific optimizations
+   =========================================== */
+@media (max-width: 768px) {
+  /* Navbar adjustments */
+  .top-navbar {
+    height: 50px;
+    padding: 0 10px;
+    gap: 10px;
+  }
+
+  .navbar-logo {
+    height: 28px;
+  }
+
+  .container {
+    margin-top: 50px;
+  }
+
+  .main-nav {
+    top: 50px;
+    height: calc(100vh - 50px) !important;
+  }
+
+  .mobile-overlay {
+    top: 50px;
+  }
+
+  /* Smaller panel padding */
+  .left-panel .header {
+    padding: 12px 14px;
+  }
+
+  .left-panel .content {
+    padding: 12px 14px;
+  }
+
+  .right-panel {
+    padding: 12px;
+  }
+
+  /* Output grid - smaller items */
+  .output-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  /* Model tabs - more compact */
+  .model-tabs {
+    gap: 6px;
+  }
+
+  .model-tab {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Content mode */
+  .content-mode-toggle {
+    gap: 8px;
+  }
+
+  .content-mode-label {
+    font-size: 0.8rem;
+  }
+
+  /* Output header */
+  .output-header h2 {
+    font-size: 1.2rem;
+  }
+
+  /* Marketplace adjustments */
+  .marketplace-page {
+    padding: 16px;
+  }
+
+  .marketplace-title {
+    font-size: 1.5rem;
+  }
+
+  .marketplace-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  /* Footer */
+  .footer-ai-disclosure {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+
+  .footer-links {
+    gap: 10px;
+    font-size: 0.8rem;
+  }
+
+  /* Nav tabs */
+  .nav-label {
+    font-size: 0.6rem;
+  }
+
+  .nav-icon {
+    font-size: 1.2rem;
+  }
+
+  .nav-tab {
+    padding: 12px 0;
+  }
+}
+
+/* ===========================================
+   VERY SMALL SCREENS (480px and below)
+   Compact phone layouts
+   =========================================== */
 @media (max-width: 480px) {
   .top-navbar {
     height: 46px;
-    padding: 0 10px;
+    padding: 0 8px;
   }
 
   .navbar-logo {
@@ -387,11 +523,24 @@
     top: 46px;
   }
 
+  /* Even smaller padding */
+  .left-panel .header,
+  .left-panel .content {
+    padding: 10px 12px;
+  }
+
+  .right-panel {
+    padding: 10px;
+    min-height: 250px;
+  }
+
+  /* Smaller output grid */
   .output-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 6px;
   }
 
+  /* Compact model tabs */
   .model-tabs {
     gap: 4px;
   }
@@ -401,20 +550,7 @@
     font-size: 0.75rem;
   }
 
-  .left-panel .header,
-  .left-panel .content {
-    padding: 10px 12px;
-  }
-
-  .right-panel {
-    padding: 10px;
-  }
-
-  .generate-btn {
-    padding: 12px;
-    font-size: 0.9rem;
-  }
-
+  /* Compact content mode */
   .content-mode-label {
     font-size: 0.75rem;
   }
@@ -424,6 +560,13 @@
     font-size: 0.75rem;
   }
 
+  /* Compact generate button */
+  .generate-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  /* Compact footer */
   .footer-links {
     gap: 8px;
     font-size: 0.75rem;
@@ -431,5 +574,34 @@
 
   .footer-links a {
     font-size: 0.75rem;
+  }
+
+  .footer-ai-disclosure {
+    font-size: 0.65rem;
+    padding: 6px 8px;
+  }
+
+  /* Marketplace - single column */
+  .marketplace-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .marketplace-title {
+    font-size: 1.3rem;
+  }
+
+  /* Caption section */
+  .caption-container {
+    min-height: 50vh;
+  }
+
+  .caption-welcome h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Reference grid */
+  .reference-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

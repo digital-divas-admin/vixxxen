@@ -9846,7 +9846,7 @@
       const mainNav = document.querySelector('.main-nav');
       const siteFooter = document.querySelector('.site-footer');
       const mobileOverlay = document.getElementById('mobileOverlay');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 900;
 
       if (isMobile) {
         // On mobile, toggle mobile-open class (sidebar slides in/out)
@@ -9867,7 +9867,7 @@
     function closeMobileSidebar() {
       const mainNav = document.querySelector('.main-nav');
       const mobileOverlay = document.getElementById('mobileOverlay');
-      if (window.innerWidth <= 768) {
+      if (window.innerWidth <= 900) {
         mainNav.classList.remove('mobile-open');
         if (mobileOverlay) {
           mobileOverlay.classList.remove('active');
