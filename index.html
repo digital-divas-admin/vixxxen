@@ -7837,30 +7837,14 @@
               <button onclick="clearMask()" style="padding: 8px 16px; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem;">
                 Clear Mask
               </button>
+              <button onclick="clearEditImage()" style="padding: 8px 16px; background: rgba(255, 46, 187, 0.9); border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                Clear Image
+              </button>
             </div>
 
             <!-- Canvas Container -->
             <div style="position: relative; background: #0a0a0a; border-radius: 8px; overflow: hidden; border: 1px solid #2a2a2a;">
               <canvas id="maskCanvas" style="display: block; max-width: 100%; cursor: crosshair;"></canvas>
-            </div>
-          </div>
-
-          <!-- Settings (only for Eraser tool) -->
-          <div class="section" id="eraserSettings">
-            <div class="section-label">Settings</div>
-            <div class="settings-grid">
-              <div class="setting-item full">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="preserveAlpha" checked style="width: 16px; height: 16px; cursor: pointer;">
-                  <span>Preserve Alpha Channel</span>
-                </label>
-              </div>
-              <div class="setting-item full">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="contentModeration" style="width: 16px; height: 16px; cursor: pointer;">
-                  <span>Enable Content Moderation</span>
-                </label>
-              </div>
             </div>
           </div>
 
@@ -12223,7 +12207,6 @@
       cropTab.classList.remove('active');
 
       // Hide all tool-specific sections
-      document.getElementById('eraserSettings').style.display = 'none';
       document.getElementById('cropSection').style.display = 'none';
       document.getElementById('editActionBtn').style.display = 'none';
       document.getElementById('cropActionBtn').style.display = 'none';
@@ -12249,7 +12232,6 @@
           }
         }
 
-        document.getElementById('eraserSettings').style.display = 'block';
         document.getElementById('editActionBtn').style.display = 'block';
         document.getElementById('editActionText').textContent = '✨ Remove Object';
       } else if (tool === 'bg-remover') {
@@ -12685,8 +12667,9 @@
       btnText.textContent = '⏳ Erasing...';
       btn.disabled = true;
 
-      const preserveAlpha = document.getElementById('preserveAlpha').checked;
-      const contentModeration = document.getElementById('contentModeration').checked;
+      // Use sensible defaults (settings removed from UI)
+      const preserveAlpha = true;
+      const contentModeration = false;
 
       // Clear placeholder if it's first edit
       const editOutputGrid = document.getElementById('editOutputGrid');
