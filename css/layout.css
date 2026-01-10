@@ -49,8 +49,8 @@
 
 .container {
   display: flex;
-  height: 100vh;
-  padding-top: 56px; /* Space for fixed top navbar */
+  height: calc(100vh - 56px); /* Subtract navbar height */
+  margin-top: 56px; /* Space for fixed top navbar */
   padding-bottom: 50px; /* Space for fixed footer */
 }
 
@@ -286,7 +286,7 @@
 #videoSection .left-panel {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px);
+  height: calc(100vh - 156px); /* 100px + 56px navbar */
   overflow: hidden;
 }
 
