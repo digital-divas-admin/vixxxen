@@ -48,7 +48,7 @@ function initializeChat(io) {
         connectedUsers.set(socket.id, {
           userId: userId,
           email,
-          displayName: displayName || email?.split('@')[0] || 'Anonymous',
+          displayName: displayName || 'New User',
           avatar,
           tier: userTier,
           isAdmin: isAdmin,
@@ -488,7 +488,7 @@ async function getChannelMessages(channelId, limit = 50) {
     const userIds = [...new Set(messages.map(m => m.user_id))];
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url, email')
+      .select('id, display_name, avatar_url')
       .in('id', userIds);
 
     const profileMap = new Map();
@@ -525,7 +525,7 @@ async function getChannelMessages(channelId, limit = 50) {
         createdAt: m.created_at,
         user: {
           id: m.user_id,
-          displayName: profile?.display_name || profile?.email?.split('@')[0] || 'Unknown User',
+          displayName: profile?.display_name || 'New User',
           avatar: profile?.avatar_url
         },
         reactions: reactionsMap.get(m.id) || []
@@ -595,7 +595,7 @@ async function getAllMembers() {
     // Combine data
     return profiles.map(p => ({
       id: p.id,
-      displayName: p.display_name || p.email?.split('@')[0] || 'Unknown',
+      displayName: p.display_name || 'New User',
       email: p.email,
       avatar: p.avatar_url,
       role: p.role || 'user',
