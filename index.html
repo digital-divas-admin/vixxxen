@@ -9841,11 +9841,9 @@
     // ===========================================
     function toggleSidebar() {
       const mainNav = document.querySelector('.main-nav');
-      const hamburgerBtn = document.getElementById('hamburgerBtn');
       const siteFooter = document.querySelector('.site-footer');
 
       mainNav.classList.toggle('collapsed');
-      hamburgerBtn.classList.toggle('active');
 
       if (siteFooter) {
         siteFooter.classList.toggle('sidebar-collapsed');
