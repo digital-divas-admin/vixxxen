@@ -466,13 +466,21 @@
     text-align: center;
   }
 
-  /* Content mode */
+  /* Content mode - stack vertically on phones */
   .content-mode-toggle {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 8px;
+    padding: 10px 12px;
   }
 
   .content-mode-label {
     font-size: 0.8rem;
+  }
+
+  .content-mode-info {
+    font-size: 0.7rem;
+    margin-left: 0;
   }
 
   /* Output header */
@@ -589,6 +597,11 @@
   }
 
   /* Compact content mode */
+  .content-mode-toggle {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
   .content-mode-label {
     font-size: 0.75rem;
   }
