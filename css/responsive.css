@@ -479,8 +479,7 @@
   }
 
   .content-mode-info {
-    font-size: 0.7rem;
-    margin-left: 0;
+    display: none;
   }
 
   /* Output header */
