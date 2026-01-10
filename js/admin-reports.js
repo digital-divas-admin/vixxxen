@@ -772,9 +772,32 @@ async function giftCredits() {
       return;
     }
 
-    // Update displayed balance
+    // Update displayed balance in admin panel
     selectedGrantUserCredits = data.newBalance;
     document.getElementById('grantUserCredits').textContent = selectedGrantUserCredits.toLocaleString();
+
+    // If gifted to self (current logged-in user), update global credit displays
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.id === selectedGrantUserId) {
+      // Update global userCredits variable
+      if (typeof userCredits !== 'undefined') {
+        userCredits = data.newBalance;
+      }
+      // Update sidebar display
+      const userCreditsDisplay = document.getElementById('userCreditsDisplay');
+      if (userCreditsDisplay) {
+        userCreditsDisplay.textContent = data.newBalance.toLocaleString();
+      }
+      // Update user menu detail
+      const userCreditsDetail = document.getElementById('userCreditsDetail');
+      if (userCreditsDetail) {
+        userCreditsDetail.textContent = `${data.newBalance.toLocaleString()} Credits`;
+      }
+      // Update billing page if visible
+      const billingCredits = document.getElementById('billingCredits');
+      if (billingCredits) {
+        billingCredits.textContent = data.newBalance.toLocaleString();
+      }
+    }
 
     // Clear inputs
     amountInput.value = '';
