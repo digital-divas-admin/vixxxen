@@ -533,13 +533,14 @@ async function addBulkBlockedWords() {
 }
 
 // ===========================================
-// Character Grants Admin Functions
+// User Services Admin Functions
 // ===========================================
 
 let selectedGrantUserId = null;
+let selectedGrantUserCredits = 0;
 let allCharacters = [];
 
-async function loadCharacterGrantsData() {
+async function loadUserServicesData() {
   try {
     const response = await authFetch('/api/admin/characters');
     if (response.ok) {
@@ -589,13 +590,13 @@ async function searchUserForGrant() {
     }
 
     resultsDiv.innerHTML = users.map(user => `
-      <div onclick="selectUserForGrant('${user.id}', '${user.email}', '${user.plan || 'free'}', '${user.role || 'user'}')"
+      <div onclick="selectUserForGrant('${user.id}', '${user.email}', '${user.plan || 'free'}', '${user.role || 'user'}', ${user.credits || 0})"
            style="padding: 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center;"
            onmouseover="this.style.background='rgba(157, 78, 221, 0.1)'"
            onmouseout="this.style.background='transparent'">
         <div>
           <div style="font-weight: 500; color: #fff;">${user.email}</div>
-          <div style="font-size: 0.8rem; color: #888;">Plan: ${user.plan || 'free'} | Role: ${user.role || 'user'}</div>
+          <div style="font-size: 0.8rem; color: #888;">Plan: ${user.plan || 'free'} | Role: ${user.role || 'user'} | Credits: ${user.credits || 0}</div>
         </div>
         <span style="color: #9d4edd;">Select</span>
       </div>
@@ -608,22 +609,27 @@ async function searchUserForGrant() {
   }
 }
 
-async function selectUserForGrant(userId, email, plan, role) {
+async function selectUserForGrant(userId, email, plan, role, credits) {
   selectedGrantUserId = userId;
+  selectedGrantUserCredits = credits || 0;
 
   document.getElementById('grantUserSearchResults').style.display = 'none';
   document.getElementById('grantUserSelected').style.display = 'block';
   document.getElementById('grantUserEmail').textContent = email;
   document.getElementById('grantUserInfo').textContent = `Plan: ${plan} | Role: ${role}`;
+  document.getElementById('grantUserCredits').textContent = selectedGrantUserCredits.toLocaleString();
 
   await loadUserCharacters(userId);
 }
 
 function clearSelectedUser() {
   selectedGrantUserId = null;
+  selectedGrantUserCredits = 0;
   document.getElementById('grantUserSelected').style.display = 'none';
   document.getElementById('grantUserSearch').value = '';
   document.getElementById('grantUserCharacters').innerHTML = '<div style="color: #888; font-size: 0.9rem;">Select a user to view their characters</div>';
+  document.getElementById('giftCreditsAmount').value = '';
+  document.getElementById('giftCreditsReason').value = '';
 }
 
 async function loadUserCharacters(userId) {
@@ -727,5 +733,56 @@ async function revokeCharacterAccess(characterId, characterName) {
   } catch (error) {
     console.error('Error revoking character:', error);
     alert('Failed to revoke character access. Please try again.');
+  }
+}
+
+async function giftCredits() {
+  if (!selectedGrantUserId) {
+    alert('Please select a user first');
+    return;
+  }
+
+  const amountInput = document.getElementById('giftCreditsAmount');
+  const reasonInput = document.getElementById('giftCreditsReason');
+
+  const amount = parseInt(amountInput.value);
+  const reason = reasonInput.value.trim();
+
+  if (!amount || amount <= 0) {
+    alert('Please enter a valid credit amount');
+    return;
+  }
+
+  if (!reason) {
+    alert('Please enter a reason for this gift (required)');
+    return;
+  }
+
+  try {
+    const response = await authFetch('/api/admin/gift-credits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: selectedGrantUserId, amount, reason })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || 'Failed to gift credits');
+      return;
+    }
+
+    // Update displayed balance
+    selectedGrantUserCredits = data.newBalance;
+    document.getElementById('grantUserCredits').textContent = selectedGrantUserCredits.toLocaleString();
+
+    // Clear inputs
+    amountInput.value = '';
+    reasonInput.value = '';
+
+    alert(`Successfully gifted ${amount.toLocaleString()} credits!\nNew balance: ${data.newBalance.toLocaleString()}`);
+  } catch (error) {
+    console.error('Error gifting credits:', error);
+    alert('Failed to gift credits. Please try again.');
   }
 }

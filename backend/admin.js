@@ -302,7 +302,7 @@ router.get('/users/search', async (req, res) => {
     // Search for user by email in profiles
     const { data: users, error } = await supabase
       .from('profiles')
-      .select('id, email, display_name, plan, role')
+      .select('id, email, display_name, plan, role, credits')
       .ilike('email', `%${email}%`)
       .limit(10);
 
@@ -483,6 +483,87 @@ router.post('/revoke-character', async (req, res) => {
   } catch (error) {
     console.error('Revoke character error:', error);
     res.status(500).json({ error: 'Failed to revoke character access' });
+  }
+});
+
+/**
+ * POST /api/admin/gift-credits
+ * Gift credits to a user (shows as 'gift' type in their transaction history)
+ */
+router.post('/gift-credits', async (req, res) => {
+  try {
+    const { userId, amount, reason } = req.body;
+
+    if (!userId || !amount || !reason) {
+      return res.status(400).json({ error: 'userId, amount, and reason are required' });
+    }
+
+    const creditAmount = parseInt(amount);
+    if (isNaN(creditAmount) || creditAmount <= 0) {
+      return res.status(400).json({ error: 'Amount must be a positive number' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Get admin info for the transaction record
+    const adminEmail = req.user?.email || 'Unknown Admin';
+
+    // Update user's credits
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const newBalance = (profile.credits || 0) + creditAmount;
+
+    // Update credits
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ credits: newBalance, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Update credits error:', updateError);
+      return res.status(500).json({ error: 'Failed to update credits' });
+    }
+
+    // Create transaction record
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        type: 'gift',
+        amount: creditAmount,
+        description: `Gift: ${reason}`,
+        metadata: {
+          gift: true,
+          admin_email: adminEmail,
+          reason: reason
+        }
+      });
+
+    if (transactionError) {
+      console.error('Transaction record error:', transactionError);
+      // Credits were updated but transaction failed - log it but don't fail the request
+    }
+
+    console.log(`🎁 Admin ${adminEmail} gifted ${creditAmount} credits to user ${userId}: ${reason}`);
+
+    res.json({
+      success: true,
+      message: `Gifted ${creditAmount} credits`,
+      newBalance: newBalance
+    });
+  } catch (error) {
+    console.error('Gift credits error:', error);
+    res.status(500).json({ error: 'Failed to gift credits' });
   }
 });
 
