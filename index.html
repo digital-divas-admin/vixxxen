@@ -15839,37 +15839,52 @@
       // Update Flux dropdown
       const fluxCharacter = document.getElementById('fluxCharacter');
       if (fluxCharacter) {
-        fluxCharacter.innerHTML = '<option value="none" selected>No Character (LoRA)</option>';
+        const savedFluxValue = fluxCharacter.value;
+        fluxCharacter.innerHTML = '<option value="none">No Character (LoRA)</option>';
         allMarketplaceCharacters.forEach(char => {
           // Admin sees all, others see only owned - must have lora_url
           if ((isUserAdmin || ownedCharacters.includes(char.id)) && char.lora_url) {
             fluxCharacter.innerHTML += `<option value="${char.id}">✨ ${char.name}</option>`;
           }
         });
+        // Restore selection if still valid
+        if (savedFluxValue && fluxCharacter.querySelector(`option[value="${savedFluxValue}"]`)) {
+          fluxCharacter.value = savedFluxValue;
+        }
       }
 
       // Update Qwen dropdown - only marketplace characters with lora_url
       const qwenCharacter = document.getElementById('qwenGenCharacter');
       if (qwenCharacter) {
-        qwenCharacter.innerHTML = '<option value="none" selected>No Character (LoRA)</option>';
+        const savedQwenValue = qwenCharacter.value;
+        qwenCharacter.innerHTML = '<option value="none">No Character (LoRA)</option>';
         allMarketplaceCharacters.forEach(char => {
           // Admin sees all, others see only owned - must have lora_url
           if ((isUserAdmin || ownedCharacters.includes(char.id)) && char.lora_url) {
             qwenCharacter.innerHTML += `<option value="${char.id}">✨ ${char.name}</option>`;
           }
         });
+        // Restore selection if still valid
+        if (savedQwenValue && qwenCharacter.querySelector(`option[value="${savedQwenValue}"]`)) {
+          qwenCharacter.value = savedQwenValue;
+        }
       }
 
       // Update Inpaint dropdown - same as Qwen since both use ComfyUI
       const inpaintLoraSelect = document.getElementById('inpaintLoraSelect');
       if (inpaintLoraSelect) {
-        inpaintLoraSelect.innerHTML = '<option value="" selected>None</option>';
+        const savedInpaintValue = inpaintLoraSelect.value;
+        inpaintLoraSelect.innerHTML = '<option value="">None</option>';
         allMarketplaceCharacters.forEach(char => {
           // Admin sees all, others see only owned - must have lora_url
           if ((isUserAdmin || ownedCharacters.includes(char.id)) && char.lora_url) {
             inpaintLoraSelect.innerHTML += `<option value="${char.id}">✨ ${char.name}</option>`;
           }
         });
+        // Restore selection if still valid
+        if (savedInpaintValue && inpaintLoraSelect.querySelector(`option[value="${savedInpaintValue}"]`)) {
+          inpaintLoraSelect.value = savedInpaintValue;
+        }
       }
     }
 
