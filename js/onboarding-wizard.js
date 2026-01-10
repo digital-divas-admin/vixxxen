@@ -248,18 +248,27 @@ function renderChooseCharacterStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
-  const charactersHTML = starterCharacters.map(char => `
+  // Color palette for character placeholders
+  const placeholderColors = ['#ff2ebb', '#00b2ff', '#00cc88', '#9966ff', '#ff6600'];
+
+  const charactersHTML = starterCharacters.map((char, idx) => {
+    const bgColor = placeholderColors[idx % placeholderColors.length];
+    return `
     <div class="starter-character-card">
       <div class="character-image">
-        ${char.image_url ? `<img src="${char.image_url}" alt="${char.name}">` : `<div class="character-placeholder">${char.name.charAt(0)}</div>`}
+        ${char.image_url
+          ? `<img src="${char.image_url}" alt="${char.name}">`
+          : `<div class="character-placeholder" style="background: linear-gradient(135deg, ${bgColor}, ${bgColor}dd);">
+              <span class="placeholder-icon">✨</span>
+              <span class="placeholder-name">${char.name}</span>
+            </div>`}
       </div>
       <div class="character-info">
         <h3 class="character-name">${char.name}</h3>
         <p class="character-category">${char.category || ''}</p>
-        <p class="character-desc">${char.description || ''}</p>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-character-step">
@@ -271,11 +280,9 @@ function renderChooseCharacterStep(step) {
         ${charactersHTML || '<p class="no-characters">Loading characters...</p>'}
       </div>
 
-      ${step.config?.show_marketplace_link ? `
-        <p class="marketplace-hint">
-          Want a unique AI character? <a href="#" onclick="goToMarketplace(); return false;">Browse our marketplace</a>
-        </p>
-      ` : ''}
+      <p class="marketplace-hint">
+        Want more characters? You can browse our marketplace after signup!
+      </p>
     </div>
   `;
 

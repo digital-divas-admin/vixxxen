@@ -276,11 +276,21 @@
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  gap: 8px;
+  color: #fff;
+}
+
+.character-placeholder .placeholder-icon {
+  font-size: 2.5rem;
+}
+
+.character-placeholder .placeholder-name {
+  font-size: 1.1rem;
   font-weight: 600;
-  color: #666;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .character-name {
