@@ -65,6 +65,7 @@
 
   <!-- External CSS - Organized styles -->
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/onboarding-wizard.css">
 
   <style>
     /* ===========================================
@@ -9916,6 +9917,7 @@
   <script src="js/account-page.js"></script>
   <script src="js/billing-page.js"></script>
   <script src="js/delete-functions.js"></script>
+  <script src="js/onboarding-wizard.js"></script>
 
   <script>
     // ===========================================
@@ -10926,6 +10928,17 @@
 
     // Run health check on page load
     document.addEventListener('DOMContentLoaded', checkServerHealth);
+
+    // Initialize onboarding system on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initializeOnboarding === 'function') {
+        initializeOnboarding().then(() => {
+          console.log('Onboarding system initialized');
+        }).catch(err => {
+          console.warn('Onboarding initialization failed:', err);
+        });
+      }
+    });
 
     // Hide loading splash when page is ready
     function hideLoadingSplash() {
@@ -15055,24 +15068,35 @@
     }
 
     // Show login required modal with message
+    // Now shows the onboarding wizard for new users
     function showLoginRequiredModal() {
-      // Create a brief notification then open login
-      const notification = document.createElement('div');
-      notification.className = 'login-required-toast';
-      notification.innerHTML = `
-        <div style="background: linear-gradient(135deg, #ff6b6b, #ee5a5a); color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 12px; font-weight: 500;">
-          <span style="font-size: 24px;">🔐</span>
-          <span>Sign up to start creating! Get 20 free credits.</span>
-        </div>
-      `;
-      notification.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; animation: slideDown 0.3s ease;';
-      document.body.appendChild(notification);
+      // Check if onboarding wizard is initialized
+      if (typeof showOnboardingWizard === 'function' && onboardingConfig) {
+        showOnboardingWizard('create_account');
+        return;
+      }
 
-      // Remove notification after delay and open login
-      setTimeout(() => {
-        notification.remove();
-        openLoginModal();
-      }, 1500);
+      // Fallback: Initialize onboarding and then show wizard
+      if (typeof initializeOnboarding === 'function') {
+        initializeOnboarding().then(() => {
+          if (typeof showOnboardingWizard === 'function') {
+            showOnboardingWizard('create_account');
+          } else {
+            openLoginModal();
+          }
+        }).catch(() => {
+          openLoginModal();
+        });
+        return;
+      }
+
+      // Ultimate fallback: show regular login modal
+      openLoginModal();
+    }
+
+    // Show the traditional login modal (for returning users)
+    function showLoginModal() {
+      openLoginModal();
     }
 
     function closeLoginModal() {
@@ -15395,6 +15419,11 @@
         try {
           await loadUserProfile(session.user.id);
           console.log('🔐 loadUserProfile completed');
+
+          // Check for prompts/reminders after profile load
+          if (typeof checkAndShowPrompts === 'function') {
+            setTimeout(() => checkAndShowPrompts(), 2000);
+          }
         } catch (err) {
           console.error('🔐 loadUserProfile failed:', err);
         }
