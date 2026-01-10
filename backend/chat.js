@@ -488,7 +488,7 @@ async function getChannelMessages(channelId, limit = 50) {
     const userIds = [...new Set(messages.map(m => m.user_id))];
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url')
+      .select('id, display_name, avatar_url, email')
       .in('id', userIds);
 
     const profileMap = new Map();
@@ -517,17 +517,20 @@ async function getChannelMessages(channelId, limit = 50) {
       });
     }
 
-    return messages.map(m => ({
-      id: m.id,
-      content: m.content,
-      createdAt: m.created_at,
-      user: {
-        id: m.user_id,
-        displayName: profileMap.get(m.user_id)?.display_name || 'Unknown User',
-        avatar: profileMap.get(m.user_id)?.avatar_url
-      },
-      reactions: reactionsMap.get(m.id) || []
-    }));
+    return messages.map(m => {
+      const profile = profileMap.get(m.user_id);
+      return {
+        id: m.id,
+        content: m.content,
+        createdAt: m.created_at,
+        user: {
+          id: m.user_id,
+          displayName: profile?.display_name || profile?.email?.split('@')[0] || 'Unknown User',
+          avatar: profile?.avatar_url
+        },
+        reactions: reactionsMap.get(m.id) || []
+      };
+    });
   } catch (err) {
     console.error('Error getting messages:', err);
     return [];
