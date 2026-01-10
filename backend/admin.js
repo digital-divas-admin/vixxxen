@@ -7,7 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('./middleware/auth');
+const { requireAdmin, supabase } = require('./middleware/auth');
 const { getSetting, setSetting, getGpuConfig, DEFAULTS } = require('./services/settingsService');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
 
@@ -276,6 +276,213 @@ router.post('/warmup', async (req, res) => {
       success: false,
       error: error.message || 'Failed to trigger warmup'
     });
+  }
+});
+
+// ===========================================
+// LoRA / Character Grant Management
+// ===========================================
+
+/**
+ * GET /api/admin/users/search
+ * Search for a user by email
+ */
+router.get('/users/search', async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Search for user by email in profiles (joined with auth.users)
+    const { data: users, error } = await supabase
+      .from('profiles')
+      .select('id, email, display_name, subscription_tier, role')
+      .ilike('email', `%${email}%`)
+      .limit(10);
+
+    if (error) {
+      console.error('User search error:', error);
+      return res.status(500).json({ error: 'Failed to search users' });
+    }
+
+    res.json({ users: users || [] });
+  } catch (error) {
+    console.error('User search error:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+/**
+ * GET /api/admin/users/:userId/characters
+ * Get characters owned by a user
+ */
+router.get('/users/:userId/characters', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Get user's owned characters
+    const { data: ownedCharacters, error } = await supabase
+      .from('user_characters')
+      .select(`
+        id,
+        purchased_at,
+        amount_paid,
+        character:marketplace_characters (
+          id,
+          name,
+          category,
+          image_url,
+          lora_url
+        )
+      `)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Fetch owned characters error:', error);
+      return res.status(500).json({ error: 'Failed to fetch owned characters' });
+    }
+
+    res.json({
+      ownedCharacters: ownedCharacters || [],
+      userId
+    });
+  } catch (error) {
+    console.error('Fetch owned characters error:', error);
+    res.status(500).json({ error: 'Failed to fetch owned characters' });
+  }
+});
+
+/**
+ * GET /api/admin/characters
+ * Get all available characters/LoRAs
+ */
+router.get('/characters', async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { data: characters, error } = await supabase
+      .from('marketplace_characters')
+      .select('id, name, category, image_url, lora_url, price')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Fetch characters error:', error);
+      return res.status(500).json({ error: 'Failed to fetch characters' });
+    }
+
+    res.json({ characters: characters || [] });
+  } catch (error) {
+    console.error('Fetch characters error:', error);
+    res.status(500).json({ error: 'Failed to fetch characters' });
+  }
+});
+
+/**
+ * POST /api/admin/grant-character
+ * Grant a user access to a character/LoRA
+ */
+router.post('/grant-character', async (req, res) => {
+  try {
+    const { userId, characterId } = req.body;
+
+    if (!userId || !characterId) {
+      return res.status(400).json({ error: 'userId and characterId are required' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Check if already granted
+    const { data: existing } = await supabase
+      .from('user_characters')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('character_id', characterId)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ error: 'User already has access to this character' });
+    }
+
+    // Grant access (amount_paid = 0 indicates admin grant)
+    const { data, error } = await supabase
+      .from('user_characters')
+      .insert({
+        user_id: userId,
+        character_id: characterId,
+        amount_paid: 0
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Grant character error:', error);
+      return res.status(500).json({ error: 'Failed to grant character access' });
+    }
+
+    console.log(`🎁 Admin ${req.user.email} granted character ${characterId} to user ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'Character access granted',
+      grant: data
+    });
+  } catch (error) {
+    console.error('Grant character error:', error);
+    res.status(500).json({ error: 'Failed to grant character access' });
+  }
+});
+
+/**
+ * POST /api/admin/revoke-character
+ * Revoke a user's access to a character/LoRA
+ */
+router.post('/revoke-character', async (req, res) => {
+  try {
+    const { userId, characterId } = req.body;
+
+    if (!userId || !characterId) {
+      return res.status(400).json({ error: 'userId and characterId are required' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { error } = await supabase
+      .from('user_characters')
+      .delete()
+      .eq('user_id', userId)
+      .eq('character_id', characterId);
+
+    if (error) {
+      console.error('Revoke character error:', error);
+      return res.status(500).json({ error: 'Failed to revoke character access' });
+    }
+
+    console.log(`🚫 Admin ${req.user.email} revoked character ${characterId} from user ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'Character access revoked'
+    });
+  } catch (error) {
+    console.error('Revoke character error:', error);
+    res.status(500).json({ error: 'Failed to revoke character access' });
   }
 });
 

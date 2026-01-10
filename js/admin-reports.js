@@ -531,3 +531,201 @@ async function addBulkBlockedWords() {
     alert('Failed to add words. Please try again.');
   }
 }
+
+// ===========================================
+// Character Grants Admin Functions
+// ===========================================
+
+let selectedGrantUserId = null;
+let allCharacters = [];
+
+async function loadCharacterGrantsData() {
+  try {
+    const response = await authFetch('/api/admin/characters');
+    if (response.ok) {
+      const data = await response.json();
+      allCharacters = data.characters || [];
+      populateCharacterSelect();
+    }
+  } catch (error) {
+    console.error('Error loading characters:', error);
+  }
+}
+
+function populateCharacterSelect() {
+  const select = document.getElementById('grantCharacterSelect');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Select a character...</option>';
+  allCharacters.forEach(char => {
+    const option = document.createElement('option');
+    option.value = char.id;
+    option.textContent = `${char.name} (${char.category})`;
+    select.appendChild(option);
+  });
+}
+
+async function searchUserForGrant() {
+  const searchInput = document.getElementById('grantUserSearch');
+  const resultsDiv = document.getElementById('grantUserSearchResults');
+
+  const email = searchInput.value.trim();
+  if (!email) {
+    alert('Please enter an email to search');
+    return;
+  }
+
+  try {
+    const response = await authFetch(`/api/admin/users/search?email=${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error('Search failed');
+
+    const data = await response.json();
+    const users = data.users || [];
+
+    if (users.length === 0) {
+      resultsDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 12px;">No users found</div>';
+      resultsDiv.style.display = 'block';
+      return;
+    }
+
+    resultsDiv.innerHTML = users.map(user => `
+      <div onclick="selectUserForGrant('${user.id}', '${user.email}', '${user.subscription_tier || 'free'}', '${user.role || 'user'}')"
+           style="padding: 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center;"
+           onmouseover="this.style.background='rgba(157, 78, 221, 0.1)'"
+           onmouseout="this.style.background='transparent'">
+        <div>
+          <div style="font-weight: 500; color: #fff;">${user.email}</div>
+          <div style="font-size: 0.8rem; color: #888;">Tier: ${user.subscription_tier || 'free'} | Role: ${user.role || 'user'}</div>
+        </div>
+        <span style="color: #9d4edd;">Select</span>
+      </div>
+    `).join('');
+
+    resultsDiv.style.display = 'block';
+  } catch (error) {
+    console.error('Error searching users:', error);
+    alert('Failed to search users. Please try again.');
+  }
+}
+
+async function selectUserForGrant(userId, email, tier, role) {
+  selectedGrantUserId = userId;
+
+  document.getElementById('grantUserSearchResults').style.display = 'none';
+  document.getElementById('grantUserSelected').style.display = 'block';
+  document.getElementById('grantUserEmail').textContent = email;
+  document.getElementById('grantUserInfo').textContent = `Tier: ${tier} | Role: ${role}`;
+
+  await loadUserCharacters(userId);
+}
+
+function clearSelectedUser() {
+  selectedGrantUserId = null;
+  document.getElementById('grantUserSelected').style.display = 'none';
+  document.getElementById('grantUserSearch').value = '';
+  document.getElementById('grantUserCharacters').innerHTML = '<div style="color: #888; font-size: 0.9rem;">Select a user to view their characters</div>';
+}
+
+async function loadUserCharacters(userId) {
+  const container = document.getElementById('grantUserCharacters');
+  container.innerHTML = '<div style="color: #888;">Loading...</div>';
+
+  try {
+    const response = await authFetch(`/api/admin/users/${userId}/characters`);
+    if (!response.ok) throw new Error('Failed to load characters');
+
+    const data = await response.json();
+    const ownedCharacters = data.ownedCharacters || [];
+
+    if (ownedCharacters.length === 0) {
+      container.innerHTML = '<div style="color: #888; font-size: 0.9rem;">No characters owned</div>';
+      return;
+    }
+
+    container.innerHTML = ownedCharacters.map(uc => {
+      const char = uc.character;
+      const isAdminGrant = uc.amount_paid === 0 || uc.amount_paid === '0' || uc.amount_paid === null;
+      return `
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+          ${char.image_url ? `<img src="${char.image_url}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(157, 78, 221, 0.2); display: flex; align-items: center; justify-content: center;">🎭</div>'}
+          <div style="flex: 1;">
+            <div style="font-weight: 500; color: #fff;">${char.name}</div>
+            <div style="font-size: 0.75rem; color: #888;">${char.category}${isAdminGrant ? ' • Admin Grant' : ''}</div>
+          </div>
+          <button onclick="revokeCharacterAccess('${char.id}', '${char.name}')" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #ef4444; cursor: pointer; font-size: 0.8rem;">
+            Revoke
+          </button>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Error loading user characters:', error);
+    container.innerHTML = '<div style="color: #ef4444; font-size: 0.9rem;">Failed to load characters</div>';
+  }
+}
+
+async function grantCharacterAccess() {
+  if (!selectedGrantUserId) {
+    alert('Please select a user first');
+    return;
+  }
+
+  const select = document.getElementById('grantCharacterSelect');
+  const characterId = select.value;
+
+  if (!characterId) {
+    alert('Please select a character to grant');
+    return;
+  }
+
+  try {
+    const response = await authFetch('/api/admin/grant-character', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: selectedGrantUserId, characterId })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || 'Failed to grant character access');
+      return;
+    }
+
+    alert('Character access granted successfully!');
+    select.value = '';
+    await loadUserCharacters(selectedGrantUserId);
+  } catch (error) {
+    console.error('Error granting character:', error);
+    alert('Failed to grant character access. Please try again.');
+  }
+}
+
+async function revokeCharacterAccess(characterId, characterName) {
+  if (!selectedGrantUserId) return;
+
+  if (!confirm(`Are you sure you want to revoke access to "${characterName}"?`)) {
+    return;
+  }
+
+  try {
+    const response = await authFetch('/api/admin/revoke-character', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: selectedGrantUserId, characterId })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || 'Failed to revoke character access');
+      return;
+    }
+
+    alert('Character access revoked.');
+    await loadUserCharacters(selectedGrantUserId);
+  } catch (error) {
+    console.error('Error revoking character:', error);
+    alert('Failed to revoke character access. Please try again.');
+  }
+}
