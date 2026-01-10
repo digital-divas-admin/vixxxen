@@ -18989,11 +18989,7 @@
       if (!currentUser) return true; // Not logged in, skip check
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/membership/rules-status`, {
-          headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          }
-        });
+        const response = await authFetch(`${API_BASE_URL}/api/membership/rules-status`);
         if (response.ok) {
           const data = await response.json();
           userHasAcknowledgedRules = data.acknowledged;
