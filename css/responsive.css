@@ -379,8 +379,9 @@
   }
 
   /* Zoom slider - hide on tablet */
-  .zoom-controls {
-    display: none;
+  .zoom-controls,
+  .zoom-slider-container {
+    display: none !important;
   }
 }
 
@@ -438,8 +439,12 @@
   }
 
   .model-tab {
-    padding: 8px 12px;
+    padding: 8px 10px;
     font-size: 0.8rem;
+    min-width: 0;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Content mode */
@@ -543,11 +548,17 @@
   /* Compact model tabs */
   .model-tabs {
     gap: 4px;
+    justify-content: flex-start;
   }
 
   .model-tab {
-    padding: 6px 10px;
-    font-size: 0.75rem;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    min-width: 0;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Compact content mode */
