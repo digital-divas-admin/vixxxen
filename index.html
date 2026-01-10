@@ -7969,6 +7969,7 @@
               <button class="inpaint-btn secondary" onclick="clearInpaintMask()">Clear Mask</button>
               <button class="inpaint-btn secondary" onclick="undoInpaintMask()">Undo</button>
             </div>
+            <button class="inpaint-btn secondary" onclick="clearInpaintImage()" style="width: 100%; margin-top: 8px;">Clear Image</button>
           </div>
 
           <div class="inpaint-divider"></div>
@@ -7979,8 +7980,8 @@
             <textarea id="inpaintPrompt" class="inpaint-textarea" placeholder="a beautiful woman"></textarea>
           </div>
 
-          <!-- LoRA Selection -->
-          <div class="inpaint-control-section">
+          <!-- LoRA Selection (SFW only) -->
+          <div class="inpaint-control-section" id="inpaintLoraSection">
             <div class="inpaint-control-label">LoRA (Optional)</div>
             <select id="inpaintLoraSelect" class="inpaint-select">
               <option value="">None</option>
@@ -13067,10 +13068,42 @@
       ctx.putImageData(previousState, 0, 0);
     }
 
+    function clearInpaintImage() {
+      // Reset inpaint image state
+      inpaintImage = null;
+      inpaintMaskHistory = [];
+
+      // Hide canvases
+      const canvas = document.getElementById('inpaintCanvas');
+      const maskCanvas = document.getElementById('inpaintMaskCanvas');
+      if (canvas) canvas.style.display = 'none';
+      if (maskCanvas) maskCanvas.style.display = 'none';
+
+      // Show upload placeholder
+      const placeholder = document.getElementById('inpaintUploadPlaceholder');
+      if (placeholder) placeholder.style.display = 'flex';
+
+      // Clear file input
+      const fileInput = document.getElementById('inpaintImageInput');
+      if (fileInput) fileInput.value = '';
+    }
+
     function setInpaintMode(mode) {
       inpaintMode = mode;
       document.getElementById('inpaintSfwBtn').classList.toggle('active', mode === 'sfw');
       document.getElementById('inpaintNsfwBtn').classList.toggle('active', mode === 'nsfw');
+
+      // Hide LoRA dropdown in NSFW mode (not needed for NSFW inpaint)
+      const loraSection = document.getElementById('inpaintLoraSection');
+      if (loraSection) {
+        loraSection.style.display = mode === 'nsfw' ? 'none' : 'flex';
+      }
+
+      // Clear LoRA selection when switching to NSFW
+      if (mode === 'nsfw') {
+        const loraSelect = document.getElementById('inpaintLoraSelect');
+        if (loraSelect) loraSelect.value = '';
+      }
     }
 
     function createMaskedImage() {
