@@ -320,6 +320,10 @@
     gap: 10px;
   }
 
+  .content-mode-info {
+    display: none;
+  }
+
   /* Prompt textarea */
   .prompt-input {
     min-height: 80px;
