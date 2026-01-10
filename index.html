@@ -7278,6 +7278,9 @@
     <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" class="navbar-logo">
   </nav>
 
+  <!-- Mobile overlay for sidebar -->
+  <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
   <div class="container">
     <!-- Main Navigation Sidebar -->
     <div class="main-nav">
@@ -9842,11 +9845,33 @@
     function toggleSidebar() {
       const mainNav = document.querySelector('.main-nav');
       const siteFooter = document.querySelector('.site-footer');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+      const isMobile = window.innerWidth <= 768;
 
-      mainNav.classList.toggle('collapsed');
+      if (isMobile) {
+        // On mobile, toggle mobile-open class (sidebar slides in/out)
+        mainNav.classList.toggle('mobile-open');
+        if (mobileOverlay) {
+          mobileOverlay.classList.toggle('active');
+        }
+      } else {
+        // On desktop, toggle collapsed class
+        mainNav.classList.toggle('collapsed');
+        if (siteFooter) {
+          siteFooter.classList.toggle('sidebar-collapsed');
+        }
+      }
+    }
 
-      if (siteFooter) {
-        siteFooter.classList.toggle('sidebar-collapsed');
+    // Close mobile sidebar when selecting a tab
+    function closeMobileSidebar() {
+      const mainNav = document.querySelector('.main-nav');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+      if (window.innerWidth <= 768) {
+        mainNav.classList.remove('mobile-open');
+        if (mobileOverlay) {
+          mobileOverlay.classList.remove('active');
+        }
       }
     }
 
@@ -11227,6 +11252,9 @@
 
     // Switch between main navigation tabs (Image, Video, Edit, Inpaint, Caption)
     function switchMainTab(tab) {
+      // Close mobile sidebar when switching tabs
+      closeMobileSidebar();
+
       // Hide all tab sections
       document.querySelectorAll('.tab-section').forEach(section => {
         section.classList.remove('active');
