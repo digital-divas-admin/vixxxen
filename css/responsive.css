@@ -39,15 +39,17 @@
     height: 30px;
   }
 
-  /* Body - allow scrolling, no fixed height */
+  /* Body - flex column to push footer down */
   body {
     height: auto;
     min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Container - natural flow, no fixed heights */
+  /* Container - fills available space */
   .container {
     flex-direction: column;
     height: auto !important;
@@ -55,6 +57,7 @@
     margin-top: 52px;
     padding-bottom: 0;
     overflow: visible;
+    flex: 1;
   }
 
   /* =========================================
@@ -154,7 +157,8 @@
     bottom: auto !important;
     width: 100%;
     padding: 16px;
-    margin-top: auto;
+    margin-top: 0;
+    flex-shrink: 0;
   }
 
   .site-footer.sidebar-collapsed {
