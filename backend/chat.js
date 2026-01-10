@@ -48,7 +48,7 @@ function initializeChat(io) {
         connectedUsers.set(socket.id, {
           userId: userId,
           email,
-          displayName: displayName || email?.split('@')[0] || 'Anonymous',
+          displayName: displayName || 'New User',
           avatar,
           tier: userTier,
           isAdmin: isAdmin,
@@ -517,17 +517,20 @@ async function getChannelMessages(channelId, limit = 50) {
       });
     }
 
-    return messages.map(m => ({
-      id: m.id,
-      content: m.content,
-      createdAt: m.created_at,
-      user: {
-        id: m.user_id,
-        displayName: profileMap.get(m.user_id)?.display_name || 'Unknown User',
-        avatar: profileMap.get(m.user_id)?.avatar_url
-      },
-      reactions: reactionsMap.get(m.id) || []
-    }));
+    return messages.map(m => {
+      const profile = profileMap.get(m.user_id);
+      return {
+        id: m.id,
+        content: m.content,
+        createdAt: m.created_at,
+        user: {
+          id: m.user_id,
+          displayName: profile?.display_name || 'New User',
+          avatar: profile?.avatar_url
+        },
+        reactions: reactionsMap.get(m.id) || []
+      };
+    });
   } catch (err) {
     console.error('Error getting messages:', err);
     return [];
@@ -592,7 +595,7 @@ async function getAllMembers() {
     // Combine data
     return profiles.map(p => ({
       id: p.id,
-      displayName: p.display_name || p.email?.split('@')[0] || 'Unknown',
+      displayName: p.display_name || 'New User',
       email: p.email,
       avatar: p.avatar_url,
       role: p.role || 'user',
