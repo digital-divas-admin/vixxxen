@@ -589,13 +589,13 @@ async function searchUserForGrant() {
     }
 
     resultsDiv.innerHTML = users.map(user => `
-      <div onclick="selectUserForGrant('${user.id}', '${user.email}', '${user.subscription_tier || 'free'}', '${user.role || 'user'}')"
+      <div onclick="selectUserForGrant('${user.id}', '${user.email}', '${user.plan || 'free'}', '${user.role || 'user'}')"
            style="padding: 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center;"
            onmouseover="this.style.background='rgba(157, 78, 221, 0.1)'"
            onmouseout="this.style.background='transparent'">
         <div>
           <div style="font-weight: 500; color: #fff;">${user.email}</div>
-          <div style="font-size: 0.8rem; color: #888;">Tier: ${user.subscription_tier || 'free'} | Role: ${user.role || 'user'}</div>
+          <div style="font-size: 0.8rem; color: #888;">Plan: ${user.plan || 'free'} | Role: ${user.role || 'user'}</div>
         </div>
         <span style="color: #9d4edd;">Select</span>
       </div>
@@ -608,13 +608,13 @@ async function searchUserForGrant() {
   }
 }
 
-async function selectUserForGrant(userId, email, tier, role) {
+async function selectUserForGrant(userId, email, plan, role) {
   selectedGrantUserId = userId;
 
   document.getElementById('grantUserSearchResults').style.display = 'none';
   document.getElementById('grantUserSelected').style.display = 'block';
   document.getElementById('grantUserEmail').textContent = email;
-  document.getElementById('grantUserInfo').textContent = `Tier: ${tier} | Role: ${role}`;
+  document.getElementById('grantUserInfo').textContent = `Plan: ${plan} | Role: ${role}`;
 
   await loadUserCharacters(userId);
 }

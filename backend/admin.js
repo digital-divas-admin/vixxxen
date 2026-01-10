@@ -299,10 +299,10 @@ router.get('/users/search', async (req, res) => {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
-    // Search for user by email in profiles (joined with auth.users)
+    // Search for user by email in profiles
     const { data: users, error } = await supabase
       .from('profiles')
-      .select('id, email, display_name, subscription_tier, role')
+      .select('id, email, display_name, plan, role')
       .ilike('email', `%${email}%`)
       .limit(10);
 
