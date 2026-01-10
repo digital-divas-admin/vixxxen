@@ -194,6 +194,7 @@ async function updateProfile() {
       .from('profiles')
       .update({
         full_name: newName,
+        display_name: newName,
         updated_at: new Date().toISOString()
       })
       .eq('id', currentUser.id);
@@ -202,6 +203,7 @@ async function updateProfile() {
 
     // Update local user object
     currentUser.full_name = newName;
+    currentUser.display_name = newName;
 
     // Update UI
     const userNameDisplay = document.getElementById('userName');

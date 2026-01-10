@@ -15282,6 +15282,13 @@
 
             console.log('📊 Profile loaded:', { credits: userCredits, plan: userPlan, characters: ownedCharacters });
 
+            // Merge profile data into currentUser for chat and other features
+            if (currentUser) {
+              currentUser.display_name = data.profile.display_name;
+              currentUser.full_name = data.profile.full_name;
+              currentUser.avatar_url = data.profile.avatar_url;
+            }
+
             // Load history in parallel
             Promise.all([
               displayImageHistory().catch(err => console.warn('📁 Could not load image history:', err.message)),
@@ -15346,6 +15353,13 @@
         }
 
         console.log('📊 Profile loaded:', { credits: userCredits, plan: userPlan, characters: ownedCharacters });
+
+        // Merge profile data into currentUser for chat and other features
+        if (currentUser) {
+          currentUser.display_name = profile.display_name;
+          currentUser.full_name = profile.full_name;
+          currentUser.avatar_url = profile.avatar_url;
+        }
 
         // Load history
         try { await displayImageHistory(); } catch (e) { console.warn('📁 Could not load image history:', e.message); }
@@ -16408,12 +16422,12 @@
       chatSocket.on('connect', () => {
         console.log('Connected to chat server');
 
-        // Authenticate with user info
+        // Authenticate with user info - use profile data from currentUser for display name
         chatSocket.emit('authenticate', {
           userId: user.id,
           email: user.email,
-          displayName: user.user_metadata?.display_name || user.email?.split('@')[0],
-          avatar: user.user_metadata?.avatar_url
+          displayName: currentUser?.display_name || currentUser?.full_name || user.email?.split('@')[0],
+          avatar: currentUser?.avatar_url || user.user_metadata?.avatar_url
         });
       });
 
@@ -17159,8 +17173,8 @@
           chatSocket.emit('authenticate', {
             userId: currentUser.id,
             email: currentUser.email,
-            displayName: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0],
-            avatar: currentUser.user_metadata?.avatar_url
+            displayName: currentUser.display_name || currentUser.full_name || currentUser.email?.split('@')[0],
+            avatar: currentUser.avatar_url
           });
         }
 
@@ -17212,8 +17226,8 @@
           chatSocket.emit('authenticate', {
             userId: currentUser.id,
             email: currentUser.email,
-            displayName: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0],
-            avatar: currentUser.user_metadata?.avatar_url
+            displayName: currentUser.display_name || currentUser.full_name || currentUser.email?.split('@')[0],
+            avatar: currentUser.avatar_url
           });
         }
 

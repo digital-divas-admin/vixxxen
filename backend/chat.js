@@ -488,7 +488,7 @@ async function getChannelMessages(channelId, limit = 50) {
     const userIds = [...new Set(messages.map(m => m.user_id))];
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url')
+      .select('id, display_name, full_name, avatar_url')
       .in('id', userIds);
 
     const profileMap = new Map();
@@ -525,7 +525,7 @@ async function getChannelMessages(channelId, limit = 50) {
         createdAt: m.created_at,
         user: {
           id: m.user_id,
-          displayName: profile?.display_name || 'New User',
+          displayName: profile?.display_name || profile?.full_name || 'New User',
           avatar: profile?.avatar_url
         },
         reactions: reactionsMap.get(m.id) || []
@@ -568,7 +568,7 @@ async function getAllMembers() {
     // Get all profiles with memberships
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url, email, role, created_at')
+      .select('id, display_name, full_name, avatar_url, email, role, created_at')
       .order('created_at', { ascending: false });
 
     if (profileError) {
@@ -595,7 +595,7 @@ async function getAllMembers() {
     // Combine data
     return profiles.map(p => ({
       id: p.id,
-      displayName: p.display_name || 'New User',
+      displayName: p.display_name || p.full_name || 'New User',
       email: p.email,
       avatar: p.avatar_url,
       role: p.role || 'user',
