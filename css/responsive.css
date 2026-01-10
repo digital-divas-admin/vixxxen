@@ -368,6 +368,24 @@
     max-height: 150px;
   }
 
+  /* Reference upload - smaller on tablet */
+  .reference-upload {
+    padding: 20px 16px;
+  }
+
+  .reference-upload-icon {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+  }
+
+  .reference-upload-text {
+    font-size: 0.85rem;
+  }
+
+  .reference-upload-hint {
+    font-size: 0.7rem;
+  }
+
   /* Generated images header */
   .output-header {
     flex-wrap: wrap;
@@ -378,7 +396,8 @@
     font-size: 1.3rem;
   }
 
-  /* Zoom slider - hide on tablet */
+  /* Hide selection toggle and zoom slider on tablet */
+  .selection-mode-toggle,
   .zoom-controls,
   .zoom-slider-container {
     display: none !important;
@@ -559,6 +578,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Reference upload - compact on small phones */
+  .reference-upload {
+    padding: 14px 12px;
+  }
+
+  .reference-upload-icon {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .reference-upload-text {
+    font-size: 0.75rem;
   }
 
   /* Compact content mode */
