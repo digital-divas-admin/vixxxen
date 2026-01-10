@@ -16,7 +16,11 @@
 
 /* Mobile */
 @media (max-width: 768px) {
-  /* Top Navbar - mobile adjustments */
+  /* =========================================
+     CORE LAYOUT - Make everything scrollable
+     ========================================= */
+
+  /* Top Navbar - smaller on mobile */
   .top-navbar {
     height: 50px;
     padding: 0 12px;
@@ -27,27 +31,36 @@
     height: 28px;
   }
 
-  /* Container - stack vertically */
-  .container {
-    flex-direction: column;
-    height: auto;
-    min-height: calc(100vh - 50px);
-    margin-top: 50px;
-    padding-bottom: 0;
+  /* Body - allow scrolling */
+  body {
+    overflow-x: hidden;
     overflow-y: auto;
   }
 
-  /* Sidebar - hidden by default on mobile, overlay when open */
+  /* Container - natural flow, no fixed heights */
+  .container {
+    flex-direction: column;
+    height: auto !important;
+    min-height: auto;
+    margin-top: 50px;
+    padding-bottom: 0;
+    overflow: visible;
+  }
+
+  /* =========================================
+     SIDEBAR - Hidden, slides in as overlay
+     ========================================= */
   .main-nav {
     position: fixed;
     top: 50px;
     left: 0;
     bottom: 0;
     width: 80px;
-    height: calc(100vh - 50px);
+    height: calc(100vh - 50px) !important;
     z-index: 999;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
+    background: var(--bg-secondary);
   }
 
   .main-nav.mobile-open {
@@ -58,7 +71,7 @@
     transform: translateX(-100%);
   }
 
-  /* Mobile overlay when sidebar is open */
+  /* Mobile overlay */
   .mobile-overlay {
     display: none;
     position: fixed;
@@ -74,24 +87,31 @@
     display: block;
   }
 
-  /* Tab sections - full width, stack content */
+  /* =========================================
+     TAB SECTIONS - Stack vertically
+     ========================================= */
   .tab-section {
-    flex-direction: column;
+    flex-direction: column !important;
     width: 100%;
+    min-height: auto;
   }
 
   .tab-section.active {
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
-  /* Left panel (prompts/controls) - on top */
+  /* Left panel (controls) - flows naturally */
   .left-panel {
-    width: 100%;
-    max-height: none;
-    height: auto;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: auto;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
   }
 
   .left-panel .header {
@@ -100,79 +120,35 @@
 
   .left-panel .content {
     padding: 12px 16px;
-    max-height: none;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  /* Right panel (outputs) - below, scrollable */
+  /* Right panel (outputs) - flows below */
   .right-panel {
-    width: 100%;
-    flex: 1;
-    min-height: 50vh;
-    padding: 12px;
-  }
-
-  /* Output grid - adjust for mobile */
-  .output-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 8px;
-  }
-
-  /* Video section adjustments */
-  #videoSection .left-panel {
-    height: auto;
-    max-height: none;
-  }
-
-  #videoSection .content {
-    max-height: none;
-    overflow-y: visible;
-  }
-
-  /* Inpaint container - stack vertically */
-  .inpaint-container {
-    flex-direction: column;
-    height: auto;
-    min-height: calc(100vh - 100px);
-  }
-
-  .inpaint-canvas-area {
+    width: 100% !important;
     flex: none;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
     min-height: 300px;
+    padding: 12px;
+    overflow: visible !important;
   }
 
-  .inpaint-right-panel {
-    width: 100%;
-  }
-
-  /* Caption container - full height on mobile */
-  .caption-container {
-    height: auto;
-    min-height: calc(100vh - 100px);
-  }
-
-  .caption-welcome {
-    margin-top: 5vh;
-    padding: 0 16px;
-  }
-
-  .caption-input-wrapper {
-    max-width: 100%;
-    padding: 0 12px;
-  }
-
-  /* Footer - fixed at bottom, full width */
+  /* =========================================
+     FOOTER - At the end of content
+     ========================================= */
   .site-footer {
-    position: relative;
-    left: 0;
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
     width: 100%;
-    padding: 12px 16px;
+    padding: 16px;
+    margin-top: auto;
   }
 
   .site-footer.sidebar-collapsed {
-    left: 0;
+    left: auto !important;
   }
 
   .footer-main {
@@ -184,14 +160,82 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 12px;
+    font-size: 0.85rem;
   }
 
-  /* Model tabs - scrollable on mobile */
+  .footer-ai-disclosure {
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  /* =========================================
+     SPECIFIC SECTIONS
+     ========================================= */
+
+  /* Video section */
+  #videoSection .left-panel {
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  #videoSection .content {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Inpaint container */
+  .inpaint-container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: auto;
+  }
+
+  .inpaint-canvas-area {
+    flex: none;
+    width: 100% !important;
+    max-width: 100%;
+    height: auto;
+    min-height: 250px;
+  }
+
+  .inpaint-right-panel {
+    width: 100% !important;
+  }
+
+  /* Caption container */
+  .caption-container {
+    height: auto !important;
+    min-height: 60vh;
+  }
+
+  .caption-welcome {
+    margin-top: 5vh;
+    padding: 0 16px;
+  }
+
+  .caption-input-wrapper {
+    max-width: 100%;
+    padding: 0 12px 20px;
+  }
+
+  /* =========================================
+     UI COMPONENTS
+     ========================================= */
+
+  /* Output grid */
+  .output-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  /* Model tabs - horizontal scroll */
   .model-tabs {
     overflow-x: auto;
     flex-wrap: nowrap;
     gap: 8px;
     padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .model-tab {
@@ -206,11 +250,6 @@
     gap: 8px;
   }
 
-  /* Reference images area */
-  .reference-images-section {
-    padding: 12px;
-  }
-
   /* Prompt textarea */
   .prompt-input {
     min-height: 80px;
@@ -222,7 +261,17 @@
     font-size: 1rem;
   }
 
-  /* Admin panel adjustments */
+  /* Settings dropdowns */
+  .settings-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .settings-row select {
+    width: 100%;
+  }
+
+  /* Admin panel */
   .admin-container {
     flex-direction: column;
   }
@@ -234,7 +283,7 @@
   }
 
   .admin-content-area {
-    max-height: none;
+    max-height: none !important;
     padding: 16px;
   }
 
@@ -244,7 +293,7 @@
   }
 
   .marketplace-title {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
   }
 
   /* Education/Learn section */
@@ -254,24 +303,26 @@
 
   .education-sidebar {
     width: 100%;
-    max-height: 200px;
+    max-height: 150px;
     overflow-y: auto;
   }
 
-  /* Modals - full width on mobile */
+  /* Modals */
   .user-menu {
     width: calc(100% - 24px);
     right: 12px;
-    max-width: 320px;
+    max-width: 300px;
   }
 
   .modal-content {
     width: calc(100% - 24px);
     max-width: none;
     margin: 12px;
+    max-height: 90vh;
+    overflow-y: auto;
   }
 
-  /* Hide elements that clutter mobile */
+  /* Nav tab styling */
   .nav-label {
     font-size: 0.6rem;
   }
@@ -283,16 +334,43 @@
   .nav-tab {
     padding: 12px 0;
   }
+
+  /* Reference images */
+  .reference-images-section {
+    padding: 12px;
+  }
+
+  .reference-preview {
+    max-height: 150px;
+  }
+
+  /* Generated images header */
+  .output-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .output-header h2 {
+    font-size: 1.2rem;
+  }
+
+  /* Zoom slider */
+  .zoom-controls {
+    display: none;
+  }
 }
 
-/* Very small screens */
+/* =========================================
+   VERY SMALL SCREENS (phones)
+   ========================================= */
 @media (max-width: 480px) {
   .top-navbar {
     height: 46px;
+    padding: 0 10px;
   }
 
   .navbar-logo {
-    height: 24px;
+    height: 22px;
   }
 
   .container {
@@ -301,12 +379,17 @@
 
   .main-nav {
     top: 46px;
-    height: calc(100vh - 46px);
+    height: calc(100vh - 46px) !important;
     width: 70px;
   }
 
+  .mobile-overlay {
+    top: 46px;
+  }
+
   .output-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
   }
 
   .model-tabs {
@@ -329,6 +412,24 @@
 
   .generate-btn {
     padding: 12px;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+  }
+
+  .content-mode-label {
+    font-size: 0.75rem;
+  }
+
+  .content-mode-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .footer-links {
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .footer-links a {
+    font-size: 0.75rem;
   }
 }
