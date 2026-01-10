@@ -330,30 +330,46 @@ router.get('/users/:userId/characters', async (req, res) => {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
-    // Get user's owned characters
-    const { data: ownedCharacters, error } = await supabase
+    // Get user's owned character IDs
+    const { data: userChars, error: userCharsError } = await supabase
       .from('user_characters')
-      .select(`
-        id,
-        purchased_at,
-        amount_paid,
-        character:marketplace_characters (
-          id,
-          name,
-          category,
-          image_url,
-          lora_url
-        )
-      `)
+      .select('id, character_id, purchased_at, amount_paid')
       .eq('user_id', userId);
 
-    if (error) {
-      console.error('Fetch owned characters error:', error);
+    if (userCharsError) {
+      console.error('Fetch user characters error:', userCharsError);
       return res.status(500).json({ error: 'Failed to fetch owned characters' });
     }
 
+    if (!userChars || userChars.length === 0) {
+      return res.json({ ownedCharacters: [], userId });
+    }
+
+    // Get character details for owned characters
+    const characterIds = userChars.map(uc => uc.character_id);
+    const { data: characters, error: charsError } = await supabase
+      .from('marketplace_characters')
+      .select('id, name, category, image_url, lora_url')
+      .in('id', characterIds);
+
+    if (charsError) {
+      console.error('Fetch character details error:', charsError);
+      return res.status(500).json({ error: 'Failed to fetch character details' });
+    }
+
+    // Combine the data
+    const charMap = {};
+    (characters || []).forEach(c => { charMap[c.id] = c; });
+
+    const ownedCharacters = userChars.map(uc => ({
+      id: uc.id,
+      purchased_at: uc.purchased_at,
+      amount_paid: uc.amount_paid,
+      character: charMap[uc.character_id] || { id: uc.character_id, name: 'Unknown', category: 'Unknown' }
+    }));
+
     res.json({
-      ownedCharacters: ownedCharacters || [],
+      ownedCharacters,
       userId
     });
   } catch (error) {
