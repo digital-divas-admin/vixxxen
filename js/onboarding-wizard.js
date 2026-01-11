@@ -612,6 +612,8 @@ function renderChooseEducationStep(step) {
   const tiersHTML = educationTiers.map(tier => {
     const monthlyPrice = tier.price_monthly;
     const features = tier.features || [];
+    // Get a highlight/tagline for each tier
+    const tierHighlight = tier.description || getTierHighlight(tier.slug);
 
     return `
       <div class="tier-card ${wizardSelections.education_tier === tier.slug ? 'selected' : ''}"
@@ -623,7 +625,9 @@ function renderChooseEducationStep(step) {
             <span class="price-period">/mo</span>
           </div>
         </div>
-        <p class="tier-description">${tier.description || ''}</p>
+        <div class="tier-highlight">
+          <span class="highlight-text">${tierHighlight}</span>
+        </div>
         <ul class="tier-features">
           ${features.map(f => `<li>${f}</li>`).join('')}
         </ul>
@@ -1019,6 +1023,16 @@ function selectContentPlan(slug) {
 function selectEducationTier(slug) {
   wizardSelections.education_tier = slug;
   renderCurrentStep();
+}
+
+// Get tier highlight text based on slug
+function getTierHighlight(slug) {
+  const highlights = {
+    'silver': 'Getting Started',
+    'gold': 'Most Popular',
+    'platinum': 'Full Mastery'
+  };
+  return highlights[slug] || 'Learn & Grow';
 }
 
 // Handle plan selection (would integrate with payment)

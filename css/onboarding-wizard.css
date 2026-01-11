@@ -781,7 +781,7 @@
 /* Education Tiers Grid */
 .tiers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
 }
 
@@ -805,11 +805,11 @@
 }
 
 .tier-header {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .tier-name {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: #fff;
   margin-bottom: 8px;
@@ -822,6 +822,8 @@
 }
 
 .tier-price .price-amount {
+  font-size: 1.8rem;
+  font-weight: 700;
   color: #ff2ebb;
 }
 
@@ -829,6 +831,21 @@
   font-size: 0.8rem;
   color: #666;
   margin-top: 4px;
+}
+
+/* Tier Highlight Box (similar to plan credits box) */
+.tier-highlight {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.tier-highlight .highlight-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ff2ebb;
 }
 
 .tier-description {
@@ -845,9 +862,14 @@
 }
 
 .tier-features li {
-  padding: 6px 0;
+  padding: 8px 0;
   font-size: 0.85rem;
   color: #aaa;
+  border-bottom: 1px solid #333;
+}
+
+.tier-features li:last-child {
+  border-bottom: none;
 }
 
 .tier-features li::before {
