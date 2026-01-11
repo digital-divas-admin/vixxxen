@@ -1627,6 +1627,17 @@ function triggerOnboardingOrLogin(action = 'generate') {
     return onboardingConfig !== null;
   }
 
+  // Reset wizard state (call on logout)
+  function resetWizard() {
+    clearWizardState();
+    currentStepIndex = -1;
+    wizardSelections = {};
+    planBillingCycle = 'monthly';
+    educationBillingCycle = 'monthly';
+    selectedStarterCharacter = null;
+    purchasedPremiumCharacter = null;
+  }
+
   // Main entry points (called from other JS files)
   window.showOnboardingWizard = showOnboardingWizard;
   window.hideOnboardingWizard = hideOnboardingWizard;
@@ -1634,6 +1645,7 @@ function triggerOnboardingOrLogin(action = 'generate') {
   window.initializeOnboarding = initializeOnboarding;
   window.checkAndShowPrompts = checkAndShowPrompts;
   window.isWizardReady = isWizardReady;
+  window.resetWizard = resetWizard;
 
   // Step navigation (called from onclick in templates)
   window.nextStep = nextStep;

@@ -15248,6 +15248,11 @@
       userCredits = 0;
       ownedCharacters = ['aika', 'jessica', 'alexis']; // Reset to defaults
 
+      // Reset wizard state so next user starts fresh
+      if (typeof resetWizard === 'function') {
+        resetWizard();
+      }
+
       // Reset UI (with null checks)
       const userAvatar = document.getElementById('userAvatar');
       const userStatusDot = document.getElementById('userStatusDot');
