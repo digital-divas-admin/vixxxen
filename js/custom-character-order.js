@@ -728,50 +728,143 @@ function showCustomOrderSuccess(order) {
   const config = customCharacterConfig;
   const deliveryDays = order.is_rush ? (config?.rush_days || 2) : `${config?.standard_days_min || 3}-${config?.standard_days_max || 5}`;
 
-  content.innerHTML = `
-    <div style="padding: 60px 32px; text-align: center;">
-      <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4ade80, #22c55e); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
-        <svg width="40" height="40" fill="#fff" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+  // Load starter characters for selection
+  loadStarterCharactersForSelection().then(starters => {
+    const starterHTML = starters.length > 0 ? starters.map(char => `
+      <div class="interim-character-option" data-id="${char.id}" onclick="selectInterimCharacter('${char.id}')" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: all 0.2s;">
+        <div style="width: 60px; height: 60px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #9d4edd, #ff2ebb);">
+          ${char.image_url ? `<img src="${char.image_url}" alt="${char.name}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">✨</div>`}
+        </div>
+        <div style="flex: 1;">
+          <div style="color: #fff; font-weight: 500; font-size: 0.95rem;">${escapeHtml(char.name)}</div>
+          <div style="color: #888; font-size: 0.8rem;">${char.category || 'Starter Character'}</div>
+        </div>
+        <div class="interim-check" style="width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"></div>
       </div>
+    `).join('') : '<div style="color: #888; text-align: center; padding: 20px;">No starter characters available</div>';
 
-      <h2 style="color: #fff; font-size: 1.5rem; margin: 0 0 12px;">Order Submitted!</h2>
-      <p style="color: #888; font-size: 0.95rem; margin: 0 0 32px;">Your custom character order has been received.</p>
+    content.innerHTML = `
+      <div style="padding: 40px 32px; text-align: center;">
+        <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #4ade80, #22c55e); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+          <svg width="35" height="35" fill="#fff" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        </div>
 
-      <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; text-align: left; margin-bottom: 24px;">
-        <div style="display: grid; gap: 12px; font-size: 0.9rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #888;">Order Number</span>
-            <span style="color: #9d4edd; font-weight: 600;">#${order.order_number}</span>
+        <h2 style="color: #fff; font-size: 1.4rem; margin: 0 0 8px;">Order Submitted!</h2>
+        <p style="color: #888; font-size: 0.9rem; margin: 0 0 20px;">Order #${order.order_number} • ${escapeHtml(order.character_name)} • ${deliveryDays} business days</p>
+
+        <!-- Starter Character Selection -->
+        <div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.1), rgba(255, 46, 187, 0.1)); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 16px; padding: 24px; margin-bottom: 20px; text-align: left;">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">🎭</div>
+            <h3 style="color: #fff; font-size: 1.1rem; margin: 0 0 6px;">Pick a Free Character to Use While You Wait</h3>
+            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">Select a starter character to begin creating content immediately!</p>
           </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #888;">Character Name</span>
-            <span style="color: #fff;">${escapeHtml(order.character_name)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #888;">Estimated Delivery</span>
-            <span style="color: #fff;">${deliveryDays} business days</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #888;">Total</span>
-            <span style="color: #4ade80; font-weight: 600;">$${parseFloat(order.total_price).toFixed(2)}</span>
+
+          <div id="interimCharacterList" style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 8px;">
+            ${starterHTML}
           </div>
         </div>
-      </div>
 
-      <div style="background: rgba(157, 78, 221, 0.1); border: 1px solid rgba(157, 78, 221, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-        <div style="color: #aaa; font-size: 0.85rem; line-height: 1.5;">
-          ${order.interim_character_id ?
-            "You'll receive an email when your custom character is ready. In the meantime, you can start using your interim character!" :
-            "You'll receive an email when your custom character is ready to use."
-          }
+        <div id="selectedInterimInfo" style="display: none; background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+          <span style="color: #4ade80; font-size: 0.9rem;">✓ <span id="selectedInterimName"></span> selected as your starter character</span>
         </div>
-      </div>
 
-      <button onclick="closeCustomCharacterOrderModal()" style="padding: 14px 40px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 12px; color: #fff; cursor: pointer; font-size: 1rem; font-weight: 600;">
-        Got It!
-      </button>
-    </div>
-  `;
+        <button id="continueWithInterimBtn" onclick="continueWithInterimCharacter()" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 12px; color: #fff; cursor: pointer; font-size: 1rem; font-weight: 600; opacity: 0.5; pointer-events: none;" disabled>
+          Select a Character to Continue
+        </button>
+
+        <button onclick="skipInterimCharacter()" style="width: 100%; padding: 12px; background: transparent; border: none; color: #666; cursor: pointer; font-size: 0.85rem; margin-top: 8px;">
+          Skip for now
+        </button>
+      </div>
+    `;
+  });
+}
+
+// State for selected interim character
+let selectedInterimForCustomOrder = null;
+
+// Load starter characters from API
+async function loadStarterCharactersForSelection() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/onboarding/starter-characters`);
+    if (!response.ok) throw new Error('Failed to load characters');
+    const data = await response.json();
+    return data.characters || [];
+  } catch (error) {
+    console.error('Error loading starter characters:', error);
+    return [];
+  }
+}
+
+// Select interim character
+function selectInterimCharacter(characterId) {
+  selectedInterimForCustomOrder = characterId;
+
+  // Update visual selection
+  document.querySelectorAll('.interim-character-option').forEach(opt => {
+    const isSelected = opt.dataset.id === characterId;
+    opt.style.borderColor = isSelected ? '#9d4edd' : 'rgba(255,255,255,0.1)';
+    opt.style.background = isSelected ? 'rgba(157, 78, 221, 0.15)' : 'rgba(255,255,255,0.03)';
+    const check = opt.querySelector('.interim-check');
+    if (check) {
+      check.style.borderColor = isSelected ? '#4ade80' : 'rgba(255,255,255,0.2)';
+      check.style.background = isSelected ? '#4ade80' : 'transparent';
+      check.innerHTML = isSelected ? '<svg width="14" height="14" fill="#fff" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>' : '';
+    }
+  });
+
+  // Get character name
+  const selectedOpt = document.querySelector(`.interim-character-option[data-id="${characterId}"]`);
+  const charName = selectedOpt?.querySelector('div > div:first-child')?.textContent || 'Character';
+
+  // Show selected info
+  const infoEl = document.getElementById('selectedInterimInfo');
+  const nameEl = document.getElementById('selectedInterimName');
+  if (infoEl && nameEl) {
+    nameEl.textContent = charName;
+    infoEl.style.display = 'block';
+  }
+
+  // Enable continue button
+  const btn = document.getElementById('continueWithInterimBtn');
+  if (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    btn.textContent = `Continue with ${charName}`;
+  }
+}
+
+// Continue with selected interim character
+function continueWithInterimCharacter() {
+  if (!selectedInterimForCustomOrder) return;
+
+  // Close the custom order modal
+  closeCustomCharacterOrderModal();
+
+  // If in onboarding wizard, set the starter character and continue
+  if (typeof selectStarterCharacter === 'function') {
+    selectStarterCharacter(selectedInterimForCustomOrder);
+  }
+
+  // If wizard is open, move to next step
+  if (typeof nextStep === 'function' && document.getElementById('onboardingWizardModal')?.classList.contains('active')) {
+    // The character is already selected, so just continue
+    if (typeof handleCharacterContinue === 'function') {
+      handleCharacterContinue();
+    }
+  }
+}
+
+// Skip interim character selection
+function skipInterimCharacter() {
+  closeCustomCharacterOrderModal();
+
+  // If in wizard, just re-render current step so they can continue manually
+  if (typeof renderCurrentStep === 'function' && document.getElementById('onboardingWizardModal')?.classList.contains('active')) {
+    renderCurrentStep();
+  }
 }
 
 // Helper function (ensure it exists)
