@@ -9,6 +9,7 @@ let onboardingProgress = null;
 let contentPlans = [];
 let educationTiers = [];
 let starterCharacters = [];
+let premiumCharacters = []; // Marketplace characters (unique, paid)
 let currentStepIndex = 0;
 let billingCycle = 'monthly'; // or 'annual'
 let wizardSelections = {};
@@ -77,6 +78,22 @@ async function loadStarterCharacters() {
   return [];
 }
 
+// Load premium marketplace characters (non-starter, paid)
+async function loadPremiumCharacters() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/characters`);
+    if (response.ok) {
+      const data = await response.json();
+      // Filter to only paid characters (not starters)
+      premiumCharacters = (data.characters || []).filter(c => !c.is_starter && c.price > 0);
+      return premiumCharacters;
+    }
+  } catch (error) {
+    console.error('Error loading premium characters:', error);
+  }
+  return [];
+}
+
 // Load user's onboarding progress (if logged in)
 async function loadOnboardingProgress() {
   try {
@@ -98,7 +115,8 @@ async function initializeOnboarding() {
     loadOnboardingConfig(),
     loadContentPlans(),
     loadEducationTiers(),
-    loadStarterCharacters()
+    loadStarterCharacters(),
+    loadPremiumCharacters()
   ]);
 }
 
@@ -251,10 +269,11 @@ function renderChooseCharacterStep(step) {
   // Color palette for character placeholders
   const placeholderColors = ['#ff2ebb', '#00b2ff', '#00cc88', '#9966ff', '#ff6600'];
 
-  const charactersHTML = starterCharacters.map((char, idx) => {
+  // Render free starter characters
+  const starterHTML = starterCharacters.map((char, idx) => {
     const bgColor = placeholderColors[idx % placeholderColors.length];
     return `
-    <div class="starter-character-card">
+    <div class="starter-character-card free-character">
       <div class="character-image">
         ${char.image_url
           ? `<img src="${char.image_url}" alt="${char.name}">`
@@ -266,9 +285,34 @@ function renderChooseCharacterStep(step) {
       <div class="character-info">
         <h3 class="character-name">${char.name}</h3>
         <p class="character-category">${char.category || ''}</p>
+        <span class="character-badge free-badge">Free</span>
       </div>
     </div>
   `}).join('');
+
+  // Render premium marketplace characters (limit to 6 for display)
+  const premiumToShow = premiumCharacters.slice(0, 6);
+  const premiumHTML = premiumToShow.map((char, idx) => {
+    const bgColor = placeholderColors[(idx + 2) % placeholderColors.length];
+    return `
+    <div class="starter-character-card premium-character" onclick="selectPremiumCharacter('${char.id}')">
+      <div class="character-image">
+        ${char.image_url
+          ? `<img src="${char.image_url}" alt="${char.name}">`
+          : `<div class="character-placeholder" style="background: linear-gradient(135deg, ${bgColor}, ${bgColor}dd);">
+              <span class="placeholder-icon">✨</span>
+              <span class="placeholder-name">${char.name}</span>
+            </div>`}
+      </div>
+      <div class="character-info">
+        <h3 class="character-name">${char.name}</h3>
+        <p class="character-category">${char.category || ''}</p>
+        <span class="character-badge premium-badge">$${char.price}</span>
+      </div>
+    </div>
+  `}).join('');
+
+  const morePremiumCount = premiumCharacters.length - premiumToShow.length;
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-character-step">
@@ -276,19 +320,44 @@ function renderChooseCharacterStep(step) {
       <h2 class="wizard-title">${step.title}</h2>
       <p class="wizard-subtitle">${step.subtitle}</p>
 
-      <div class="starter-characters-grid">
-        ${charactersHTML || '<p class="no-characters">Loading characters...</p>'}
+      <!-- Free Characters Section -->
+      <div class="character-section">
+        <div class="section-header">
+          <h3 class="section-title">Free Starter Characters</h3>
+          <p class="section-desc">Shared characters available to all users. <strong>SFW content only.</strong></p>
+        </div>
+        <div class="starter-characters-grid">
+          ${starterHTML || '<p class="no-characters">No free characters available</p>'}
+        </div>
       </div>
 
-      <p class="marketplace-hint">
-        Want more characters? You can browse our marketplace after signup!
-      </p>
+      <!-- Premium Characters Section -->
+      <div class="character-section premium-section">
+        <div class="section-header">
+          <h3 class="section-title">Premium Exclusive Characters</h3>
+          <p class="section-desc">
+            <strong>100% unique</strong> - each character is sold only once.
+            Full <strong>SFW + NSFW</strong> content capabilities.
+            When you buy, it's <strong>yours alone</strong>.
+          </p>
+        </div>
+        ${premiumCharacters.length > 0 ? `
+          <div class="starter-characters-grid premium-grid">
+            ${premiumHTML}
+          </div>
+          ${morePremiumCount > 0 ? `
+            <p class="more-characters-hint">
+              + ${morePremiumCount} more exclusive characters in the marketplace
+            </p>
+          ` : ''}
+        ` : '<p class="no-characters">Check back soon for exclusive characters!</p>'}
+      </div>
     </div>
   `;
 
   actionsEl.innerHTML = `
     <button class="wizard-btn primary" onclick="nextStep()">
-      ${step.continue_button_text || 'Continue'}
+      ${step.continue_button_text || 'Continue with Free Characters'}
     </button>
     ${!step.is_required ? `
       <button class="wizard-btn secondary" onclick="skipStep()">
@@ -296,6 +365,27 @@ function renderChooseCharacterStep(step) {
       </button>
     ` : ''}
   `;
+}
+
+// Handle premium character selection in wizard
+function selectPremiumCharacter(characterId) {
+  const char = premiumCharacters.find(c => c.id === characterId);
+  if (!char) return;
+
+  // Store selection for potential purchase
+  wizardSelections.premium_character = characterId;
+
+  // Show purchase confirmation
+  const confirmed = confirm(
+    `Purchase "${char.name}" for $${char.price}?\n\n` +
+    `This is an exclusive character that will be yours alone.\n` +
+    `Full SFW + NSFW content capabilities included.`
+  );
+
+  if (confirmed) {
+    // TODO: Integrate with payment system
+    alert('Payment integration coming soon! You can purchase characters from the marketplace after signup.');
+  }
 }
 
 // Step 3: Choose Plan
