@@ -1298,3 +1298,74 @@
   color: #888;
   font-size: 1rem;
 }
+
+/* Review Item with Toggle */
+.review-item-with-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-item-with-toggle .review-item {
+  padding: 0;
+}
+
+.item-billing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mini-toggle {
+  display: inline-flex;
+  background: #1a1a1a;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.mini-toggle .toggle-btn {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+.mini-toggle .save-badge {
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  margin-left: 2px;
+}
+
+.item-billing .item-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #00b2ff;
+  text-align: right;
+}
+
+.item-billing .item-price small {
+  color: #666;
+  font-weight: 400;
+}
+
+/* Recurring Note */
+.recurring-note {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Mobile adjustments for billing toggles */
+@media (max-width: 480px) {
+  .item-billing {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .item-billing .item-price {
+    text-align: left;
+  }
+}

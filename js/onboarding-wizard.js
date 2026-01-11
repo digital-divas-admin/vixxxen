@@ -11,7 +11,8 @@ let educationTiers = [];
 let starterCharacters = [];
 let premiumCharacters = []; // Marketplace characters (unique, paid)
 let currentStepIndex = 0;
-let billingCycle = 'monthly'; // or 'annual'
+let planBillingCycle = 'monthly'; // Billing cycle for creator package
+let educationBillingCycle = 'monthly'; // Billing cycle for education tier
 let wizardSelections = {};
 let selectedStarterCharacter = null; // Track selected starter character
 let purchasedPremiumCharacter = null; // Track if premium was purchased
@@ -145,7 +146,8 @@ function showOnboardingWizard(startAtStep = null) {
   // Reset state
   currentStepIndex = 0;
   wizardSelections = {};
-  billingCycle = 'monthly';
+  planBillingCycle = 'monthly';
+  educationBillingCycle = 'monthly';
   selectedStarterCharacter = null;
   purchasedPremiumCharacter = null;
 
@@ -680,19 +682,26 @@ function renderWelcomeStep(step) {
     ? displayStarters.find(c => c.id === wizardSelections.starter_character)
     : null;
 
-  // Calculate totals
+  // Calculate prices based on individual billing cycles
   const planMonthly = selectedPlan ? parseFloat(selectedPlan.price_monthly) : 0;
   const planAnnual = selectedPlan ? parseFloat(selectedPlan.price_annual) : 0;
+  const planAnnualSavings = selectedPlan ? (planMonthly * 12) - planAnnual : 0;
+  const planPrice = planBillingCycle === 'annual' ? planAnnual : planMonthly;
+  const planMonthlyEquiv = planBillingCycle === 'annual' ? (planAnnual / 12) : planMonthly;
+
   const tierMonthly = selectedTier ? parseFloat(selectedTier.price_monthly) : 0;
   const tierAnnual = selectedTier ? parseFloat(selectedTier.price_annual) : 0;
+  const tierAnnualSavings = selectedTier ? (tierMonthly * 12) - tierAnnual : 0;
+  const tierPrice = educationBillingCycle === 'annual' ? tierAnnual : tierMonthly;
+  const tierMonthlyEquiv = educationBillingCycle === 'annual' ? (tierAnnual / 12) : tierMonthly;
+
+  // Premium character is one-time, no discount
   const premiumCharPrice = selectedPremiumChar ? parseFloat(selectedPremiumChar.price) : 0;
 
-  const totalMonthly = planMonthly + tierMonthly;
-  const totalAnnual = planAnnual + tierAnnual;
-  const monthlyFromAnnual = totalAnnual / 12;
-  const annualSavings = (totalMonthly * 12) - totalAnnual;
-
-  const hasPaidItems = totalMonthly > 0 || premiumCharPrice > 0;
+  // Calculate total due today
+  const totalDueToday = premiumCharPrice + planPrice + tierPrice;
+  const hasRecurring = planMonthly > 0 || tierMonthly > 0;
+  const hasPaidItems = totalDueToday > 0;
 
   contentEl.innerHTML = `
     <div class="wizard-step review-step">
@@ -712,7 +721,7 @@ function renderWelcomeStep(step) {
               <div class="review-item premium">
                 <span class="item-name">${selectedPremiumChar.name}</span>
                 <span class="item-badge premium">Premium Exclusive</span>
-                <span class="item-price">$${premiumCharPrice.toFixed(2)} one-time</span>
+                <span class="item-price">$${premiumCharPrice.toFixed(2)} <small>(one-time)</small></span>
               </div>
             ` : selectedStarterChar ? `
               <div class="review-item free">
@@ -736,10 +745,25 @@ function renderWelcomeStep(step) {
           </div>
           <div class="review-section-content">
             ${selectedPlan ? `
-              <div class="review-item">
-                <span class="item-name">${selectedPlan.name}</span>
-                <span class="item-detail">${selectedPlan.credits_monthly} credits/month</span>
-                <span class="item-price">$${planMonthly.toFixed(2)}/mo</span>
+              <div class="review-item-with-toggle">
+                <div class="review-item">
+                  <span class="item-name">${selectedPlan.name}</span>
+                  <span class="item-detail">${selectedPlan.credits_monthly} credits/month</span>
+                </div>
+                <div class="item-billing">
+                  <div class="billing-toggle mini-toggle">
+                    <button class="toggle-btn ${planBillingCycle === 'monthly' ? 'active' : ''}" onclick="setBillingCycle('plan', 'monthly')">Monthly</button>
+                    <button class="toggle-btn ${planBillingCycle === 'annual' ? 'active' : ''}" onclick="setBillingCycle('plan', 'annual')">
+                      Annual ${planAnnualSavings > 0 ? `<span class="save-badge">-$${planAnnualSavings.toFixed(0)}</span>` : ''}
+                    </button>
+                  </div>
+                  <span class="item-price">
+                    ${planBillingCycle === 'annual'
+                      ? `$${planMonthlyEquiv.toFixed(2)}/mo <small>($${planAnnual.toFixed(2)}/yr)</small>`
+                      : `$${planMonthly.toFixed(2)}/mo`
+                    }
+                  </span>
+                </div>
               </div>
             ` : `
               <div class="review-item free">
@@ -759,9 +783,24 @@ function renderWelcomeStep(step) {
           </div>
           <div class="review-section-content">
             ${selectedTier ? `
-              <div class="review-item">
-                <span class="item-name">${selectedTier.name}</span>
-                <span class="item-price">$${tierMonthly.toFixed(2)}/mo</span>
+              <div class="review-item-with-toggle">
+                <div class="review-item">
+                  <span class="item-name">${selectedTier.name}</span>
+                </div>
+                <div class="item-billing">
+                  <div class="billing-toggle mini-toggle">
+                    <button class="toggle-btn ${educationBillingCycle === 'monthly' ? 'active' : ''}" onclick="setBillingCycle('education', 'monthly')">Monthly</button>
+                    <button class="toggle-btn ${educationBillingCycle === 'annual' ? 'active' : ''}" onclick="setBillingCycle('education', 'annual')">
+                      Annual ${tierAnnualSavings > 0 ? `<span class="save-badge">-$${tierAnnualSavings.toFixed(0)}</span>` : ''}
+                    </button>
+                  </div>
+                  <span class="item-price">
+                    ${educationBillingCycle === 'annual'
+                      ? `$${tierMonthlyEquiv.toFixed(2)}/mo <small>($${tierAnnual.toFixed(2)}/yr)</small>`
+                      : `$${tierMonthly.toFixed(2)}/mo`
+                    }
+                  </span>
+                </div>
               </div>
             ` : `
               <div class="review-item none">
@@ -779,37 +818,36 @@ function renderWelcomeStep(step) {
           <h4>Payment Summary</h4>
 
           ${premiumCharPrice > 0 ? `
-            <div class="summary-line onetime">
-              <span>One-time purchase (${selectedPremiumChar.name})</span>
+            <div class="summary-line">
+              <span>${selectedPremiumChar.name} (one-time)</span>
               <span class="summary-amount">$${premiumCharPrice.toFixed(2)}</span>
             </div>
           ` : ''}
 
-          ${totalMonthly > 0 ? `
-            <div class="billing-toggle checkout-toggle">
-              <button class="toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}" onclick="setBillingCycle('monthly')">Monthly</button>
-              <button class="toggle-btn ${billingCycle === 'annual' ? 'active' : ''}" onclick="setBillingCycle('annual')">
-                Annual ${annualSavings > 0 ? `<span class="save-badge">Save $${annualSavings.toFixed(0)}/yr</span>` : ''}
-              </button>
+          ${selectedPlan ? `
+            <div class="summary-line">
+              <span>${selectedPlan.name} (${planBillingCycle})</span>
+              <span class="summary-amount">$${planPrice.toFixed(2)}</span>
             </div>
+          ` : ''}
 
-            <div class="summary-line recurring">
-              <span>Recurring ${billingCycle === 'annual' ? '(billed annually)' : ''}</span>
-              <span class="summary-amount">
-                ${billingCycle === 'annual'
-                  ? `$${monthlyFromAnnual.toFixed(2)}/mo <small>($${totalAnnual.toFixed(2)}/yr)</small>`
-                  : `$${totalMonthly.toFixed(2)}/mo`
-                }
-              </span>
+          ${selectedTier ? `
+            <div class="summary-line">
+              <span>${selectedTier.name} (${educationBillingCycle})</span>
+              <span class="summary-amount">$${tierPrice.toFixed(2)}</span>
             </div>
           ` : ''}
 
           <div class="summary-total">
             <span>Due today</span>
-            <span class="total-amount">
-              $${(premiumCharPrice + (billingCycle === 'annual' ? totalAnnual : totalMonthly)).toFixed(2)}
-            </span>
+            <span class="total-amount">$${totalDueToday.toFixed(2)}</span>
           </div>
+
+          ${hasRecurring ? `
+            <p class="recurring-note">
+              Subscriptions will renew ${planBillingCycle === 'annual' || educationBillingCycle === 'annual' ? 'annually or monthly based on your selections' : 'monthly'}.
+            </p>
+          ` : ''}
         </div>
       ` : `
         <div class="checkout-free">
@@ -965,9 +1003,13 @@ async function skipStep() {
   nextStep();
 }
 
-// Set billing cycle
-function setBillingCycle(cycle) {
-  billingCycle = cycle;
+// Set billing cycle for a specific subscription type
+function setBillingCycle(type, cycle) {
+  if (type === 'plan') {
+    planBillingCycle = cycle;
+  } else if (type === 'education') {
+    educationBillingCycle = cycle;
+  }
   renderCurrentStep();
 }
 
