@@ -6873,10 +6873,16 @@
     /* ===========================================
        ACCOUNT & BILLING PAGE STYLES
        =========================================== */
+    #accountSection,
+    #billingSection {
+      overflow-y: auto;
+      flex-direction: column;
+    }
+
     .account-page {
       max-width: 900px;
       margin: 0 auto;
-      padding: 30px 20px 80px;
+      padding: 30px 20px 100px;
     }
 
     .account-header {
