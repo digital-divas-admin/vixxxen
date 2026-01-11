@@ -125,6 +125,52 @@
   text-align: center;
 }
 
+/* Loading State */
+.loading-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.wizard-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #333;
+  border-top-color: #00b2ff;
+  border-radius: 50%;
+  animation: wizard-spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes wizard-spin {
+  to { transform: rotate(360deg); }
+}
+
+.wizard-loading-text {
+  color: #888;
+  font-size: 1rem;
+}
+
+/* Error State */
+.error-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.error-step .wizard-subtitle {
+  color: #ff6b6b;
+}
+
 .wizard-icon {
   font-size: 3rem;
   margin-bottom: 16px;
@@ -1271,36 +1317,80 @@
    RESPONSIVE STYLES
    =========================================== */
 
+@media (max-width: 968px) {
+  .plans-grid,
+  .tiers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .onboarding-wizard-container {
-    width: 95%;
-    max-height: 95vh;
-    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
   }
 
   .onboarding-wizard-content {
-    padding: 24px 20px;
+    padding: 20px 16px;
   }
 
   .onboarding-wizard-actions {
-    padding: 20px;
+    padding: 16px;
   }
 
   .wizard-title {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
 
   .wizard-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
   }
 
   .wizard-btn {
     width: 100%;
+    padding: 16px 24px;
+    min-height: 52px;
   }
 
+  /* Single column scrollable cards on mobile */
   .plans-grid,
   .tiers-grid {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 20px;
+  }
+
+  .plan-card,
+  .tier-card {
+    padding: 20px;
+    min-height: auto;
+  }
+
+  /* Make selected badge fit better on mobile */
+  .plan-card.selected::after,
+  .tier-card.selected::after {
+    font-size: 0.65rem;
+    padding: 3px 10px;
+  }
+
+  /* Reduce badge size on mobile */
+  .popular-badge,
+  .pro-badge,
+  .premium-badge-tag {
+    font-size: 0.65rem;
+    padding: 3px 12px;
+    top: -10px;
+  }
+
+  /* Scale down popular cards on mobile */
+  .plan-card.popular,
+  .tier-card.popular {
+    transform: none;
   }
 
   .starter-characters-grid {
@@ -1332,6 +1422,19 @@
   .review-section-header {
     flex-direction: column;
     gap: 8px;
+  }
+
+  /* Intro step mobile adjustments */
+  .process-step {
+    padding: 12px;
+  }
+
+  .step-content h4 {
+    font-size: 0.95rem;
+  }
+
+  .step-content p {
+    font-size: 0.85rem;
   }
 }
 

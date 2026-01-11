@@ -25,6 +25,58 @@ const placeholderStarters = [
 ];
 
 // ===========================================
+// WIZARD CONFIGURATION
+// ===========================================
+// These can be moved to database/API later
+
+const WIZARD_CONFIG = {
+  // Free plan option for credits step
+  freePlan: {
+    slug: 'free',
+    name: 'Free',
+    price_monthly: 0,
+    price_annual: 0,
+    credits_monthly: 20,
+    credits_label: 'one-time credits',
+    features: [
+      'Try before you buy',
+      'Limited features',
+      'No monthly credits'
+    ],
+    is_free: true
+  },
+
+  // Skip option for education step
+  skipEducation: {
+    slug: 'none',
+    name: 'Skip',
+    price_monthly: 0,
+    price_annual: 0,
+    description: 'Go It Alone',
+    features: [
+      'No guided training',
+      'Basic docs only',
+      'Longer learning curve'
+    ],
+    is_skip: true
+  },
+
+  // Which plans/tiers to highlight
+  popularPlanSlug: 'creator',
+  proPlanSlug: 'pro',
+  popularTierSlug: 'gold',
+  premiumTierSlug: 'platinum',
+
+  // Badge text
+  badges: {
+    popularPlan: 'Most Popular',
+    proPlan: 'Best Value',
+    popularTier: 'Recommended',
+    premiumTier: 'Complete Package'
+  }
+};
+
+// ===========================================
 // INITIALIZATION
 // ===========================================
 
@@ -134,6 +186,58 @@ async function initializeOnboarding() {
 // WIZARD UI
 // ===========================================
 
+// LocalStorage key for wizard state
+const WIZARD_STORAGE_KEY = 'vixxxen_wizard_state';
+
+// Save wizard state to localStorage
+function saveWizardState() {
+  const state = {
+    currentStepIndex,
+    wizardSelections,
+    planBillingCycle,
+    educationBillingCycle,
+    selectedStarterCharacter,
+    purchasedPremiumCharacter,
+    timestamp: Date.now()
+  };
+  try {
+    localStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('Could not save wizard state:', e);
+  }
+}
+
+// Load wizard state from localStorage
+function loadWizardState() {
+  try {
+    const saved = localStorage.getItem(WIZARD_STORAGE_KEY);
+    if (!saved) return null;
+
+    const state = JSON.parse(saved);
+
+    // Expire after 24 hours
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    if (Date.now() - state.timestamp > ONE_DAY) {
+      clearWizardState();
+      return null;
+    }
+
+    return state;
+  } catch (e) {
+    console.warn('Could not load wizard state:', e);
+    return null;
+  }
+}
+
+// Clear wizard state from localStorage
+function clearWizardState() {
+  try {
+    localStorage.removeItem(WIZARD_STORAGE_KEY);
+  } catch (e) {
+    console.warn('Could not clear wizard state:', e);
+  }
+}
+
 // Show the onboarding wizard modal
 function showOnboardingWizard(startAtStep = null) {
   // Create modal if it doesn't exist
@@ -143,17 +247,26 @@ function showOnboardingWizard(startAtStep = null) {
     document.body.appendChild(modal);
   }
 
-  // Reset state
-  currentStepIndex = 0;
-  wizardSelections = {};
-  planBillingCycle = 'monthly';
-  educationBillingCycle = 'monthly';
-  selectedStarterCharacter = null;
-  purchasedPremiumCharacter = null;
+  // Try to restore previous state
+  const savedState = loadWizardState();
 
-  // Always start with intro step (index -1 represents intro)
-  // After intro, we proceed to the database-driven steps
-  currentStepIndex = -1; // -1 = intro step
+  if (savedState && savedState.currentStepIndex > -1) {
+    // Restore previous progress
+    currentStepIndex = savedState.currentStepIndex;
+    wizardSelections = savedState.wizardSelections || {};
+    planBillingCycle = savedState.planBillingCycle || 'monthly';
+    educationBillingCycle = savedState.educationBillingCycle || 'monthly';
+    selectedStarterCharacter = savedState.selectedStarterCharacter || null;
+    purchasedPremiumCharacter = savedState.purchasedPremiumCharacter || null;
+  } else {
+    // Fresh start
+    currentStepIndex = -1; // -1 = intro step
+    wizardSelections = {};
+    planBillingCycle = 'monthly';
+    educationBillingCycle = 'monthly';
+    selectedStarterCharacter = null;
+    purchasedPremiumCharacter = null;
+  }
 
   // Render current step
   renderCurrentStep();
@@ -237,8 +350,73 @@ function goToStep(stepIndex) {
   }
 }
 
+// Render loading state
+function renderLoadingStep() {
+  const contentEl = document.getElementById('wizardContent');
+  const actionsEl = document.getElementById('wizardActions');
+  const progressEl = document.getElementById('wizardProgress');
+
+  if (progressEl) progressEl.innerHTML = '';
+
+  if (contentEl) {
+    contentEl.innerHTML = `
+      <div class="wizard-step loading-step">
+        <div class="wizard-loading-spinner"></div>
+        <p class="wizard-loading-text">Loading...</p>
+      </div>
+    `;
+  }
+
+  if (actionsEl) actionsEl.innerHTML = '';
+}
+
+// Render error state
+function renderErrorStep(errorMessage) {
+  const contentEl = document.getElementById('wizardContent');
+  const actionsEl = document.getElementById('wizardActions');
+  const progressEl = document.getElementById('wizardProgress');
+
+  if (progressEl) progressEl.innerHTML = '';
+
+  if (contentEl) {
+    contentEl.innerHTML = `
+      <div class="wizard-step error-step">
+        <div class="wizard-icon error-icon">⚠️</div>
+        <h2 class="wizard-title">Something went wrong</h2>
+        <p class="wizard-subtitle">${errorMessage || 'Unable to load. Please try again.'}</p>
+      </div>
+    `;
+  }
+
+  if (actionsEl) {
+    actionsEl.innerHTML = `
+      <div class="wizard-actions-row">
+        <button class="wizard-btn secondary" onclick="hideOnboardingWizard()">Close</button>
+        <button class="wizard-btn primary" onclick="retryWizardLoad()">Try Again</button>
+      </div>
+    `;
+  }
+}
+
+// Retry loading wizard data
+async function retryWizardLoad() {
+  renderLoadingStep();
+  try {
+    await initializeOnboarding();
+    renderCurrentStep();
+  } catch (error) {
+    renderErrorStep('Failed to load configuration. Please check your connection.');
+  }
+}
+
 // Render current step content
 function renderCurrentStep() {
+  // Show loading if config not ready
+  if (!onboardingConfig && currentStepIndex !== -1) {
+    renderLoadingStep();
+    return;
+  }
+
   // Handle intro step (index -1)
   if (currentStepIndex === -1) {
     renderProgressDots();
@@ -510,6 +688,7 @@ function selectStarterCharacter(characterId) {
     purchasedPremiumCharacter = null;
     wizardSelections.premium_character = null;
   }
+  saveWizardState();
   renderCurrentStep();
 }
 
@@ -530,6 +709,7 @@ function selectPremiumCharacter(characterId) {
     selectedStarterCharacter = null;
     wizardSelections.starter_character = null;
   }
+  saveWizardState();
   renderCurrentStep();
 }
 
@@ -554,20 +734,20 @@ function renderChoosePlanStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
-  // Determine which plan to highlight as popular/recommended
-  const popularPlanSlug = 'creator'; // Middle tier is usually best for conversions
+  // Use config for highlighting
+  const { popularPlanSlug, proPlanSlug, badges, freePlan } = WIZARD_CONFIG;
 
   const plansHTML = contentPlans.map(plan => {
     const monthlyPrice = plan.price_monthly;
     const features = plan.features || [];
     const isPopular = plan.slug === popularPlanSlug;
-    const isPro = plan.slug === 'pro';
+    const isPro = plan.slug === proPlanSlug;
 
     return `
       <div class="plan-card ${isPopular ? 'popular' : ''} ${isPro ? 'pro-tier' : ''} ${wizardSelections.content_plan === plan.slug ? 'selected' : ''}"
            onclick="selectContentPlan('${plan.slug}')">
-        ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
-        ${isPro ? '<div class="pro-badge">Best Value</div>' : ''}
+        ${isPopular ? `<div class="popular-badge">${badges.popularPlan}</div>` : ''}
+        ${isPro ? `<div class="pro-badge">${badges.proPlan}</div>` : ''}
         <div class="plan-header">
           <h3 class="plan-name">${plan.name}</h3>
           <div class="plan-price">
@@ -586,25 +766,23 @@ function renderChoosePlanStep(step) {
     `;
   }).join('');
 
-  // Free plan card - at the end, smaller/less prominent
+  // Free plan card from config - at the end, smaller/less prominent
   const freePlanHTML = `
-    <div class="plan-card free-plan ${wizardSelections.content_plan === 'free' ? 'selected' : ''}"
-         onclick="selectContentPlan('free')">
+    <div class="plan-card free-plan ${wizardSelections.content_plan === freePlan.slug ? 'selected' : ''}"
+         onclick="selectContentPlan('${freePlan.slug}')">
       <div class="plan-header">
-        <h3 class="plan-name">Free</h3>
+        <h3 class="plan-name">${freePlan.name}</h3>
         <div class="plan-price">
-          <span class="price-amount">$0</span>
+          <span class="price-amount">$${freePlan.price_monthly}</span>
           <span class="price-period">/mo</span>
         </div>
       </div>
       <div class="plan-credits">
-        <span class="credits-amount">20</span>
-        <span class="credits-label">one-time credits</span>
+        <span class="credits-amount">${freePlan.credits_monthly}</span>
+        <span class="credits-label">${freePlan.credits_label}</span>
       </div>
       <ul class="plan-features">
-        <li>Try before you buy</li>
-        <li>Limited features</li>
-        <li>No monthly credits</li>
+        ${freePlan.features.map(f => `<li>${f}</li>`).join('')}
       </ul>
     </div>
   `;
@@ -640,22 +818,22 @@ function renderChooseEducationStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
-  // Determine which tier to highlight
-  const popularTierSlug = 'gold'; // Middle tier for conversions
+  // Use config for highlighting
+  const { popularTierSlug, premiumTierSlug, badges, skipEducation } = WIZARD_CONFIG;
 
   const tiersHTML = educationTiers.map(tier => {
     const monthlyPrice = tier.price_monthly;
     const features = tier.features || [];
     const isPopular = tier.slug === popularTierSlug;
-    const isPlatinum = tier.slug === 'platinum';
+    const isPremium = tier.slug === premiumTierSlug;
     // Get a highlight/tagline for each tier
     const tierHighlight = tier.description || getTierHighlight(tier.slug);
 
     return `
-      <div class="tier-card ${isPopular ? 'popular' : ''} ${isPlatinum ? 'premium-tier' : ''} ${wizardSelections.education_tier === tier.slug ? 'selected' : ''}"
+      <div class="tier-card ${isPopular ? 'popular' : ''} ${isPremium ? 'premium-tier' : ''} ${wizardSelections.education_tier === tier.slug ? 'selected' : ''}"
            onclick="selectEducationTier('${tier.slug}')">
-        ${isPopular ? '<div class="popular-badge">Recommended</div>' : ''}
-        ${isPlatinum ? '<div class="premium-badge-tag">Complete Package</div>' : ''}
+        ${isPopular ? `<div class="popular-badge">${badges.popularTier}</div>` : ''}
+        ${isPremium ? `<div class="premium-badge-tag">${badges.premiumTier}</div>` : ''}
         <div class="tier-header">
           <h3 class="tier-name">${tier.name}</h3>
           <div class="tier-price">
@@ -673,24 +851,22 @@ function renderChooseEducationStep(step) {
     `;
   }).join('');
 
-  // None option card - at the end, less prominent
+  // Skip option card from config - at the end, less prominent
   const noneTierHTML = `
-    <div class="tier-card none-tier ${wizardSelections.education_tier === 'none' ? 'selected' : ''}"
-         onclick="selectEducationTier('none')">
+    <div class="tier-card none-tier ${wizardSelections.education_tier === skipEducation.slug ? 'selected' : ''}"
+         onclick="selectEducationTier('${skipEducation.slug}')">
       <div class="tier-header">
-        <h3 class="tier-name">Skip</h3>
+        <h3 class="tier-name">${skipEducation.name}</h3>
         <div class="tier-price">
-          <span class="price-amount">$0</span>
+          <span class="price-amount">$${skipEducation.price_monthly}</span>
           <span class="price-period">/mo</span>
         </div>
       </div>
       <div class="tier-highlight">
-        <span class="highlight-text">Go It Alone</span>
+        <span class="highlight-text">${skipEducation.description}</span>
       </div>
       <ul class="tier-features">
-        <li>No guided training</li>
-        <li>Basic docs only</li>
-        <li>Longer learning curve</li>
+        ${skipEducation.features.map(f => `<li>${f}</li>`).join('')}
       </ul>
     </div>
   `;
@@ -1043,6 +1219,7 @@ function switchToLogin() {
 function nextStep() {
   if (onboardingConfig && currentStepIndex < onboardingConfig.length - 1) {
     currentStepIndex++;
+    saveWizardState();
     renderCurrentStep();
   } else {
     completeOnboarding();
@@ -1053,6 +1230,7 @@ function nextStep() {
 function prevStep() {
   if (currentStepIndex > -1) {
     currentStepIndex--;
+    saveWizardState();
     renderCurrentStep();
   }
 }
@@ -1071,18 +1249,21 @@ function setBillingCycle(type, cycle) {
   } else if (type === 'education') {
     educationBillingCycle = cycle;
   }
+  saveWizardState();
   renderCurrentStep();
 }
 
 // Select content plan
 function selectContentPlan(slug) {
   wizardSelections.content_plan = slug;
+  saveWizardState();
   renderCurrentStep();
 }
 
 // Select education tier
 function selectEducationTier(slug) {
   wizardSelections.education_tier = slug;
+  saveWizardState();
   renderCurrentStep();
 }
 
@@ -1171,6 +1352,9 @@ async function completeOnboarding() {
         })
       });
     }
+
+    // Clear saved wizard state on successful completion
+    clearWizardState();
 
     // Hide wizard
     hideOnboardingWizard();
