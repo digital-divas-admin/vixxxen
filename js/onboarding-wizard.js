@@ -766,6 +766,24 @@ function renderChooseCharacterStep(step) {
           : 'Please select at least one character to continue'}
       </p>
 
+      <!-- Custom Character Option -->
+      <div class="character-section custom-section">
+        <div class="custom-character-card" onclick="openCustomCharacterFromWizard()">
+          <div class="custom-character-icon">
+            <span style="font-size: 2.5rem;">🎨</span>
+          </div>
+          <div class="custom-character-content">
+            <h3 class="custom-character-title">Create Your Own Custom Character</h3>
+            <p class="custom-character-desc">Commission a fully custom AI character based on your Instagram inspiration. 100% unique, exclusively yours.</p>
+            <div class="custom-character-meta">
+              <span class="custom-price">Starting at $795</span>
+              <span class="custom-delivery">3-5 business days</span>
+            </div>
+          </div>
+          <div class="custom-character-arrow">→</div>
+        </div>
+      </div>
+
       <!-- Free Characters Section -->
       <div class="character-section">
         <div class="section-header">
@@ -1675,6 +1693,20 @@ function triggerOnboardingOrLogin(action = 'generate') {
   window.selectStarterCharacter = selectStarterCharacter;
   window.selectPremiumCharacter = selectPremiumCharacter;
   window.handleCharacterContinue = handleCharacterContinue;
+
+  // Open custom character order modal from wizard
+  // Selects a starter character as interim and opens the custom order form
+  window.openCustomCharacterFromWizard = function() {
+    // If user has selected a starter, use it as interim character
+    const interimId = selectedStarterCharacter || null;
+    // Open custom character order modal (function from custom-character-order.js)
+    if (typeof openCustomCharacterOrderModal === 'function') {
+      openCustomCharacterOrderModal(interimId);
+    } else {
+      console.error('Custom character order modal not available');
+      alert('Custom character orders are not available at the moment. Please try again later.');
+    }
+  };
 
   // Plan/tier selection (called from onclick in templates)
   window.selectContentPlan = selectContentPlan;

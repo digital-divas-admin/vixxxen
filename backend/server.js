@@ -29,6 +29,7 @@ const contentFilterRouter = require('./content-filter');
 const emailRouter = require('./email-routes');
 const adminRouter = require('./admin');
 const onboardingRouter = require('./onboarding');
+const customCharactersRouter = require('./custom-characters');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
@@ -232,6 +233,7 @@ app.use('/api/content-filter', contentFilterRouter);
 app.use('/api/email', emailRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/onboarding', onboardingRouter);
+app.use('/api/custom-characters', customCharactersRouter);
 
 // Serve static files from the parent directory (frontend)
 app.use(express.static(path.join(__dirname, '..')));
