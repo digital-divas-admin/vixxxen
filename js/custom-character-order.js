@@ -920,16 +920,26 @@ function showCustomOrderSuccess(order) {
 // State for selected interim character
 let selectedInterimForCustomOrder = null;
 
-// Load starter characters from API
+// Placeholder starter characters (used when none in database)
+const placeholderStartersForCustomOrder = [
+  { id: 'placeholder-1', name: 'Luna', category: 'Fantasy', is_starter: true },
+  { id: 'placeholder-2', name: 'Aria', category: 'Modern', is_starter: true },
+  { id: 'placeholder-3', name: 'Nova', category: 'Sci-Fi', is_starter: true }
+];
+
+// Load starter characters from API (with fallback to placeholders)
 async function loadStarterCharactersForSelection() {
   try {
     const response = await fetch(`${API_BASE_URL}/api/onboarding/starter-characters`);
     if (!response.ok) throw new Error('Failed to load characters');
     const data = await response.json();
-    return data.characters || [];
+    const characters = data.characters || [];
+    // If no characters from API, use placeholders
+    return characters.length > 0 ? characters : placeholderStartersForCustomOrder;
   } catch (error) {
     console.error('Error loading starter characters:', error);
-    return [];
+    // Return placeholders on error
+    return placeholderStartersForCustomOrder;
   }
 }
 
