@@ -844,11 +844,11 @@ async function submitCustomCharacterOrder() {
 
     const data = await response.json();
 
-    // Store the order for wizard review step access
-    submittedCustomCharacterOrder = {
+    // Store the order for wizard review step access (persists to localStorage)
+    saveSubmittedCustomCharacterOrder({
       ...data.order,
       config: customCharacterConfig  // Include config for pricing info
-    };
+    });
 
     // Show success
     showCustomOrderSuccess(data.order);
@@ -1033,14 +1033,48 @@ function escapeHtml(str) {
 // EXPOSED FUNCTIONS FOR WIZARD INTEGRATION
 // ===========================================
 
+const CUSTOM_ORDER_STORAGE_KEY = 'vixxxen_pending_custom_order';
+
 // Get the submitted custom character order (for wizard review step)
+// Checks both memory and localStorage for persistence across page refreshes
 function getSubmittedCustomCharacterOrder() {
-  return submittedCustomCharacterOrder;
+  // First check memory
+  if (submittedCustomCharacterOrder) {
+    return submittedCustomCharacterOrder;
+  }
+  // Fall back to localStorage
+  try {
+    const stored = localStorage.getItem(CUSTOM_ORDER_STORAGE_KEY);
+    if (stored) {
+      submittedCustomCharacterOrder = JSON.parse(stored);
+      return submittedCustomCharacterOrder;
+    }
+  } catch (e) {
+    console.error('Error reading custom order from localStorage:', e);
+  }
+  return null;
 }
 
-// Clear the submitted order (e.g., when starting fresh)
+// Save the submitted order (called after successful submission)
+function saveSubmittedCustomCharacterOrder(order) {
+  submittedCustomCharacterOrder = order;
+  try {
+    localStorage.setItem(CUSTOM_ORDER_STORAGE_KEY, JSON.stringify(order));
+    console.log('✅ Custom order saved to localStorage:', order.order_number);
+  } catch (e) {
+    console.error('Error saving custom order to localStorage:', e);
+  }
+}
+
+// Clear the submitted order (e.g., when starting fresh or after checkout)
 function clearSubmittedCustomCharacterOrder() {
   submittedCustomCharacterOrder = null;
+  try {
+    localStorage.removeItem(CUSTOM_ORDER_STORAGE_KEY);
+    console.log('🧹 Custom order cleared from localStorage');
+  } catch (e) {
+    console.error('Error clearing custom order from localStorage:', e);
+  }
 }
 
 // Expose functions globally
