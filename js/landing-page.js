@@ -47,6 +47,7 @@ function showLandingPage() {
   const topNavbar = document.getElementById('topNavbar');
   const container = document.querySelector('.container');
   const mobileOverlay = document.getElementById('mobileOverlay');
+  const siteFooter = document.querySelector('.site-footer');
 
   if (landingPage) {
     landingPage.style.display = 'block';
@@ -56,6 +57,11 @@ function showLandingPage() {
   if (topNavbar) topNavbar.style.display = 'none';
   if (container) container.style.display = 'none';
   if (mobileOverlay) mobileOverlay.style.display = 'none';
+  if (siteFooter) siteFooter.style.display = 'none';
+
+  // Enable scrolling on body for landing page
+  document.body.style.overflow = 'auto';
+  document.body.style.height = 'auto';
 
   // Scroll to top
   window.scrollTo(0, 0);
@@ -68,6 +74,7 @@ function hideLandingPage() {
   const landingPage = document.getElementById('landingPage');
   const topNavbar = document.getElementById('topNavbar');
   const container = document.querySelector('.container');
+  const siteFooter = document.querySelector('.site-footer');
 
   if (landingPage) {
     landingPage.style.display = 'none';
@@ -76,6 +83,11 @@ function hideLandingPage() {
   // Show main app elements
   if (topNavbar) topNavbar.style.display = 'flex';
   if (container) container.style.display = 'flex';
+  if (siteFooter) siteFooter.style.display = 'flex';
+
+  // Restore body overflow for main app
+  document.body.style.overflow = 'hidden';
+  document.body.style.height = '100vh';
 }
 
 // ===========================================
