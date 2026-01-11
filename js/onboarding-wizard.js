@@ -1638,6 +1638,13 @@ function triggerOnboardingOrLogin(action = 'generate') {
     purchasedPremiumCharacter = null;
   }
 
+  // Start wizard at a specific step (for users who already created account)
+  function startWizardAtStep(stepIndex) {
+    currentStepIndex = stepIndex;
+    saveWizardState();
+    renderCurrentStep();
+  }
+
   // Main entry points (called from other JS files)
   window.showOnboardingWizard = showOnboardingWizard;
   window.hideOnboardingWizard = hideOnboardingWizard;
@@ -1646,6 +1653,7 @@ function triggerOnboardingOrLogin(action = 'generate') {
   window.checkAndShowPrompts = checkAndShowPrompts;
   window.isWizardReady = isWizardReady;
   window.resetWizard = resetWizard;
+  window.startWizardAtStep = startWizardAtStep;
 
   // Step navigation (called from onclick in templates)
   window.nextStep = nextStep;

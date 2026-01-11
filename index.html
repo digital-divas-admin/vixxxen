@@ -15192,6 +15192,21 @@
           } catch (e) {
             // Ignore email errors - non-critical
           }
+
+          // Start the onboarding wizard for new users (skip account creation step)
+          if (typeof initializeOnboarding === 'function') {
+            initializeOnboarding().then(() => {
+              if (typeof showOnboardingWizard === 'function') {
+                showOnboardingWizard();
+                // Skip to character selection (step 1) since account already created
+                if (typeof startWizardAtStep === 'function') {
+                  startWizardAtStep(1);
+                }
+              }
+            }).catch(err => {
+              console.warn('Could not start onboarding wizard:', err);
+            });
+          }
         }
       } catch (err) {
         console.error('Sign up error:', err);
