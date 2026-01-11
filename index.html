@@ -6876,7 +6876,7 @@
     .account-page {
       max-width: 900px;
       margin: 0 auto;
-      padding: 30px 20px;
+      padding: 30px 20px 80px;
     }
 
     .account-header {
@@ -6900,6 +6900,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
       gap: 20px;
+      align-items: start;
     }
 
     .account-card {
@@ -7106,6 +7107,12 @@
     .account-back-btn:hover {
       background: #222;
       border-color: #444;
+    }
+
+    /* Custom Orders List */
+    #customOrdersList {
+      max-height: 300px;
+      overflow-y: auto;
     }
 
     /* Billing Page Specific Styles */
