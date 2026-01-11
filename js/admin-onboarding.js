@@ -10,7 +10,7 @@ let adminTiers = [];
 let adminSteps = [];
 let adminStarterCharacters = [];
 let adminPremiumCharacters = [];
-let allMarketplaceCharacters = [];
+let adminAllCharacters = [];
 let currentOnboardingTab = 'plans';
 
 // Drag state
@@ -717,11 +717,11 @@ async function loadAdminCharacters() {
     if (!response.ok) throw new Error('Failed to load characters');
 
     const data = await response.json();
-    allMarketplaceCharacters = data.characters || [];
+    adminAllCharacters = data.characters || [];
 
     // Separate starters and premium
-    adminStarterCharacters = allMarketplaceCharacters.filter(c => c.is_starter);
-    adminPremiumCharacters = allMarketplaceCharacters.filter(c => !c.is_starter);
+    adminStarterCharacters = adminAllCharacters.filter(c => c.is_starter);
+    adminPremiumCharacters = adminAllCharacters.filter(c => !c.is_starter);
 
     renderCharactersStats();
     renderStarterCharacters();
@@ -739,7 +739,7 @@ async function loadAdminCharacters() {
 function renderCharactersStats() {
   document.getElementById('starterCharactersCount').textContent = adminStarterCharacters.length;
   document.getElementById('premiumCharactersCount').textContent = adminPremiumCharacters.length;
-  document.getElementById('totalCharactersCount').textContent = allMarketplaceCharacters.length;
+  document.getElementById('totalCharactersCount').textContent = adminAllCharacters.length;
 }
 
 function renderStarterCharacters() {
@@ -824,7 +824,7 @@ function populateCategoryFilter() {
   const select = document.getElementById('characterCategoryFilter');
   if (!select) return;
 
-  const categories = [...new Set(allMarketplaceCharacters.map(c => c.category).filter(Boolean))].sort();
+  const categories = [...new Set(adminAllCharacters.map(c => c.category).filter(Boolean))].sort();
 
   select.innerHTML = `
     <option value="">All Categories</option>
