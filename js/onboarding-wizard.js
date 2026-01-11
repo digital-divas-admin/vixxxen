@@ -2,9 +2,16 @@
 // ONBOARDING WIZARD
 // ===========================================
 // Multi-step onboarding flow for new users
+// Wrapped in IIFE to avoid global scope pollution
 
-// State
-let onboardingConfig = null;
+(function(window) {
+  'use strict';
+
+  // ===========================================
+  // PRIVATE STATE
+  // ===========================================
+
+  let onboardingConfig = null;
 let onboardingProgress = null;
 let contentPlans = [];
 let educationTiers = [];
@@ -73,113 +80,242 @@ const WIZARD_CONFIG = {
     proPlan: 'Best Value',
     popularTier: 'Recommended',
     premiumTier: 'Complete Package'
+  },
+
+  // Tier highlight text (fallback if not in API data)
+  tierHighlights: {
+    silver: 'Getting Started',
+    gold: 'Most Popular',
+    platinum: 'Full Mastery',
+    default: 'Learn & Grow'
   }
 };
 
 // ===========================================
-// INITIALIZATION
+// REUSABLE CARD RENDERER
 // ===========================================
+
+/**
+ * Renders a selection card (plan or tier)
+ * @param {Object} options - Card configuration
+ * @param {string} options.type - 'plan' or 'tier'
+ * @param {string} options.slug - Unique identifier
+ * @param {string} options.name - Display name
+ * @param {number} options.priceMonthly - Monthly price
+ * @param {string} options.creditsLabel - Credits text (for plans)
+ * @param {number} options.creditsAmount - Credits amount (for plans)
+ * @param {string} options.highlight - Highlight/tagline text (for tiers)
+ * @param {Array} options.features - List of feature strings
+ * @param {boolean} options.isPopular - Show popular badge
+ * @param {boolean} options.isPremium - Show premium/pro badge
+ * @param {string} options.popularBadgeText - Text for popular badge
+ * @param {string} options.premiumBadgeText - Text for premium badge
+ * @param {boolean} options.isSelected - Currently selected
+ * @param {boolean} options.isFree - Is free/skip option
+ * @param {Function} options.onClick - Click handler name (string)
+ */
+function renderSelectionCard(options) {
+  const {
+    type = 'plan',
+    slug,
+    name,
+    priceMonthly = 0,
+    creditsLabel,
+    creditsAmount,
+    highlight,
+    features = [],
+    isPopular = false,
+    isPremium = false,
+    popularBadgeText = '',
+    premiumBadgeText = '',
+    isSelected = false,
+    isFree = false,
+    onClick
+  } = options;
+
+  const cardClass = type === 'plan' ? 'plan-card' : 'tier-card';
+  const freeClass = isFree ? (type === 'plan' ? 'free-plan' : 'none-tier') : '';
+  const popularClass = isPopular ? 'popular' : '';
+  const premiumClass = isPremium ? (type === 'plan' ? 'pro-tier' : 'premium-tier') : '';
+  const selectedClass = isSelected ? 'selected' : '';
+
+  // Build badges HTML
+  let badgesHTML = '';
+  if (isPopular && popularBadgeText) {
+    badgesHTML += `<div class="popular-badge">${popularBadgeText}</div>`;
+  }
+  if (isPremium && premiumBadgeText) {
+    const badgeClass = type === 'plan' ? 'pro-badge' : 'premium-badge-tag';
+    badgesHTML += `<div class="${badgeClass}">${premiumBadgeText}</div>`;
+  }
+
+  // Build middle section (credits for plans, highlight for tiers)
+  let middleHTML = '';
+  if (type === 'plan' && (creditsAmount !== undefined || creditsLabel)) {
+    middleHTML = `
+      <div class="plan-credits">
+        <span class="credits-amount">${creditsAmount || 0}</span>
+        <span class="credits-label">${creditsLabel || 'credits/month'}</span>
+      </div>
+    `;
+  } else if (type === 'tier' && highlight) {
+    middleHTML = `
+      <div class="tier-highlight">
+        <span class="highlight-text">${highlight}</span>
+      </div>
+    `;
+  }
+
+  // Build features list
+  const featuresHTML = features.length > 0
+    ? `<ul class="${type}-features">${features.map(f => `<li>${f}</li>`).join('')}</ul>`
+    : '';
+
+  return `
+    <div class="${cardClass} ${freeClass} ${popularClass} ${premiumClass} ${selectedClass}"
+         onclick="${onClick}('${slug}')">
+      ${badgesHTML}
+      <div class="${type}-header">
+        <h3 class="${type}-name">${name}</h3>
+        <div class="${type}-price">
+          <span class="price-amount">$${priceMonthly}</span>
+          <span class="price-period">/mo</span>
+        </div>
+      </div>
+      ${middleHTML}
+      ${featuresHTML}
+    </div>
+  `;
+}
+
+// ===========================================
+// INITIALIZATION & ERROR HANDLING
+// ===========================================
+
+// Track loading state and errors
+let wizardLoadState = {
+  isLoading: false,
+  hasError: false,
+  errorMessage: null,
+  failedResources: []
+};
+
+/**
+ * Wrapper for async API calls with error tracking
+ * @param {string} resourceName - Name of the resource being loaded
+ * @param {Function} loaderFn - Async function that performs the load
+ * @param {*} fallback - Fallback value if load fails
+ * @returns {Object} - { success, data, error }
+ */
+async function safeLoad(resourceName, loaderFn, fallback = null) {
+  try {
+    const result = await loaderFn();
+    return { success: true, data: result, error: null };
+  } catch (error) {
+    console.error(`Error loading ${resourceName}:`, error);
+    return { success: false, data: fallback, error: error.message || 'Unknown error' };
+  }
+}
 
 // Load onboarding configuration from server
 async function loadOnboardingConfig() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/config`);
-    if (response.ok) {
-      const data = await response.json();
-      onboardingConfig = data.steps;
-      return onboardingConfig;
-    }
-  } catch (error) {
-    console.error('Error loading onboarding config:', error);
-  }
-  return null;
+  const response = await fetch(`${API_BASE_URL}/api/onboarding/config`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  onboardingConfig = data.steps;
+  return onboardingConfig;
 }
 
 // Load content plans
 async function loadContentPlans() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/content-plans`);
-    if (response.ok) {
-      const data = await response.json();
-      contentPlans = data.plans;
-      return contentPlans;
-    }
-  } catch (error) {
-    console.error('Error loading content plans:', error);
-  }
-  return [];
+  const response = await fetch(`${API_BASE_URL}/api/onboarding/content-plans`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  contentPlans = data.plans || [];
+  return contentPlans;
 }
 
 // Load education tiers
 async function loadEducationTiers() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/education-tiers`);
-    if (response.ok) {
-      const data = await response.json();
-      educationTiers = data.tiers;
-      return educationTiers;
-    }
-  } catch (error) {
-    console.error('Error loading education tiers:', error);
-  }
-  return [];
+  const response = await fetch(`${API_BASE_URL}/api/onboarding/education-tiers`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  educationTiers = data.tiers || [];
+  return educationTiers;
 }
 
 // Load starter characters
 async function loadStarterCharacters() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/starter-characters`);
-    if (response.ok) {
-      const data = await response.json();
-      starterCharacters = data.characters;
-      return starterCharacters;
-    }
-  } catch (error) {
-    console.error('Error loading starter characters:', error);
-  }
-  return [];
+  const response = await fetch(`${API_BASE_URL}/api/onboarding/starter-characters`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  starterCharacters = data.characters || [];
+  return starterCharacters;
 }
 
 // Load premium marketplace characters (non-starter, paid)
 async function loadPremiumCharacters() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/characters`);
-    if (response.ok) {
-      const data = await response.json();
-      // Filter to only paid characters (not starters)
-      premiumCharacters = (data.characters || []).filter(c => !c.is_starter && c.price > 0);
-      return premiumCharacters;
-    }
-  } catch (error) {
-    console.error('Error loading premium characters:', error);
-  }
-  return [];
+  const response = await fetch(`${API_BASE_URL}/api/characters`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  // Filter to only paid characters (not starters)
+  premiumCharacters = (data.characters || []).filter(c => !c.is_starter && c.price > 0);
+  return premiumCharacters;
 }
 
 // Load user's onboarding progress (if logged in)
 async function loadOnboardingProgress() {
-  try {
-    const response = await authFetch(`${API_BASE_URL}/api/onboarding/progress`);
-    if (response.ok) {
-      const data = await response.json();
-      onboardingProgress = data.progress;
-      return onboardingProgress;
-    }
-  } catch (error) {
-    console.error('Error loading onboarding progress:', error);
-  }
-  return null;
+  const response = await authFetch(`${API_BASE_URL}/api/onboarding/progress`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  onboardingProgress = data.progress;
+  return onboardingProgress;
 }
 
-// Initialize all onboarding data
+// Initialize all onboarding data with error tracking
 async function initializeOnboarding() {
-  await Promise.all([
-    loadOnboardingConfig(),
-    loadContentPlans(),
-    loadEducationTiers(),
-    loadStarterCharacters(),
-    loadPremiumCharacters()
+  wizardLoadState = {
+    isLoading: true,
+    hasError: false,
+    errorMessage: null,
+    failedResources: []
+  };
+
+  // Load all resources in parallel with error tracking
+  const results = await Promise.all([
+    safeLoad('config', loadOnboardingConfig, null),
+    safeLoad('plans', loadContentPlans, []),
+    safeLoad('tiers', loadEducationTiers, []),
+    safeLoad('starters', loadStarterCharacters, []),
+    safeLoad('premium', loadPremiumCharacters, [])
   ]);
+
+  // Track which resources failed
+  const resourceNames = ['config', 'plans', 'tiers', 'starters', 'premium'];
+  const failedResources = [];
+
+  results.forEach((result, index) => {
+    if (!result.success) {
+      failedResources.push(resourceNames[index]);
+    }
+  });
+
+  wizardLoadState.isLoading = false;
+  wizardLoadState.failedResources = failedResources;
+
+  // Config is critical - if it fails, the wizard can't work
+  if (!results[0].success) {
+    wizardLoadState.hasError = true;
+    wizardLoadState.errorMessage = 'Could not load wizard configuration. Please check your connection.';
+    throw new Error(wizardLoadState.errorMessage);
+  }
+
+  // Plans and tiers are important but we can show partial UI
+  if (failedResources.length > 0) {
+    console.warn('Some resources failed to load:', failedResources);
+  }
+
+  return { success: true, failedResources };
 }
 
 // ===========================================
@@ -405,7 +541,10 @@ async function retryWizardLoad() {
     await initializeOnboarding();
     renderCurrentStep();
   } catch (error) {
-    renderErrorStep('Failed to load configuration. Please check your connection.');
+    // Use tracked error message if available
+    const errorMessage = wizardLoadState.errorMessage ||
+                         'Failed to load configuration. Please check your connection.';
+    renderErrorStep(errorMessage);
   }
 }
 
@@ -738,54 +877,36 @@ function renderChoosePlanStep(step) {
   const { popularPlanSlug, proPlanSlug, badges, freePlan } = WIZARD_CONFIG;
 
   const plansHTML = contentPlans.map(plan => {
-    const monthlyPrice = plan.price_monthly;
-    const features = plan.features || [];
-    const isPopular = plan.slug === popularPlanSlug;
-    const isPro = plan.slug === proPlanSlug;
-
-    return `
-      <div class="plan-card ${isPopular ? 'popular' : ''} ${isPro ? 'pro-tier' : ''} ${wizardSelections.content_plan === plan.slug ? 'selected' : ''}"
-           onclick="selectContentPlan('${plan.slug}')">
-        ${isPopular ? `<div class="popular-badge">${badges.popularPlan}</div>` : ''}
-        ${isPro ? `<div class="pro-badge">${badges.proPlan}</div>` : ''}
-        <div class="plan-header">
-          <h3 class="plan-name">${plan.name}</h3>
-          <div class="plan-price">
-            <span class="price-amount">$${monthlyPrice}</span>
-            <span class="price-period">/mo</span>
-          </div>
-        </div>
-        <div class="plan-credits">
-          <span class="credits-amount">${plan.credits_monthly}</span>
-          <span class="credits-label">credits/month</span>
-        </div>
-        <ul class="plan-features">
-          ${features.map(f => `<li>${f}</li>`).join('')}
-        </ul>
-      </div>
-    `;
+    return renderSelectionCard({
+      type: 'plan',
+      slug: plan.slug,
+      name: plan.name,
+      priceMonthly: plan.price_monthly,
+      creditsAmount: plan.credits_monthly,
+      creditsLabel: 'credits/month',
+      features: plan.features || [],
+      isPopular: plan.slug === popularPlanSlug,
+      isPremium: plan.slug === proPlanSlug,
+      popularBadgeText: badges.popularPlan,
+      premiumBadgeText: badges.proPlan,
+      isSelected: wizardSelections.content_plan === plan.slug,
+      onClick: 'selectContentPlan'
+    });
   }).join('');
 
   // Free plan card from config - at the end, smaller/less prominent
-  const freePlanHTML = `
-    <div class="plan-card free-plan ${wizardSelections.content_plan === freePlan.slug ? 'selected' : ''}"
-         onclick="selectContentPlan('${freePlan.slug}')">
-      <div class="plan-header">
-        <h3 class="plan-name">${freePlan.name}</h3>
-        <div class="plan-price">
-          <span class="price-amount">$${freePlan.price_monthly}</span>
-          <span class="price-period">/mo</span>
-        </div>
-      </div>
-      <div class="plan-credits">
-        <span class="credits-amount">${freePlan.credits_monthly}</span>
-        <span class="credits-label">${freePlan.credits_label}</span>
-      </div>
-      <ul class="plan-features">
-        ${freePlan.features.map(f => `<li>${f}</li>`).join('')}
-      </ul>
-    </div>
-  `;
+  const freePlanHTML = renderSelectionCard({
+    type: 'plan',
+    slug: freePlan.slug,
+    name: freePlan.name,
+    priceMonthly: freePlan.price_monthly,
+    creditsAmount: freePlan.credits_monthly,
+    creditsLabel: freePlan.credits_label,
+    features: freePlan.features,
+    isSelected: wizardSelections.content_plan === freePlan.slug,
+    isFree: true,
+    onClick: 'selectContentPlan'
+  });
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-plan-step">
@@ -822,54 +943,34 @@ function renderChooseEducationStep(step) {
   const { popularTierSlug, premiumTierSlug, badges, skipEducation } = WIZARD_CONFIG;
 
   const tiersHTML = educationTiers.map(tier => {
-    const monthlyPrice = tier.price_monthly;
-    const features = tier.features || [];
-    const isPopular = tier.slug === popularTierSlug;
-    const isPremium = tier.slug === premiumTierSlug;
-    // Get a highlight/tagline for each tier
-    const tierHighlight = tier.description || getTierHighlight(tier.slug);
-
-    return `
-      <div class="tier-card ${isPopular ? 'popular' : ''} ${isPremium ? 'premium-tier' : ''} ${wizardSelections.education_tier === tier.slug ? 'selected' : ''}"
-           onclick="selectEducationTier('${tier.slug}')">
-        ${isPopular ? `<div class="popular-badge">${badges.popularTier}</div>` : ''}
-        ${isPremium ? `<div class="premium-badge-tag">${badges.premiumTier}</div>` : ''}
-        <div class="tier-header">
-          <h3 class="tier-name">${tier.name}</h3>
-          <div class="tier-price">
-            <span class="price-amount">$${monthlyPrice}</span>
-            <span class="price-period">/mo</span>
-          </div>
-        </div>
-        <div class="tier-highlight">
-          <span class="highlight-text">${tierHighlight}</span>
-        </div>
-        <ul class="tier-features">
-          ${features.map(f => `<li>${f}</li>`).join('')}
-        </ul>
-      </div>
-    `;
+    return renderSelectionCard({
+      type: 'tier',
+      slug: tier.slug,
+      name: tier.name,
+      priceMonthly: tier.price_monthly,
+      highlight: tier.description || getTierHighlight(tier.slug),
+      features: tier.features || [],
+      isPopular: tier.slug === popularTierSlug,
+      isPremium: tier.slug === premiumTierSlug,
+      popularBadgeText: badges.popularTier,
+      premiumBadgeText: badges.premiumTier,
+      isSelected: wizardSelections.education_tier === tier.slug,
+      onClick: 'selectEducationTier'
+    });
   }).join('');
 
   // Skip option card from config - at the end, less prominent
-  const noneTierHTML = `
-    <div class="tier-card none-tier ${wizardSelections.education_tier === skipEducation.slug ? 'selected' : ''}"
-         onclick="selectEducationTier('${skipEducation.slug}')">
-      <div class="tier-header">
-        <h3 class="tier-name">${skipEducation.name}</h3>
-        <div class="tier-price">
-          <span class="price-amount">$${skipEducation.price_monthly}</span>
-          <span class="price-period">/mo</span>
-        </div>
-      </div>
-      <div class="tier-highlight">
-        <span class="highlight-text">${skipEducation.description}</span>
-      </div>
-      <ul class="tier-features">
-        ${skipEducation.features.map(f => `<li>${f}</li>`).join('')}
-      </ul>
-    </div>
-  `;
+  const noneTierHTML = renderSelectionCard({
+    type: 'tier',
+    slug: skipEducation.slug,
+    name: skipEducation.name,
+    priceMonthly: skipEducation.price_monthly,
+    highlight: skipEducation.description,
+    features: skipEducation.features,
+    isSelected: wizardSelections.education_tier === skipEducation.slug,
+    isFree: true,
+    onClick: 'selectEducationTier'
+  });
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-education-step">
@@ -1269,12 +1370,8 @@ function selectEducationTier(slug) {
 
 // Get tier highlight text based on slug
 function getTierHighlight(slug) {
-  const highlights = {
-    'silver': 'Getting Started',
-    'gold': 'Most Popular',
-    'platinum': 'Full Mastery'
-  };
-  return highlights[slug] || 'Learn & Grow';
+  const { tierHighlights } = WIZARD_CONFIG;
+  return tierHighlights[slug] || tierHighlights.default;
 }
 
 // Handle plan selection (would integrate with payment)
@@ -1502,9 +1599,59 @@ function triggerOnboardingOrLogin(action = 'generate') {
   }
 
   // User not logged in - show onboarding wizard
-  initializeOnboarding().then(() => {
-    showOnboardingWizard('create_account');
-  });
+  // Show loading state immediately, then load data
+  showOnboardingWizard('create_account');
+
+  // If data not loaded yet, initialize in background
+  if (!onboardingConfig) {
+    initializeOnboarding()
+      .then(() => {
+        renderCurrentStep();
+      })
+      .catch(() => {
+        // Error will be shown via wizardLoadState
+        renderErrorStep(wizardLoadState.errorMessage || 'Unable to load. Please try again.');
+      });
+  }
 
   return false; // Block action
 }
+
+  // ===========================================
+  // PUBLIC API
+  // ===========================================
+  // Expose functions needed by onclick handlers and other scripts
+
+  // Main entry points (called from other JS files)
+  window.showOnboardingWizard = showOnboardingWizard;
+  window.hideOnboardingWizard = hideOnboardingWizard;
+  window.triggerOnboardingOrLogin = triggerOnboardingOrLogin;
+  window.initializeOnboarding = initializeOnboarding;
+  window.checkAndShowPrompts = checkAndShowPrompts;
+
+  // Step navigation (called from onclick in templates)
+  window.nextStep = nextStep;
+  window.prevStep = prevStep;
+  window.goToStep = goToStep;
+  window.retryWizardLoad = retryWizardLoad;
+
+  // Form handlers (called from onclick in templates)
+  window.handleCreateAccount = handleCreateAccount;
+  window.switchToLogin = switchToLogin;
+  window.handleCheckout = handleCheckout;
+
+  // Character selection (called from onclick in templates)
+  window.selectStarterCharacter = selectStarterCharacter;
+  window.selectPremiumCharacter = selectPremiumCharacter;
+  window.handleCharacterContinue = handleCharacterContinue;
+
+  // Plan/tier selection (called from onclick in templates)
+  window.selectContentPlan = selectContentPlan;
+  window.selectEducationTier = selectEducationTier;
+  window.setBillingCycle = setBillingCycle;
+
+  // Prompt system (called from onclick in templates)
+  window.handlePromptCta = handlePromptCta;
+  window.dismissPrompt = dismissPrompt;
+
+})(window);
