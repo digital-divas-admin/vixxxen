@@ -35,8 +35,8 @@
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 16px;
-  width: 90%;
-  max-width: 800px;
+  width: 95%;
+  max-width: 1100px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
@@ -678,8 +678,9 @@
 /* Plans Grid */
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding-bottom: 16px;
 }
 
 .plan-card {
@@ -690,6 +691,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  position: relative;
 }
 
 .plan-card:hover {
@@ -697,8 +699,25 @@
 }
 
 .plan-card.selected {
-  border-color: #00b2ff;
-  background: rgba(0, 178, 255, 0.1);
+  border-color: #00cc88 !important;
+  border-width: 3px !important;
+  background: rgba(0, 204, 136, 0.15) !important;
+  box-shadow: 0 0 20px rgba(0, 204, 136, 0.4), inset 0 0 30px rgba(0, 204, 136, 0.1) !important;
+}
+
+.plan-card.selected::after {
+  content: "✓ SELECTED";
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #00cc88;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
 }
 
 .plan-header {
@@ -876,8 +895,9 @@
 /* Education Tiers Grid */
 .tiers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding-bottom: 16px;
 }
 
 .tier-card {
@@ -888,6 +908,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  position: relative;
 }
 
 .tier-card:hover {
@@ -895,8 +916,25 @@
 }
 
 .tier-card.selected {
-  border-color: #ff2ebb;
-  background: rgba(255, 46, 187, 0.1);
+  border-color: #00cc88 !important;
+  border-width: 3px !important;
+  background: rgba(0, 204, 136, 0.15) !important;
+  box-shadow: 0 0 20px rgba(0, 204, 136, 0.4), inset 0 0 30px rgba(0, 204, 136, 0.1) !important;
+}
+
+.tier-card.selected::after {
+  content: "✓ SELECTED";
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #00cc88;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
 }
 
 .tier-header {
@@ -1262,7 +1300,7 @@
 
   .plans-grid,
   .tiers-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .starter-characters-grid {
