@@ -555,8 +555,7 @@ function renderChoosePlanStep(step) {
   const actionsEl = document.getElementById('wizardActions');
 
   const plansHTML = contentPlans.map(plan => {
-    const price = billingCycle === 'annual' ? plan.price_annual : plan.price_monthly;
-    const monthlyEquiv = billingCycle === 'annual' ? (plan.price_annual / 12).toFixed(2) : plan.price_monthly;
+    const monthlyPrice = plan.price_monthly;
     const features = plan.features || [];
 
     return `
@@ -565,10 +564,9 @@ function renderChoosePlanStep(step) {
         <div class="plan-header">
           <h3 class="plan-name">${plan.name}</h3>
           <div class="plan-price">
-            <span class="price-amount">$${monthlyEquiv}</span>
+            <span class="price-amount">$${monthlyPrice}</span>
             <span class="price-period">/mo</span>
           </div>
-          ${billingCycle === 'annual' ? `<div class="plan-billed">Billed $${price}/year</div>` : ''}
         </div>
         <div class="plan-credits">
           <span class="credits-amount">${plan.credits_monthly}</span>
@@ -612,8 +610,7 @@ function renderChooseEducationStep(step) {
   const actionsEl = document.getElementById('wizardActions');
 
   const tiersHTML = educationTiers.map(tier => {
-    const price = billingCycle === 'annual' ? tier.price_annual : tier.price_monthly;
-    const monthlyEquiv = billingCycle === 'annual' ? (tier.price_annual / 12).toFixed(2) : tier.price_monthly;
+    const monthlyPrice = tier.price_monthly;
     const features = tier.features || [];
 
     return `
@@ -622,10 +619,9 @@ function renderChooseEducationStep(step) {
         <div class="tier-header">
           <h3 class="tier-name">${tier.name}</h3>
           <div class="tier-price">
-            <span class="price-amount">$${monthlyEquiv}</span>
+            <span class="price-amount">$${monthlyPrice}</span>
             <span class="price-period">/mo</span>
           </div>
-          ${billingCycle === 'annual' ? `<div class="tier-billed">Billed $${price}/year</div>` : ''}
         </div>
         <p class="tier-description">${tier.description || ''}</p>
         <ul class="tier-features">
@@ -1034,11 +1030,11 @@ async function handlePlanSelection() {
   // For now, just save selection and move on
   await saveStepProgress('choose_plan', false, {
     plan: wizardSelections.content_plan,
-    billing_cycle: billingCycle
+    billing_cycle: planBillingCycle
   });
 
   // Show payment modal or redirect to payment
-  alert(`Payment integration coming soon!\nYou selected: ${plan.name} (${billingCycle})`);
+  alert(`Payment integration coming soon!\nYou selected: ${plan.name} (${planBillingCycle})`);
 
   nextStep();
 }
@@ -1051,10 +1047,10 @@ async function handleEducationSelection() {
   // TODO: Integrate with payment system
   await saveStepProgress('choose_education', false, {
     tier: wizardSelections.education_tier,
-    billing_cycle: billingCycle
+    billing_cycle: educationBillingCycle
   });
 
-  alert(`Payment integration coming soon!\nYou selected: ${tier.name} (${billingCycle})`);
+  alert(`Payment integration coming soon!\nYou selected: ${tier.name} (${educationBillingCycle})`);
 
   nextStep();
 }
