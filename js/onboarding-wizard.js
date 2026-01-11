@@ -13,6 +13,15 @@ let premiumCharacters = []; // Marketplace characters (unique, paid)
 let currentStepIndex = 0;
 let billingCycle = 'monthly'; // or 'annual'
 let wizardSelections = {};
+let selectedStarterCharacter = null; // Track selected starter character
+let purchasedPremiumCharacter = null; // Track if premium was purchased
+
+// Placeholder starter characters (used when none in database)
+const placeholderStarters = [
+  { id: 'placeholder-1', name: 'Luna', category: 'Fantasy', is_starter: true },
+  { id: 'placeholder-2', name: 'Aria', category: 'Modern', is_starter: true },
+  { id: 'placeholder-3', name: 'Nova', category: 'Sci-Fi', is_starter: true }
+];
 
 // ===========================================
 // INITIALIZATION
@@ -137,12 +146,12 @@ function showOnboardingWizard(startAtStep = null) {
   currentStepIndex = 0;
   wizardSelections = {};
   billingCycle = 'monthly';
+  selectedStarterCharacter = null;
+  purchasedPremiumCharacter = null;
 
-  // If startAtStep specified, find its index
-  if (startAtStep && onboardingConfig) {
-    const idx = onboardingConfig.findIndex(s => s.step_key === startAtStep);
-    if (idx >= 0) currentStepIndex = idx;
-  }
+  // Always start with intro step (index -1 represents intro)
+  // After intro, we proceed to the database-driven steps
+  currentStepIndex = -1; // -1 = intro step
 
   // Render current step
   renderCurrentStep();
@@ -178,7 +187,15 @@ function createWizardModal() {
 // Render progress dots
 function renderProgressDots() {
   const progressEl = document.getElementById('wizardProgress');
-  if (!progressEl || !onboardingConfig) return;
+  if (!progressEl) return;
+
+  // Intro step doesn't show progress dots
+  if (currentStepIndex === -1) {
+    progressEl.innerHTML = '';
+    return;
+  }
+
+  if (!onboardingConfig) return;
 
   const dots = onboardingConfig.map((step, idx) => {
     let className = 'progress-dot';
@@ -195,6 +212,13 @@ function renderProgressDots() {
 
 // Render current step content
 function renderCurrentStep() {
+  // Handle intro step (index -1)
+  if (currentStepIndex === -1) {
+    renderProgressDots();
+    renderIntroStep();
+    return;
+  }
+
   if (!onboardingConfig || currentStepIndex >= onboardingConfig.length) {
     hideOnboardingWizard();
     return;
@@ -228,6 +252,62 @@ function renderCurrentStep() {
 // STEP RENDERERS
 // ===========================================
 
+// Intro Step: Explain the process
+function renderIntroStep() {
+  const contentEl = document.getElementById('wizardContent');
+  const actionsEl = document.getElementById('wizardActions');
+
+  contentEl.innerHTML = `
+    <div class="wizard-step intro-step">
+      <div class="wizard-icon">&#127775;</div>
+      <h2 class="wizard-title">Welcome to Vixxxen</h2>
+      <p class="wizard-subtitle">Your AI-powered content creation platform</p>
+
+      <div class="intro-process">
+        <h3 class="process-title">Here's how it works:</h3>
+
+        <div class="process-steps">
+          <div class="process-step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h4>Choose Your Character</h4>
+              <p>Pick a free starter character or purchase a premium exclusive character that's 100% yours.</p>
+            </div>
+          </div>
+
+          <div class="process-step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h4>Select Your Creator Package</h4>
+              <p>Choose the credits and features that fit your content creation goals.</p>
+            </div>
+          </div>
+
+          <div class="process-step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h4>Pick Your Education Level</h4>
+              <p>Get training and resources to help you succeed with your new AI influencer.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="intro-bonus">
+          <span class="bonus-icon">&#127873;</span>
+          <span class="bonus-text">Start with <strong>20 free credits</strong> to try it out!</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  actionsEl.innerHTML = `
+    <button class="wizard-btn primary large" onclick="nextStep()">
+      Let's Get Started
+    </button>
+    <p class="wizard-login-link">Already have an account? <a href="#" onclick="switchToLogin(); return false;">Sign in</a></p>
+  `;
+}
+
 // Step 1: Create Account
 function renderCreateAccountStep(step) {
   const contentEl = document.getElementById('wizardContent');
@@ -254,9 +334,12 @@ function renderCreateAccountStep(step) {
   `;
 
   actionsEl.innerHTML = `
-    <button class="wizard-btn primary" onclick="handleCreateAccount()">
-      ${step.continue_button_text || 'Create Account'}
-    </button>
+    <div class="wizard-actions-row">
+      <button class="wizard-btn back" onclick="prevStep()">Back</button>
+      <button class="wizard-btn primary" onclick="handleCreateAccount()">
+        ${step.continue_button_text || 'Create Account'}
+      </button>
+    </div>
     <p class="wizard-login-link">Already have an account? <a href="#" onclick="switchToLogin(); return false;">Sign in</a></p>
   `;
 }
@@ -269,11 +352,17 @@ function renderChooseCharacterStep(step) {
   // Color palette for character placeholders
   const placeholderColors = ['#ff2ebb', '#00b2ff', '#00cc88', '#9966ff', '#ff6600'];
 
-  // Render free starter characters
-  const starterHTML = starterCharacters.map((char, idx) => {
+  // Use placeholder starters if no real ones exist
+  const displayStarters = starterCharacters.length > 0 ? starterCharacters : placeholderStarters;
+
+  // Render free starter characters (selectable)
+  const starterHTML = displayStarters.map((char, idx) => {
     const bgColor = placeholderColors[idx % placeholderColors.length];
+    const isSelected = selectedStarterCharacter === char.id;
     return `
-    <div class="starter-character-card free-character">
+    <div class="starter-character-card free-character ${isSelected ? 'selected' : ''}"
+         onclick="selectStarterCharacter('${char.id}')">
+      <div class="selection-indicator">${isSelected ? '✓' : ''}</div>
       <div class="character-image">
         ${char.image_url
           ? `<img src="${char.image_url}" alt="${char.name}">`
@@ -294,8 +383,11 @@ function renderChooseCharacterStep(step) {
   const premiumToShow = premiumCharacters.slice(0, 6);
   const premiumHTML = premiumToShow.map((char, idx) => {
     const bgColor = placeholderColors[(idx + 2) % placeholderColors.length];
+    const isPurchased = purchasedPremiumCharacter === char.id;
     return `
-    <div class="starter-character-card premium-character" onclick="selectPremiumCharacter('${char.id}')">
+    <div class="starter-character-card premium-character ${isPurchased ? 'purchased' : ''}"
+         onclick="selectPremiumCharacter('${char.id}')">
+      ${isPurchased ? '<div class="selection-indicator purchased-indicator">✓ Owned</div>' : ''}
       <div class="character-image">
         ${char.image_url
           ? `<img src="${char.image_url}" alt="${char.name}">`
@@ -313,21 +405,28 @@ function renderChooseCharacterStep(step) {
   `}).join('');
 
   const morePremiumCount = premiumCharacters.length - premiumToShow.length;
+  const hasSelection = selectedStarterCharacter || purchasedPremiumCharacter;
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-character-step">
       <div class="wizard-icon">&#129302;</div>
-      <h2 class="wizard-title">${step.title}</h2>
-      <p class="wizard-subtitle">${step.subtitle}</p>
+      <h2 class="wizard-title">${step.title || 'Choose Your Character'}</h2>
+      <p class="wizard-subtitle">${step.subtitle || 'Select a character to create content with'}</p>
+
+      <p class="selection-requirement ${hasSelection ? 'fulfilled' : ''}">
+        ${hasSelection
+          ? '✓ Character selected! You can continue.'
+          : 'Please select at least one character to continue'}
+      </p>
 
       <!-- Free Characters Section -->
       <div class="character-section">
         <div class="section-header">
           <h3 class="section-title">Free Starter Characters</h3>
-          <p class="section-desc">Shared characters available to all users. <strong>SFW content only.</strong></p>
+          <p class="section-desc">Shared characters available to all users. <strong>SFW content only.</strong> Click to select.</p>
         </div>
         <div class="starter-characters-grid">
-          ${starterHTML || '<p class="no-characters">No free characters available</p>'}
+          ${starterHTML}
         </div>
       </div>
 
@@ -356,24 +455,29 @@ function renderChooseCharacterStep(step) {
   `;
 
   actionsEl.innerHTML = `
-    <button class="wizard-btn primary" onclick="nextStep()">
-      ${step.continue_button_text || 'Continue with Free Characters'}
-    </button>
-    ${!step.is_required ? `
-      <button class="wizard-btn secondary" onclick="skipStep()">
-        ${step.skip_button_text || 'Skip for now'}
+    <div class="wizard-actions-row">
+      <button class="wizard-btn back" onclick="prevStep()">Back</button>
+      <button class="wizard-btn primary ${!hasSelection ? 'disabled' : ''}"
+              onclick="handleCharacterContinue()"
+              ${!hasSelection ? 'disabled' : ''}>
+        Continue
       </button>
-    ` : ''}
+    </div>
   `;
+}
+
+// Select a free starter character
+function selectStarterCharacter(characterId) {
+  selectedStarterCharacter = characterId;
+  // Clear premium selection when selecting starter
+  // (they can have both, but starter is primary if no purchase)
+  renderCurrentStep();
 }
 
 // Handle premium character selection in wizard
 function selectPremiumCharacter(characterId) {
   const char = premiumCharacters.find(c => c.id === characterId);
   if (!char) return;
-
-  // Store selection for potential purchase
-  wizardSelections.premium_character = characterId;
 
   // Show purchase confirmation
   const confirmed = confirm(
@@ -384,8 +488,28 @@ function selectPremiumCharacter(characterId) {
 
   if (confirmed) {
     // TODO: Integrate with payment system
-    alert('Payment integration coming soon! You can purchase characters from the marketplace after signup.');
+    // For now, mark as "purchased" to allow continuing
+    purchasedPremiumCharacter = characterId;
+    wizardSelections.premium_character = characterId;
+    alert('Payment integration coming soon! For now, we\'ll let you continue to see the flow.');
+    renderCurrentStep();
   }
+}
+
+// Handle continue from character step
+function handleCharacterContinue() {
+  if (!selectedStarterCharacter && !purchasedPremiumCharacter) {
+    alert('Please select at least one character to continue.');
+    return;
+  }
+
+  // Save selection
+  wizardSelections.starter_character = selectedStarterCharacter;
+  if (purchasedPremiumCharacter) {
+    wizardSelections.premium_character = purchasedPremiumCharacter;
+  }
+
+  nextStep();
 }
 
 // Step 3: Choose Plan
@@ -441,14 +565,18 @@ function renderChoosePlanStep(step) {
   `;
 
   actionsEl.innerHTML = `
-    ${wizardSelections.content_plan ? `
-      <button class="wizard-btn primary" onclick="handlePlanSelection()">
-        Subscribe to ${wizardSelections.content_plan.charAt(0).toUpperCase() + wizardSelections.content_plan.slice(1)}
-      </button>
-    ` : ''}
-    <button class="wizard-btn secondary" onclick="skipStep()">
-      ${step.skip_button_text || 'Continue with free credits'}
-    </button>
+    <div class="wizard-actions-row">
+      <button class="wizard-btn back" onclick="prevStep()">Back</button>
+      ${wizardSelections.content_plan ? `
+        <button class="wizard-btn primary" onclick="handlePlanSelection()">
+          Subscribe to ${wizardSelections.content_plan.charAt(0).toUpperCase() + wizardSelections.content_plan.slice(1)}
+        </button>
+      ` : `
+        <button class="wizard-btn primary" onclick="skipStep()">
+          ${step.skip_button_text || 'Continue with free credits'}
+        </button>
+      `}
+    </div>
   `;
 }
 
@@ -502,14 +630,18 @@ function renderChooseEducationStep(step) {
   `;
 
   actionsEl.innerHTML = `
-    ${wizardSelections.education_tier ? `
-      <button class="wizard-btn primary" onclick="handleEducationSelection()">
-        Join ${wizardSelections.education_tier.charAt(0).toUpperCase() + wizardSelections.education_tier.slice(1)}
-      </button>
-    ` : ''}
-    <button class="wizard-btn secondary" onclick="skipStep()">
-      ${step.skip_button_text || 'Skip - I just want to create'}
-    </button>
+    <div class="wizard-actions-row">
+      <button class="wizard-btn back" onclick="prevStep()">Back</button>
+      ${wizardSelections.education_tier ? `
+        <button class="wizard-btn primary" onclick="handleEducationSelection()">
+          Join ${wizardSelections.education_tier.charAt(0).toUpperCase() + wizardSelections.education_tier.slice(1)}
+        </button>
+      ` : `
+        <button class="wizard-btn primary" onclick="skipStep()">
+          ${step.skip_button_text || 'Skip - I just want to create'}
+        </button>
+      `}
+    </div>
   `;
 }
 
@@ -565,9 +697,12 @@ function renderWelcomeStep(step) {
   `;
 
   actionsEl.innerHTML = `
-    <button class="wizard-btn primary large" onclick="completeOnboarding()">
-      ${step.continue_button_text || 'Start Creating'}
-    </button>
+    <div class="wizard-actions-row">
+      <button class="wizard-btn back" onclick="prevStep()">Back</button>
+      <button class="wizard-btn primary large" onclick="completeOnboarding()">
+        ${step.continue_button_text || 'Start Creating'}
+      </button>
+    </div>
   `;
 }
 
@@ -584,14 +719,12 @@ function renderGenericStep(step) {
   `;
 
   actionsEl.innerHTML = `
-    <button class="wizard-btn primary" onclick="nextStep()">
-      ${step.continue_button_text || 'Continue'}
-    </button>
-    ${!step.is_required ? `
-      <button class="wizard-btn secondary" onclick="skipStep()">
-        ${step.skip_button_text || 'Skip'}
+    <div class="wizard-actions-row">
+      <button class="wizard-btn back" onclick="prevStep()">Back</button>
+      <button class="wizard-btn primary" onclick="nextStep()">
+        ${step.continue_button_text || 'Continue'}
       </button>
-    ` : ''}
+    </div>
   `;
 }
 
@@ -672,6 +805,14 @@ function nextStep() {
     renderCurrentStep();
   } else {
     completeOnboarding();
+  }
+}
+
+// Go to previous step
+function prevStep() {
+  if (currentStepIndex > -1) {
+    currentStepIndex--;
+    renderCurrentStep();
   }
 }
 

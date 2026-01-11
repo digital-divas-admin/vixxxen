@@ -426,6 +426,186 @@
   padding: 24px;
 }
 
+/* Intro Step */
+.intro-step {
+  text-align: center;
+}
+
+.intro-process {
+  margin-top: 24px;
+  text-align: left;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.process-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.process-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.process-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px;
+  background: #252525;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #00b2ff, #0088cc);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.step-content p {
+  font-size: 0.9rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+.intro-bonus {
+  margin-top: 24px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(0, 204, 136, 0.15), rgba(0, 178, 255, 0.15));
+  border: 1px solid rgba(0, 204, 136, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.bonus-icon {
+  font-size: 1.5rem;
+}
+
+.bonus-text {
+  font-size: 1rem;
+  color: #fff;
+}
+
+.bonus-text strong {
+  color: #00cc88;
+}
+
+/* Selection Indicator */
+.selection-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  background: #00cc88;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.2s ease;
+}
+
+.starter-character-card {
+  position: relative;
+}
+
+.starter-character-card.selected .selection-indicator,
+.starter-character-card.purchased .selection-indicator {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.starter-character-card.selected {
+  border-color: #00cc88;
+  box-shadow: 0 0 20px rgba(0, 204, 136, 0.3);
+}
+
+.purchased-indicator {
+  width: auto;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  background: linear-gradient(135deg, #ff2ebb, #cc1799);
+}
+
+.starter-character-card.purchased {
+  border-color: #ff2ebb;
+  box-shadow: 0 0 20px rgba(255, 46, 187, 0.3);
+}
+
+/* Selection Requirement Message */
+.selection-requirement {
+  font-size: 0.95rem;
+  color: #ff6b6b;
+  padding: 12px 20px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: inline-block;
+}
+
+.selection-requirement.fulfilled {
+  color: #00cc88;
+  background: rgba(0, 204, 136, 0.1);
+  border-color: rgba(0, 204, 136, 0.3);
+}
+
+/* Disabled Button */
+.wizard-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Back Button in Actions */
+.wizard-actions-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.wizard-btn.back {
+  background: transparent;
+  color: #888;
+  border: 1px solid #333;
+  min-width: 100px;
+}
+
+.wizard-btn.back:hover {
+  background: #252525;
+  color: #fff;
+}
+
 /* Billing Toggle */
 .billing-toggle {
   display: inline-flex;
