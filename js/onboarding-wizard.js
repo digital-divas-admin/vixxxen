@@ -197,17 +197,42 @@ function renderProgressDots() {
 
   if (!onboardingConfig) return;
 
+  // Get step labels for the progress bar
+  const stepLabels = {
+    'create_account': 'Account',
+    'choose_character': 'Character',
+    'choose_plan': 'Credits',
+    'choose_education': 'Education',
+    'welcome': 'Review'
+  };
+
   const dots = onboardingConfig.map((step, idx) => {
     let className = 'progress-dot';
-    if (idx < currentStepIndex) className += ' completed';
-    if (idx === currentStepIndex) className += ' active';
-    return `<div class="${className}" data-step="${idx}"></div>`;
+    const isCompleted = idx < currentStepIndex;
+    const isActive = idx === currentStepIndex;
+    if (isCompleted) className += ' completed clickable';
+    if (isActive) className += ' active';
+    const label = stepLabels[step.step_key] || `Step ${idx + 1}`;
+    return `
+      <div class="progress-step ${isCompleted ? 'clickable' : ''}" ${isCompleted ? `onclick="goToStep(${idx})"` : ''}>
+        <div class="${className}" data-step="${idx}"></div>
+        <span class="progress-step-label">${label}</span>
+      </div>
+    `;
   }).join('');
 
   progressEl.innerHTML = `
     <div class="progress-dots">${dots}</div>
-    <div class="progress-label">Step ${currentStepIndex + 1} of ${onboardingConfig.length}</div>
+    <div class="progress-hint">Click any completed step to go back and make changes</div>
   `;
+}
+
+// Go to a specific step
+function goToStep(stepIndex) {
+  if (stepIndex >= 0 && stepIndex < currentStepIndex) {
+    currentStepIndex = stepIndex;
+    renderCurrentStep();
+  }
 }
 
 // Render current step content
@@ -451,6 +476,10 @@ function renderChooseCharacterStep(step) {
           ` : ''}
         ` : '<p class="no-characters">Check back soon for exclusive characters!</p>'}
       </div>
+
+      <p class="wizard-flexibility-note">
+        You can always purchase a premium character later from the marketplace.
+      </p>
     </div>
   `;
 
@@ -468,32 +497,38 @@ function renderChooseCharacterStep(step) {
 
 // Select a free starter character
 function selectStarterCharacter(characterId) {
-  selectedStarterCharacter = characterId;
-  // Clear premium selection when selecting starter
-  // (they can have both, but starter is primary if no purchase)
+  // Toggle selection - if already selected, deselect
+  if (selectedStarterCharacter === characterId) {
+    selectedStarterCharacter = null;
+    wizardSelections.starter_character = null;
+  } else {
+    selectedStarterCharacter = characterId;
+    wizardSelections.starter_character = characterId;
+    // Clear premium selection when selecting starter (one or the other)
+    purchasedPremiumCharacter = null;
+    wizardSelections.premium_character = null;
+  }
   renderCurrentStep();
 }
 
-// Handle premium character selection in wizard
+// Handle premium character selection in wizard (just select, pay at end)
 function selectPremiumCharacter(characterId) {
   const char = premiumCharacters.find(c => c.id === characterId);
   if (!char) return;
 
-  // Show purchase confirmation
-  const confirmed = confirm(
-    `Purchase "${char.name}" for $${char.price}?\n\n` +
-    `This is an exclusive character that will be yours alone.\n` +
-    `Full SFW + NSFW content capabilities included.`
-  );
-
-  if (confirmed) {
-    // TODO: Integrate with payment system
-    // For now, mark as "purchased" to allow continuing
+  // Toggle selection - if already selected, deselect
+  if (purchasedPremiumCharacter === characterId) {
+    purchasedPremiumCharacter = null;
+    wizardSelections.premium_character = null;
+  } else {
+    // Select this premium character (will be charged at checkout)
     purchasedPremiumCharacter = characterId;
     wizardSelections.premium_character = characterId;
-    alert('Payment integration coming soon! For now, we\'ll let you continue to see the flow.');
-    renderCurrentStep();
+    // Clear starter selection when selecting premium
+    selectedStarterCharacter = null;
+    wizardSelections.starter_character = null;
   }
+  renderCurrentStep();
 }
 
 // Handle continue from character step
@@ -546,36 +581,25 @@ function renderChoosePlanStep(step) {
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-plan-step">
-      <h2 class="wizard-title">${step.title}</h2>
-      <p class="wizard-subtitle">${step.subtitle}</p>
-
-      ${step.config?.show_annual_toggle ? `
-        <div class="billing-toggle">
-          <button class="toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}" onclick="setBillingCycle('monthly')">Monthly</button>
-          <button class="toggle-btn ${billingCycle === 'annual' ? 'active' : ''}" onclick="setBillingCycle('annual')">
-            Annual <span class="save-badge">Save 20%</span>
-          </button>
-        </div>
-      ` : ''}
+      <h2 class="wizard-title">${step.title || 'Choose Your Creator Package'}</h2>
+      <p class="wizard-subtitle">${step.subtitle || 'Select the credits and features that fit your needs'}</p>
 
       <div class="plans-grid">
         ${plansHTML || '<p>Loading plans...</p>'}
       </div>
+
+      <p class="wizard-flexibility-note">
+        You can change your plan anytime. Start with free credits and upgrade later!
+      </p>
     </div>
   `;
 
   actionsEl.innerHTML = `
     <div class="wizard-actions-row">
       <button class="wizard-btn back" onclick="prevStep()">Back</button>
-      ${wizardSelections.content_plan ? `
-        <button class="wizard-btn primary" onclick="handlePlanSelection()">
-          Subscribe to ${wizardSelections.content_plan.charAt(0).toUpperCase() + wizardSelections.content_plan.slice(1)}
-        </button>
-      ` : `
-        <button class="wizard-btn primary" onclick="skipStep()">
-          ${step.skip_button_text || 'Continue with free credits'}
-        </button>
-      `}
+      <button class="wizard-btn primary" onclick="nextStep()">
+        ${wizardSelections.content_plan ? 'Continue' : 'Skip for now'}
+      </button>
     </div>
   `;
 }
@@ -611,99 +635,217 @@ function renderChooseEducationStep(step) {
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-education-step">
-      <h2 class="wizard-title">${step.title}</h2>
-      <p class="wizard-subtitle">${step.subtitle}</p>
-
-      ${step.config?.show_annual_toggle ? `
-        <div class="billing-toggle">
-          <button class="toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}" onclick="setBillingCycle('monthly')">Monthly</button>
-          <button class="toggle-btn ${billingCycle === 'annual' ? 'active' : ''}" onclick="setBillingCycle('annual')">
-            Annual <span class="save-badge">Save 20%</span>
-          </button>
-        </div>
-      ` : ''}
+      <h2 class="wizard-title">${step.title || 'Choose Your Education Level'}</h2>
+      <p class="wizard-subtitle">${step.subtitle || 'Get the training you need to succeed with your AI influencer'}</p>
 
       <div class="tiers-grid">
         ${tiersHTML || '<p>Loading tiers...</p>'}
       </div>
+
+      <p class="wizard-flexibility-note">
+        You can add or change your education tier anytime from the Learn tab.
+      </p>
     </div>
   `;
 
   actionsEl.innerHTML = `
     <div class="wizard-actions-row">
       <button class="wizard-btn back" onclick="prevStep()">Back</button>
-      ${wizardSelections.education_tier ? `
-        <button class="wizard-btn primary" onclick="handleEducationSelection()">
-          Join ${wizardSelections.education_tier.charAt(0).toUpperCase() + wizardSelections.education_tier.slice(1)}
-        </button>
-      ` : `
-        <button class="wizard-btn primary" onclick="skipStep()">
-          ${step.skip_button_text || 'Skip - I just want to create'}
-        </button>
-      `}
+      <button class="wizard-btn primary" onclick="nextStep()">
+        ${wizardSelections.education_tier ? 'Continue to Review' : 'Skip for now'}
+      </button>
     </div>
   `;
 }
 
-// Step 5: Welcome
+// Step 5: Review & Checkout
 function renderWelcomeStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
-  // Build summary based on selections
-  let summaryItems = [];
-  summaryItems.push(`<li>You have <strong>${userCredits || 20} credits</strong> to start creating</li>`);
+  // Get selected items for pricing
+  const selectedPlan = wizardSelections.content_plan
+    ? contentPlans.find(p => p.slug === wizardSelections.content_plan)
+    : null;
+  const selectedTier = wizardSelections.education_tier
+    ? educationTiers.find(t => t.slug === wizardSelections.education_tier)
+    : null;
+  const selectedPremiumChar = wizardSelections.premium_character
+    ? premiumCharacters.find(c => c.id === wizardSelections.premium_character)
+    : null;
 
-  if (starterCharacters.length > 0) {
-    const charNames = starterCharacters.map(c => c.name).join(', ');
-    summaryItems.push(`<li>Create with starter characters: <strong>${charNames}</strong></li>`);
-  }
+  // Get selected starter character name
+  const displayStarters = starterCharacters.length > 0 ? starterCharacters : placeholderStarters;
+  const selectedStarterChar = wizardSelections.starter_character
+    ? displayStarters.find(c => c.id === wizardSelections.starter_character)
+    : null;
 
-  if (wizardSelections.content_plan) {
-    const plan = contentPlans.find(p => p.slug === wizardSelections.content_plan);
-    if (plan) {
-      summaryItems.push(`<li>Your <strong>${plan.name}</strong> plan is active</li>`);
-    }
-  }
+  // Calculate totals
+  const planMonthly = selectedPlan ? parseFloat(selectedPlan.price_monthly) : 0;
+  const planAnnual = selectedPlan ? parseFloat(selectedPlan.price_annual) : 0;
+  const tierMonthly = selectedTier ? parseFloat(selectedTier.price_monthly) : 0;
+  const tierAnnual = selectedTier ? parseFloat(selectedTier.price_annual) : 0;
+  const premiumCharPrice = selectedPremiumChar ? parseFloat(selectedPremiumChar.price) : 0;
 
-  if (wizardSelections.education_tier) {
-    const tier = educationTiers.find(t => t.slug === wizardSelections.education_tier);
-    if (tier) {
-      summaryItems.push(`<li>Welcome to <strong>${tier.name}</strong> - check out the Learn tab!</li>`);
-    }
-  }
+  const totalMonthly = planMonthly + tierMonthly;
+  const totalAnnual = planAnnual + tierAnnual;
+  const monthlyFromAnnual = totalAnnual / 12;
+  const annualSavings = (totalMonthly * 12) - totalAnnual;
+
+  const hasPaidItems = totalMonthly > 0 || premiumCharPrice > 0;
 
   contentEl.innerHTML = `
-    <div class="wizard-step welcome-step">
-      <div class="wizard-icon">&#127881;</div>
-      <h2 class="wizard-title">${step.title}</h2>
-      <p class="wizard-subtitle">${step.subtitle}</p>
+    <div class="wizard-step review-step">
+      <div class="wizard-icon">&#128203;</div>
+      <h2 class="wizard-title">Review Your Selections</h2>
+      <p class="wizard-subtitle">Here's what you've chosen. You can go back to any step to make changes.</p>
 
-      <div class="welcome-summary">
-        <ul class="summary-list">
-          ${summaryItems.join('')}
-        </ul>
+      <div class="review-sections">
+        <!-- Character Selection -->
+        <div class="review-section">
+          <div class="review-section-header">
+            <h4>Character</h4>
+            <button class="review-edit-btn" onclick="goToStep(1)">Edit</button>
+          </div>
+          <div class="review-section-content">
+            ${selectedPremiumChar ? `
+              <div class="review-item premium">
+                <span class="item-name">${selectedPremiumChar.name}</span>
+                <span class="item-badge premium">Premium Exclusive</span>
+                <span class="item-price">$${premiumCharPrice.toFixed(2)} one-time</span>
+              </div>
+            ` : selectedStarterChar ? `
+              <div class="review-item free">
+                <span class="item-name">${selectedStarterChar.name}</span>
+                <span class="item-badge free">Free Starter</span>
+                <span class="item-price">$0</span>
+              </div>
+            ` : `
+              <div class="review-item none">
+                <span class="item-name">No character selected</span>
+              </div>
+            `}
+          </div>
+        </div>
+
+        <!-- Creator Package -->
+        <div class="review-section">
+          <div class="review-section-header">
+            <h4>Creator Package</h4>
+            <button class="review-edit-btn" onclick="goToStep(2)">Edit</button>
+          </div>
+          <div class="review-section-content">
+            ${selectedPlan ? `
+              <div class="review-item">
+                <span class="item-name">${selectedPlan.name}</span>
+                <span class="item-detail">${selectedPlan.credits_monthly} credits/month</span>
+                <span class="item-price">$${planMonthly.toFixed(2)}/mo</span>
+              </div>
+            ` : `
+              <div class="review-item free">
+                <span class="item-name">Free Plan</span>
+                <span class="item-detail">20 starter credits</span>
+                <span class="item-price">$0</span>
+              </div>
+            `}
+          </div>
+        </div>
+
+        <!-- Education -->
+        <div class="review-section">
+          <div class="review-section-header">
+            <h4>Education</h4>
+            <button class="review-edit-btn" onclick="goToStep(3)">Edit</button>
+          </div>
+          <div class="review-section-content">
+            ${selectedTier ? `
+              <div class="review-item">
+                <span class="item-name">${selectedTier.name}</span>
+                <span class="item-price">$${tierMonthly.toFixed(2)}/mo</span>
+              </div>
+            ` : `
+              <div class="review-item none">
+                <span class="item-name">No education plan</span>
+                <span class="item-price">$0</span>
+              </div>
+            `}
+          </div>
+        </div>
       </div>
 
-      <div class="welcome-tips">
-        <h4>Quick Tips:</h4>
-        <ul>
-          <li>Use the <strong>Image</strong> tab to generate AI images</li>
-          <li>Try different characters from the dropdown</li>
-          <li>Check out the <strong>Learn</strong> tab for tutorials</li>
-        </ul>
-      </div>
+      ${hasPaidItems ? `
+        <!-- Pricing Summary -->
+        <div class="checkout-summary">
+          <h4>Payment Summary</h4>
+
+          ${premiumCharPrice > 0 ? `
+            <div class="summary-line onetime">
+              <span>One-time purchase (${selectedPremiumChar.name})</span>
+              <span class="summary-amount">$${premiumCharPrice.toFixed(2)}</span>
+            </div>
+          ` : ''}
+
+          ${totalMonthly > 0 ? `
+            <div class="billing-toggle checkout-toggle">
+              <button class="toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}" onclick="setBillingCycle('monthly')">Monthly</button>
+              <button class="toggle-btn ${billingCycle === 'annual' ? 'active' : ''}" onclick="setBillingCycle('annual')">
+                Annual ${annualSavings > 0 ? `<span class="save-badge">Save $${annualSavings.toFixed(0)}/yr</span>` : ''}
+              </button>
+            </div>
+
+            <div class="summary-line recurring">
+              <span>Recurring ${billingCycle === 'annual' ? '(billed annually)' : ''}</span>
+              <span class="summary-amount">
+                ${billingCycle === 'annual'
+                  ? `$${monthlyFromAnnual.toFixed(2)}/mo <small>($${totalAnnual.toFixed(2)}/yr)</small>`
+                  : `$${totalMonthly.toFixed(2)}/mo`
+                }
+              </span>
+            </div>
+          ` : ''}
+
+          <div class="summary-total">
+            <span>Due today</span>
+            <span class="total-amount">
+              $${(premiumCharPrice + (billingCycle === 'annual' ? totalAnnual : totalMonthly)).toFixed(2)}
+            </span>
+          </div>
+        </div>
+      ` : `
+        <div class="checkout-free">
+          <div class="free-badge-large">&#127881; It's Free!</div>
+          <p>You're starting with 20 free credits. No payment required!</p>
+        </div>
+      `}
+
+      <p class="wizard-flexibility-note">
+        You can upgrade your plan, add education, or purchase premium characters anytime.
+      </p>
     </div>
   `;
 
   actionsEl.innerHTML = `
     <div class="wizard-actions-row">
       <button class="wizard-btn back" onclick="prevStep()">Back</button>
-      <button class="wizard-btn primary large" onclick="completeOnboarding()">
-        ${step.continue_button_text || 'Start Creating'}
+      <button class="wizard-btn primary large" onclick="handleCheckout()">
+        ${hasPaidItems ? 'Complete Purchase' : 'Start Creating - It\'s Free!'}
       </button>
     </div>
   `;
+}
+
+// Handle final checkout
+async function handleCheckout() {
+  const hasPaidItems = wizardSelections.content_plan ||
+                       wizardSelections.education_tier ||
+                       wizardSelections.premium_character;
+
+  if (hasPaidItems) {
+    // TODO: Integrate with payment system (Stripe, etc.)
+    alert('Payment integration coming soon! For now, enjoy exploring Vixxxen.');
+  }
+
+  await completeOnboarding();
 }
 
 // Generic step renderer for custom steps
