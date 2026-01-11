@@ -385,9 +385,11 @@ function showOnboardingWizard(startAtStep = null) {
 
   // Try to restore previous state
   const savedState = loadWizardState();
+  console.log('🔄 Wizard opening, savedState:', savedState);
 
   if (savedState && savedState.currentStepIndex > -1) {
     // Restore previous progress
+    console.log('📂 Restoring previous wizard state from step', savedState.currentStepIndex);
     currentStepIndex = savedState.currentStepIndex;
     wizardSelections = savedState.wizardSelections || {};
     planBillingCycle = savedState.planBillingCycle || 'monthly';
@@ -396,6 +398,7 @@ function showOnboardingWizard(startAtStep = null) {
     purchasedPremiumCharacter = savedState.purchasedPremiumCharacter || null;
   } else {
     // Fresh start
+    console.log('🆕 Starting wizard fresh');
     currentStepIndex = -1; // -1 = intro step
     wizardSelections = {};
     planBillingCycle = 'monthly';
@@ -1629,6 +1632,7 @@ function triggerOnboardingOrLogin(action = 'generate') {
 
   // Reset wizard state (call on logout)
   function resetWizard() {
+    console.log('🧹 Resetting wizard state...');
     clearWizardState();
     currentStepIndex = -1;
     wizardSelections = {};
@@ -1636,6 +1640,7 @@ function triggerOnboardingOrLogin(action = 'generate') {
     educationBillingCycle = 'monthly';
     selectedStarterCharacter = null;
     purchasedPremiumCharacter = null;
+    console.log('✅ Wizard state reset complete');
   }
 
   // Start wizard at a specific step (for users who already created account)
