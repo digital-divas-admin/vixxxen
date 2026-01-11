@@ -1,0 +1,1204 @@
+// ===========================================
+// ADMIN LANDING PAGE CMS
+// ===========================================
+// Depends on: config.js (API_BASE_URL, authFetch), utils.js (escapeHtml)
+// Note: isUserAdmin is set by auth state handler in main script
+
+// Admin landing page state
+let adminLandingData = null;
+let currentEditingSection = null;
+
+// ===========================================
+// MAIN ADMIN FUNCTIONS
+// ===========================================
+
+/**
+ * Load all landing page content for admin editing
+ */
+async function loadAdminLandingContent() {
+  if (!isUserAdmin) return;
+
+  const container = document.getElementById('adminLandingContent');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align: center; padding: 40px;">
+      <div class="loading-spinner"></div>
+      <p style="color: #888; margin-top: 12px;">Loading landing page content...</p>
+    </div>
+  `;
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/landing/admin/all`);
+    if (!response.ok) throw new Error('Failed to load landing page content');
+
+    adminLandingData = await response.json();
+    console.log('📝 Admin landing data loaded:', adminLandingData);
+
+    renderAdminLandingDashboard();
+  } catch (error) {
+    console.error('Error loading landing page content:', error);
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #ff4444;">
+        <p>Failed to load landing page content.</p>
+        <button class="landing-btn landing-btn--secondary" onclick="loadAdminLandingContent()" style="margin-top: 12px;">
+          Retry
+        </button>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Render the admin landing page dashboard
+ */
+function renderAdminLandingDashboard() {
+  const container = document.getElementById('adminLandingContent');
+  if (!container || !adminLandingData) return;
+
+  container.innerHTML = `
+    <div class="admin-landing-header">
+      <h2 style="margin: 0; font-size: 1.5rem; color: #fff;">Landing Page CMS</h2>
+      <p style="color: #888; margin: 8px 0 0;">Edit your landing page content without code changes</p>
+    </div>
+
+    <div class="admin-landing-tabs" style="display: flex; gap: 8px; margin: 24px 0; flex-wrap: wrap;">
+      <button class="admin-tab active" onclick="showAdminLandingTab('hero')" data-tab="hero">Hero</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('stats')" data-tab="stats">Stats</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('characters')" data-tab="characters">Characters</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('pipeline')" data-tab="pipeline">Pipeline</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('showcase')" data-tab="showcase">Showcase</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('capabilities')" data-tab="capabilities">Capabilities</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('education')" data-tab="education">Education</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('pricing')" data-tab="pricing">Pricing</button>
+      <button class="admin-tab" onclick="showAdminLandingTab('finalcta')" data-tab="finalcta">Final CTA</button>
+    </div>
+
+    <div id="adminLandingTabContent">
+      ${renderHeroSection()}
+    </div>
+  `;
+
+  // Add tab styles if not present
+  addAdminLandingStyles();
+}
+
+/**
+ * Show a specific tab in the admin panel
+ */
+function showAdminLandingTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.admin-landing-tabs .admin-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+
+  // Render tab content
+  const contentContainer = document.getElementById('adminLandingTabContent');
+  if (!contentContainer) return;
+
+  switch (tab) {
+    case 'hero':
+      contentContainer.innerHTML = renderHeroSection();
+      break;
+    case 'stats':
+      contentContainer.innerHTML = renderStatsSection();
+      break;
+    case 'characters':
+      contentContainer.innerHTML = renderCharactersSection();
+      break;
+    case 'pipeline':
+      contentContainer.innerHTML = renderPipelineSection();
+      break;
+    case 'showcase':
+      contentContainer.innerHTML = renderShowcaseSection();
+      break;
+    case 'capabilities':
+      contentContainer.innerHTML = renderCapabilitiesSection();
+      break;
+    case 'education':
+      contentContainer.innerHTML = renderEducationSection();
+      break;
+    case 'pricing':
+      contentContainer.innerHTML = renderPricingSection();
+      break;
+    case 'finalcta':
+      contentContainer.innerHTML = renderFinalCtaSection();
+      break;
+  }
+}
+
+// ===========================================
+// SECTION RENDERERS
+// ===========================================
+
+function renderHeroSection() {
+  const heroContent = adminLandingData.content?.filter(c => c.section_key === 'hero') || [];
+  const getContent = (key) => heroContent.find(c => c.content_key === key)?.content_value || '';
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Hero Section</h3>
+
+      <div class="admin-form-group">
+        <label>Headline</label>
+        <input type="text" id="heroHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+      </div>
+
+      <div class="admin-form-group">
+        <label>Subheadline</label>
+        <input type="text" id="heroSubheadlineInput" value="${escapeHtml(getContent('subheadline'))}" class="admin-input">
+      </div>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>Primary CTA Text</label>
+          <input type="text" id="heroPrimaryCtaInput" value="${escapeHtml(getContent('primary_cta_text'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>Primary CTA Link</label>
+          <input type="text" id="heroPrimaryCtaLinkInput" value="${escapeHtml(getContent('primary_cta_link'))}" class="admin-input">
+        </div>
+      </div>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>Secondary CTA Text</label>
+          <input type="text" id="heroSecondaryCtaInput" value="${escapeHtml(getContent('secondary_cta_text'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>Secondary CTA Link</label>
+          <input type="text" id="heroSecondaryCtaLinkInput" value="${escapeHtml(getContent('secondary_cta_link'))}" class="admin-input">
+        </div>
+      </div>
+
+      <div class="admin-form-group">
+        <label>Trust Badge Text</label>
+        <input type="text" id="heroTrustBadgeInput" value="${escapeHtml(getContent('trust_badge'))}" class="admin-input">
+      </div>
+
+      <button class="admin-save-btn" onclick="saveHeroSection()">Save Hero Section</button>
+    </div>
+  `;
+}
+
+function renderStatsSection() {
+  const stats = adminLandingData.stats || [];
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Stats Bar</h3>
+      <p style="color: #888; margin-bottom: 16px;">Social proof numbers displayed below the hero</p>
+
+      <div id="statsListAdmin">
+        ${stats.map((stat, index) => `
+          <div class="admin-list-item" data-id="${stat.id}">
+            <div class="admin-list-item-content">
+              <input type="text" value="${escapeHtml(stat.icon)}" class="admin-input admin-input-icon" placeholder="Icon" data-field="icon">
+              <input type="text" value="${escapeHtml(stat.value)}" class="admin-input" placeholder="Value (e.g. $2.4M+)" data-field="value">
+              <input type="text" value="${escapeHtml(stat.label)}" class="admin-input" placeholder="Label" data-field="label">
+            </div>
+            <div class="admin-list-item-actions">
+              <button class="admin-btn-icon" onclick="moveStatUp('${stat.id}')" title="Move Up">↑</button>
+              <button class="admin-btn-icon" onclick="moveStatDown('${stat.id}')" title="Move Down">↓</button>
+              <button class="admin-btn-icon admin-btn-danger" onclick="deleteStat('${stat.id}')" title="Delete">×</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <button class="admin-add-btn" onclick="addNewStat()">+ Add Stat</button>
+      <button class="admin-save-btn" onclick="saveStatsSection()">Save Stats</button>
+    </div>
+  `;
+}
+
+function renderCharactersSection() {
+  const characters = adminLandingData.characters || [];
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Featured Characters (Case Studies)</h3>
+      <p style="color: #888; margin-bottom: 16px;">Showcase successful creator characters</p>
+
+      <div id="charactersListAdmin">
+        ${characters.map((char, index) => `
+          <div class="admin-character-item" data-id="${char.id}">
+            <div class="admin-character-preview">
+              <img src="${char.image_url}" alt="${escapeHtml(char.name)}" style="width: 80px; height: 100px; object-fit: cover; border-radius: 8px;">
+            </div>
+            <div class="admin-character-fields">
+              <div class="admin-form-row">
+                <div class="admin-form-group">
+                  <label>Name</label>
+                  <input type="text" value="${escapeHtml(char.name)}" class="admin-input" data-field="name">
+                </div>
+                <div class="admin-form-group">
+                  <label>Handle</label>
+                  <input type="text" value="${escapeHtml(char.handle || '')}" class="admin-input" data-field="handle">
+                </div>
+              </div>
+              <div class="admin-form-group">
+                <label>Image URL</label>
+                <input type="text" value="${escapeHtml(char.image_url)}" class="admin-input" data-field="image_url">
+              </div>
+              <div class="admin-form-group">
+                <label>Metrics (JSON array)</label>
+                <textarea class="admin-input admin-textarea" data-field="metrics">${typeof char.metrics === 'string' ? char.metrics : JSON.stringify(char.metrics, null, 2)}</textarea>
+              </div>
+              <div class="admin-form-row">
+                <div class="admin-form-group">
+                  <label>CTA Text</label>
+                  <input type="text" value="${escapeHtml(char.cta_text || '')}" class="admin-input" data-field="cta_text">
+                </div>
+                <div class="admin-form-group">
+                  <label>CTA Link</label>
+                  <input type="text" value="${escapeHtml(char.cta_link || '')}" class="admin-input" data-field="cta_link">
+                </div>
+              </div>
+            </div>
+            <div class="admin-list-item-actions admin-vertical-actions">
+              <button class="admin-btn-icon" onclick="moveCharacterUp('${char.id}')" title="Move Up">↑</button>
+              <button class="admin-btn-icon" onclick="moveCharacterDown('${char.id}')" title="Move Down">↓</button>
+              <button class="admin-btn-icon admin-btn-danger" onclick="deleteCharacter('${char.id}')" title="Delete">×</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <button class="admin-add-btn" onclick="addNewCharacter()">+ Add Character</button>
+      <button class="admin-save-btn" onclick="saveCharactersSection()">Save Characters</button>
+    </div>
+  `;
+}
+
+function renderPipelineSection() {
+  const pipeline = adminLandingData.pipeline || [];
+  const pipelineContent = adminLandingData.content?.filter(c => c.section_key === 'pipeline') || [];
+  const getContent = (key) => pipelineContent.find(c => c.content_key === key)?.content_value || '';
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Pipeline Steps</h3>
+
+      <div class="admin-form-group">
+        <label>Section Headline</label>
+        <input type="text" id="pipelineHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+      </div>
+
+      <div id="pipelineListAdmin">
+        ${pipeline.map((step, index) => `
+          <div class="admin-list-item" data-id="${step.id}">
+            <div class="admin-list-item-content">
+              <input type="number" value="${step.step_number}" class="admin-input admin-input-number" placeholder="#" data-field="step_number" style="width: 60px;">
+              <input type="text" value="${escapeHtml(step.icon)}" class="admin-input admin-input-icon" placeholder="Icon" data-field="icon">
+              <input type="text" value="${escapeHtml(step.title)}" class="admin-input" placeholder="Title" data-field="title">
+              <input type="text" value="${escapeHtml(step.description)}" class="admin-input admin-input-wide" placeholder="Description" data-field="description">
+            </div>
+            <div class="admin-list-item-actions">
+              <button class="admin-btn-icon" onclick="movePipelineUp('${step.id}')" title="Move Up">↑</button>
+              <button class="admin-btn-icon" onclick="movePipelineDown('${step.id}')" title="Move Down">↓</button>
+              <button class="admin-btn-icon admin-btn-danger" onclick="deletePipelineStep('${step.id}')" title="Delete">×</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <button class="admin-add-btn" onclick="addNewPipelineStep()">+ Add Step</button>
+      <button class="admin-save-btn" onclick="savePipelineSection()">Save Pipeline</button>
+    </div>
+  `;
+}
+
+function renderShowcaseSection() {
+  const showcase = adminLandingData.showcase || [];
+  const showcaseContent = adminLandingData.content?.filter(c => c.section_key === 'showcase') || [];
+  const getContent = (key) => showcaseContent.find(c => c.content_key === key)?.content_value || '';
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Content Showcase</h3>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>Section Headline</label>
+          <input type="text" id="showcaseHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>Section Subheadline</label>
+          <input type="text" id="showcaseSubheadlineInput" value="${escapeHtml(getContent('subheadline'))}" class="admin-input">
+        </div>
+      </div>
+
+      <div id="showcaseListAdmin" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin: 20px 0;">
+        ${showcase.map((item, index) => `
+          <div class="admin-showcase-item" data-id="${item.id}">
+            <img src="${item.image_url}" alt="${escapeHtml(item.caption || 'Showcase')}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+            <input type="text" value="${escapeHtml(item.image_url)}" class="admin-input" placeholder="Image URL" data-field="image_url" style="margin-top: 8px;">
+            <input type="text" value="${escapeHtml(item.caption || '')}" class="admin-input" placeholder="Caption" data-field="caption">
+            <select class="admin-input" data-field="size">
+              <option value="small" ${item.size === 'small' ? 'selected' : ''}>Small</option>
+              <option value="medium" ${item.size === 'medium' ? 'selected' : ''}>Medium</option>
+              <option value="large" ${item.size === 'large' ? 'selected' : ''}>Large</option>
+            </select>
+            <button class="admin-btn-icon admin-btn-danger" onclick="deleteShowcaseItem('${item.id}')" style="width: 100%; margin-top: 8px;">Delete</button>
+          </div>
+        `).join('')}
+      </div>
+
+      <button class="admin-add-btn" onclick="addNewShowcaseItem()">+ Add Showcase Image</button>
+      <button class="admin-save-btn" onclick="saveShowcaseSection()">Save Showcase</button>
+    </div>
+  `;
+}
+
+function renderCapabilitiesSection() {
+  const capabilities = adminLandingData.capabilities || [];
+  const capContent = adminLandingData.content?.filter(c => c.section_key === 'capabilities') || [];
+  const getContent = (key) => capContent.find(c => c.content_key === key)?.content_value || '';
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Capabilities</h3>
+
+      <div class="admin-form-group">
+        <label>Section Headline</label>
+        <input type="text" id="capabilitiesHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+      </div>
+
+      <div id="capabilitiesListAdmin">
+        ${capabilities.map((cap, index) => `
+          <div class="admin-list-item" data-id="${cap.id}">
+            <div class="admin-list-item-content">
+              <input type="text" value="${escapeHtml(cap.icon)}" class="admin-input admin-input-icon" placeholder="Icon" data-field="icon">
+              <input type="text" value="${escapeHtml(cap.title)}" class="admin-input" placeholder="Title" data-field="title">
+              <input type="text" value="${escapeHtml(cap.description)}" class="admin-input admin-input-wide" placeholder="Description" data-field="description">
+            </div>
+            <div class="admin-list-item-actions">
+              <button class="admin-btn-icon" onclick="moveCapabilityUp('${cap.id}')" title="Move Up">↑</button>
+              <button class="admin-btn-icon" onclick="moveCapabilityDown('${cap.id}')" title="Move Down">↓</button>
+              <button class="admin-btn-icon admin-btn-danger" onclick="deleteCapability('${cap.id}')" title="Delete">×</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <button class="admin-add-btn" onclick="addNewCapability()">+ Add Capability</button>
+      <button class="admin-save-btn" onclick="saveCapabilitiesSection()">Save Capabilities</button>
+    </div>
+  `;
+}
+
+function renderEducationSection() {
+  const eduContent = adminLandingData.content?.filter(c => c.section_key === 'education') || [];
+  const getContent = (key) => eduContent.find(c => c.content_key === key)?.content_value || '';
+
+  // Get all bullets
+  const bullets = [];
+  for (let i = 1; i <= 10; i++) {
+    const bullet = getContent(`bullet_${i}`);
+    if (bullet) bullets.push({ key: `bullet_${i}`, value: bullet });
+  }
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Education Section</h3>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>Headline</label>
+          <input type="text" id="educationHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>Subheadline</label>
+          <input type="text" id="educationSubheadlineInput" value="${escapeHtml(getContent('subheadline'))}" class="admin-input">
+        </div>
+      </div>
+
+      <div class="admin-form-group">
+        <label>Bullet Points</label>
+        <div id="educationBulletsList">
+          ${bullets.map((b, i) => `
+            <div class="admin-bullet-item" data-key="${b.key}">
+              <input type="text" value="${escapeHtml(b.value)}" class="admin-input" placeholder="Bullet point ${i + 1}">
+              <button class="admin-btn-icon admin-btn-danger" onclick="removeEducationBullet(this)">×</button>
+            </div>
+          `).join('')}
+        </div>
+        <button class="admin-add-btn" onclick="addEducationBullet()" style="margin-top: 8px;">+ Add Bullet</button>
+      </div>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>CTA Text</label>
+          <input type="text" id="educationCtaInput" value="${escapeHtml(getContent('cta_text'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>CTA Link</label>
+          <input type="text" id="educationCtaLinkInput" value="${escapeHtml(getContent('cta_link'))}" class="admin-input">
+        </div>
+      </div>
+
+      <button class="admin-save-btn" onclick="saveEducationSection()">Save Education Section</button>
+    </div>
+  `;
+}
+
+function renderPricingSection() {
+  const pricingContent = adminLandingData.content?.filter(c => c.section_key === 'pricing') || [];
+  const getContent = (key) => pricingContent.find(c => c.content_key === key)?.content_value || '';
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Pricing Section</h3>
+      <p style="color: #888; margin-bottom: 16px;">Pricing tiers are managed in the payments settings. Here you can customize the section headline.</p>
+
+      <div class="admin-form-group">
+        <label>Section Headline</label>
+        <input type="text" id="pricingHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+      </div>
+
+      <div class="admin-form-group">
+        <label>Featured Tier (highlighted)</label>
+        <select id="pricingFeaturedTierInput" class="admin-input">
+          <option value="starter" ${getContent('featured_tier') === 'starter' ? 'selected' : ''}>Starter</option>
+          <option value="creator" ${getContent('featured_tier') === 'creator' ? 'selected' : ''}>Creator</option>
+          <option value="pro" ${getContent('featured_tier') === 'pro' ? 'selected' : ''}>Pro</option>
+          <option value="mentorship" ${getContent('featured_tier') === 'mentorship' ? 'selected' : ''}>Mentorship</option>
+        </select>
+      </div>
+
+      <button class="admin-save-btn" onclick="savePricingSection()">Save Pricing Section</button>
+    </div>
+  `;
+}
+
+function renderFinalCtaSection() {
+  const ctaContent = adminLandingData.content?.filter(c => c.section_key === 'final_cta') || [];
+  const getContent = (key) => ctaContent.find(c => c.content_key === key)?.content_value || '';
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Final Call to Action</h3>
+
+      <div class="admin-form-group">
+        <label>Headline</label>
+        <input type="text" id="finalCtaHeadlineInput" value="${escapeHtml(getContent('headline'))}" class="admin-input">
+      </div>
+
+      <div class="admin-form-group">
+        <label>Subheadline</label>
+        <input type="text" id="finalCtaSubheadlineInput" value="${escapeHtml(getContent('subheadline'))}" class="admin-input">
+      </div>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>Primary CTA Text</label>
+          <input type="text" id="finalCtaPrimaryInput" value="${escapeHtml(getContent('primary_cta_text'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>Primary CTA Link</label>
+          <input type="text" id="finalCtaPrimaryLinkInput" value="${escapeHtml(getContent('primary_cta_link'))}" class="admin-input">
+        </div>
+      </div>
+
+      <div class="admin-form-row">
+        <div class="admin-form-group">
+          <label>Secondary CTA Text</label>
+          <input type="text" id="finalCtaSecondaryInput" value="${escapeHtml(getContent('secondary_cta_text'))}" class="admin-input">
+        </div>
+        <div class="admin-form-group">
+          <label>Secondary CTA Link</label>
+          <input type="text" id="finalCtaSecondaryLinkInput" value="${escapeHtml(getContent('secondary_cta_link'))}" class="admin-input">
+        </div>
+      </div>
+
+      <button class="admin-save-btn" onclick="saveFinalCtaSection()">Save Final CTA</button>
+    </div>
+  `;
+}
+
+// ===========================================
+// SAVE FUNCTIONS
+// ===========================================
+
+async function saveHeroSection() {
+  const updates = [
+    { section_key: 'hero', content_key: 'headline', content_value: document.getElementById('heroHeadlineInput')?.value },
+    { section_key: 'hero', content_key: 'subheadline', content_value: document.getElementById('heroSubheadlineInput')?.value },
+    { section_key: 'hero', content_key: 'primary_cta_text', content_value: document.getElementById('heroPrimaryCtaInput')?.value },
+    { section_key: 'hero', content_key: 'primary_cta_link', content_value: document.getElementById('heroPrimaryCtaLinkInput')?.value },
+    { section_key: 'hero', content_key: 'secondary_cta_text', content_value: document.getElementById('heroSecondaryCtaInput')?.value },
+    { section_key: 'hero', content_key: 'secondary_cta_link', content_value: document.getElementById('heroSecondaryCtaLinkInput')?.value },
+    { section_key: 'hero', content_key: 'trust_badge', content_value: document.getElementById('heroTrustBadgeInput')?.value }
+  ];
+
+  await saveContentUpdates(updates);
+}
+
+async function saveStatsSection() {
+  const statsItems = document.querySelectorAll('#statsListAdmin .admin-list-item');
+  const updates = [];
+
+  for (const item of statsItems) {
+    const id = item.dataset.id;
+    const data = {
+      icon: item.querySelector('[data-field="icon"]')?.value,
+      value: item.querySelector('[data-field="value"]')?.value,
+      label: item.querySelector('[data-field="label"]')?.value
+    };
+
+    if (id && id !== 'new') {
+      await authFetch(`${API_BASE_URL}/api/landing/admin/stats/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  showAdminToast('Stats saved successfully!');
+  loadAdminLandingContent();
+}
+
+async function saveCharactersSection() {
+  const characterItems = document.querySelectorAll('#charactersListAdmin .admin-character-item');
+
+  for (const item of characterItems) {
+    const id = item.dataset.id;
+    let metrics = item.querySelector('[data-field="metrics"]')?.value;
+
+    try {
+      metrics = JSON.parse(metrics);
+    } catch (e) {
+      showAdminToast('Invalid JSON in metrics field', 'error');
+      return;
+    }
+
+    const data = {
+      name: item.querySelector('[data-field="name"]')?.value,
+      handle: item.querySelector('[data-field="handle"]')?.value,
+      image_url: item.querySelector('[data-field="image_url"]')?.value,
+      metrics: metrics,
+      cta_text: item.querySelector('[data-field="cta_text"]')?.value,
+      cta_link: item.querySelector('[data-field="cta_link"]')?.value
+    };
+
+    if (id && id !== 'new') {
+      await authFetch(`${API_BASE_URL}/api/landing/admin/characters/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  showAdminToast('Characters saved successfully!');
+  loadAdminLandingContent();
+}
+
+async function savePipelineSection() {
+  // Save headline
+  await saveContentUpdates([
+    { section_key: 'pipeline', content_key: 'headline', content_value: document.getElementById('pipelineHeadlineInput')?.value }
+  ]);
+
+  const pipelineItems = document.querySelectorAll('#pipelineListAdmin .admin-list-item');
+
+  for (const item of pipelineItems) {
+    const id = item.dataset.id;
+    const data = {
+      step_number: parseInt(item.querySelector('[data-field="step_number"]')?.value) || 1,
+      icon: item.querySelector('[data-field="icon"]')?.value,
+      title: item.querySelector('[data-field="title"]')?.value,
+      description: item.querySelector('[data-field="description"]')?.value
+    };
+
+    if (id && id !== 'new') {
+      await authFetch(`${API_BASE_URL}/api/landing/admin/pipeline/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  showAdminToast('Pipeline saved successfully!');
+  loadAdminLandingContent();
+}
+
+async function saveShowcaseSection() {
+  // Save headlines
+  await saveContentUpdates([
+    { section_key: 'showcase', content_key: 'headline', content_value: document.getElementById('showcaseHeadlineInput')?.value },
+    { section_key: 'showcase', content_key: 'subheadline', content_value: document.getElementById('showcaseSubheadlineInput')?.value }
+  ]);
+
+  const showcaseItems = document.querySelectorAll('#showcaseListAdmin .admin-showcase-item');
+
+  for (const item of showcaseItems) {
+    const id = item.dataset.id;
+    const data = {
+      image_url: item.querySelector('[data-field="image_url"]')?.value,
+      caption: item.querySelector('[data-field="caption"]')?.value,
+      size: item.querySelector('[data-field="size"]')?.value
+    };
+
+    if (id && id !== 'new') {
+      await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  showAdminToast('Showcase saved successfully!');
+  loadAdminLandingContent();
+}
+
+async function saveCapabilitiesSection() {
+  // Save headline
+  await saveContentUpdates([
+    { section_key: 'capabilities', content_key: 'headline', content_value: document.getElementById('capabilitiesHeadlineInput')?.value }
+  ]);
+
+  const capItems = document.querySelectorAll('#capabilitiesListAdmin .admin-list-item');
+
+  for (const item of capItems) {
+    const id = item.dataset.id;
+    const data = {
+      icon: item.querySelector('[data-field="icon"]')?.value,
+      title: item.querySelector('[data-field="title"]')?.value,
+      description: item.querySelector('[data-field="description"]')?.value
+    };
+
+    if (id && id !== 'new') {
+      await authFetch(`${API_BASE_URL}/api/landing/admin/capabilities/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+  }
+
+  showAdminToast('Capabilities saved successfully!');
+  loadAdminLandingContent();
+}
+
+async function saveEducationSection() {
+  const bullets = [];
+  document.querySelectorAll('#educationBulletsList .admin-bullet-item input').forEach((input, i) => {
+    if (input.value.trim()) {
+      bullets.push({ section_key: 'education', content_key: `bullet_${i + 1}`, content_value: input.value.trim() });
+    }
+  });
+
+  const updates = [
+    { section_key: 'education', content_key: 'headline', content_value: document.getElementById('educationHeadlineInput')?.value },
+    { section_key: 'education', content_key: 'subheadline', content_value: document.getElementById('educationSubheadlineInput')?.value },
+    { section_key: 'education', content_key: 'cta_text', content_value: document.getElementById('educationCtaInput')?.value },
+    { section_key: 'education', content_key: 'cta_link', content_value: document.getElementById('educationCtaLinkInput')?.value },
+    ...bullets
+  ];
+
+  await saveContentUpdates(updates);
+}
+
+async function savePricingSection() {
+  const updates = [
+    { section_key: 'pricing', content_key: 'headline', content_value: document.getElementById('pricingHeadlineInput')?.value },
+    { section_key: 'pricing', content_key: 'featured_tier', content_value: document.getElementById('pricingFeaturedTierInput')?.value }
+  ];
+
+  await saveContentUpdates(updates);
+}
+
+async function saveFinalCtaSection() {
+  const updates = [
+    { section_key: 'final_cta', content_key: 'headline', content_value: document.getElementById('finalCtaHeadlineInput')?.value },
+    { section_key: 'final_cta', content_key: 'subheadline', content_value: document.getElementById('finalCtaSubheadlineInput')?.value },
+    { section_key: 'final_cta', content_key: 'primary_cta_text', content_value: document.getElementById('finalCtaPrimaryInput')?.value },
+    { section_key: 'final_cta', content_key: 'primary_cta_link', content_value: document.getElementById('finalCtaPrimaryLinkInput')?.value },
+    { section_key: 'final_cta', content_key: 'secondary_cta_text', content_value: document.getElementById('finalCtaSecondaryInput')?.value },
+    { section_key: 'final_cta', content_key: 'secondary_cta_link', content_value: document.getElementById('finalCtaSecondaryLinkInput')?.value }
+  ];
+
+  await saveContentUpdates(updates);
+}
+
+async function saveContentUpdates(updates) {
+  try {
+    for (const update of updates) {
+      // Find existing content item
+      const existing = adminLandingData.content?.find(c =>
+        c.section_key === update.section_key && c.content_key === update.content_key
+      );
+
+      if (existing) {
+        await authFetch(`${API_BASE_URL}/api/landing/admin/content/${existing.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content_value: update.content_value })
+        });
+      } else {
+        await authFetch(`${API_BASE_URL}/api/landing/admin/content`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            section_key: update.section_key,
+            content_key: update.content_key,
+            content_value: update.content_value,
+            content_type: 'text'
+          })
+        });
+      }
+    }
+
+    showAdminToast('Content saved successfully!');
+    loadAdminLandingContent();
+  } catch (error) {
+    console.error('Error saving content:', error);
+    showAdminToast('Failed to save content', 'error');
+  }
+}
+
+// ===========================================
+// ADD/DELETE FUNCTIONS
+// ===========================================
+
+async function addNewStat() {
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/stats`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        value: 'New',
+        label: 'New Stat',
+        icon: '📊',
+        display_order: (adminLandingData.stats?.length || 0) + 1
+      })
+    });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to add stat', 'error');
+  }
+}
+
+async function deleteStat(id) {
+  if (!confirm('Delete this stat?')) return;
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/stats/${id}`, { method: 'DELETE' });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to delete stat', 'error');
+  }
+}
+
+async function addNewCharacter() {
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/characters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'New Character',
+        handle: '@newcharacter',
+        image_url: 'https://placehold.co/400x500/1a1a2e/ff2ebb?text=New',
+        metrics: [{ icon: '📸', value: '0', label: 'Followers' }],
+        display_order: (adminLandingData.characters?.length || 0) + 1
+      })
+    });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to add character', 'error');
+  }
+}
+
+async function deleteCharacter(id) {
+  if (!confirm('Delete this character?')) return;
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/characters/${id}`, { method: 'DELETE' });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to delete character', 'error');
+  }
+}
+
+async function addNewPipelineStep() {
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/pipeline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        step_number: (adminLandingData.pipeline?.length || 0) + 1,
+        title: 'New Step',
+        description: 'Description',
+        icon: '✨',
+        display_order: (adminLandingData.pipeline?.length || 0) + 1
+      })
+    });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to add pipeline step', 'error');
+  }
+}
+
+async function deletePipelineStep(id) {
+  if (!confirm('Delete this pipeline step?')) return;
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/pipeline/${id}`, { method: 'DELETE' });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to delete pipeline step', 'error');
+  }
+}
+
+async function addNewCapability() {
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/capabilities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        icon: '✨',
+        title: 'New Capability',
+        description: 'Description',
+        display_order: (adminLandingData.capabilities?.length || 0) + 1
+      })
+    });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to add capability', 'error');
+  }
+}
+
+async function deleteCapability(id) {
+  if (!confirm('Delete this capability?')) return;
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/capabilities/${id}`, { method: 'DELETE' });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to delete capability', 'error');
+  }
+}
+
+async function addNewShowcaseItem() {
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/showcase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: 'https://placehold.co/400x400/1a1a2e/ff2ebb?text=New',
+        caption: 'New Image',
+        size: 'medium',
+        display_order: (adminLandingData.showcase?.length || 0) + 1
+      })
+    });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to add showcase item', 'error');
+  }
+}
+
+async function deleteShowcaseItem(id) {
+  if (!confirm('Delete this showcase item?')) return;
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${id}`, { method: 'DELETE' });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to delete showcase item', 'error');
+  }
+}
+
+function addEducationBullet() {
+  const container = document.getElementById('educationBulletsList');
+  const count = container.querySelectorAll('.admin-bullet-item').length + 1;
+  const div = document.createElement('div');
+  div.className = 'admin-bullet-item';
+  div.dataset.key = `bullet_${count}`;
+  div.innerHTML = `
+    <input type="text" value="" class="admin-input" placeholder="Bullet point ${count}">
+    <button class="admin-btn-icon admin-btn-danger" onclick="removeEducationBullet(this)">×</button>
+  `;
+  container.appendChild(div);
+}
+
+function removeEducationBullet(btn) {
+  btn.parentElement.remove();
+}
+
+// ===========================================
+// MOVE FUNCTIONS (Reordering)
+// ===========================================
+
+async function moveStatUp(id) { await moveItem('stats', id, -1); }
+async function moveStatDown(id) { await moveItem('stats', id, 1); }
+async function moveCharacterUp(id) { await moveItem('characters', id, -1); }
+async function moveCharacterDown(id) { await moveItem('characters', id, 1); }
+async function movePipelineUp(id) { await moveItem('pipeline', id, -1); }
+async function movePipelineDown(id) { await moveItem('pipeline', id, 1); }
+async function moveCapabilityUp(id) { await moveItem('capabilities', id, -1); }
+async function moveCapabilityDown(id) { await moveItem('capabilities', id, 1); }
+
+async function moveItem(type, id, direction) {
+  const tableMap = {
+    stats: 'landing_stats',
+    characters: 'landing_characters',
+    pipeline: 'landing_pipeline_steps',
+    capabilities: 'landing_capabilities'
+  };
+
+  const items = adminLandingData[type];
+  const index = items.findIndex(item => item.id === id);
+  const newIndex = index + direction;
+
+  if (newIndex < 0 || newIndex >= items.length) return;
+
+  // Swap display_order
+  const order = items.map((item, i) => ({
+    id: item.id,
+    display_order: i === index ? newIndex + 1 : i === newIndex ? index + 1 : i + 1
+  }));
+
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/reorder/${tableMap[type]}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order })
+    });
+    loadAdminLandingContent();
+  } catch (error) {
+    showAdminToast('Failed to reorder items', 'error');
+  }
+}
+
+// ===========================================
+// UTILITY FUNCTIONS
+// ===========================================
+
+function showAdminToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `admin-toast admin-toast--${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: ${type === 'error' ? '#ff4444' : '#4ade80'};
+    color: white;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function addAdminLandingStyles() {
+  if (document.getElementById('adminLandingStyles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'adminLandingStyles';
+  style.textContent = `
+    .admin-landing-tabs .admin-tab {
+      padding: 10px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-landing-tabs .admin-tab:hover {
+      border-color: var(--accent-primary);
+      color: var(--text-primary);
+    }
+    .admin-landing-tabs .admin-tab.active {
+      background: var(--accent-gradient);
+      border-color: transparent;
+      color: white;
+    }
+    .admin-section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .admin-section-title {
+      font-size: 1.2rem;
+      margin: 0 0 20px;
+      color: var(--text-primary);
+    }
+    .admin-form-group {
+      margin-bottom: 16px;
+    }
+    .admin-form-group label {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    .admin-form-row {
+      display: flex;
+      gap: 16px;
+    }
+    .admin-form-row .admin-form-group {
+      flex: 1;
+    }
+    .admin-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+    .admin-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+    .admin-input-icon {
+      width: 60px !important;
+      text-align: center;
+    }
+    .admin-input-number {
+      width: 70px !important;
+    }
+    .admin-input-wide {
+      flex: 2 !important;
+    }
+    .admin-textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: monospace;
+    }
+    .admin-list-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .admin-list-item-content {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+    .admin-list-item-content .admin-input {
+      flex: 1;
+      min-width: 120px;
+    }
+    .admin-list-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .admin-vertical-actions {
+      flex-direction: column;
+    }
+    .admin-btn-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-btn-icon:hover {
+      background: var(--accent-primary);
+      color: white;
+      border-color: var(--accent-primary);
+    }
+    .admin-btn-danger:hover {
+      background: #ff4444 !important;
+      border-color: #ff4444 !important;
+    }
+    .admin-add-btn {
+      padding: 10px 20px;
+      background: var(--bg-hover);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      width: 100%;
+      margin: 12px 0;
+      transition: all 0.2s;
+    }
+    .admin-add-btn:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+    .admin-save-btn {
+      padding: 12px 24px;
+      background: var(--accent-gradient);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-save-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(255, 46, 187, 0.3);
+    }
+    .admin-character-item {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .admin-character-fields {
+      flex: 1;
+    }
+    .admin-bullet-item {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .admin-bullet-item .admin-input {
+      flex: 1;
+    }
+    .admin-showcase-item {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @media (max-width: 768px) {
+      .admin-form-row {
+        flex-direction: column;
+        gap: 0;
+      }
+      .admin-list-item {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .admin-list-item-actions {
+        justify-content: flex-end;
+      }
+      .admin-character-item {
+        flex-direction: column;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Export functions
+window.loadAdminLandingContent = loadAdminLandingContent;
+window.showAdminLandingTab = showAdminLandingTab;

@@ -65,6 +65,7 @@
 
   <!-- External CSS - Organized styles -->
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/landing-page.css">
   <link rel="stylesheet" href="css/onboarding-wizard.css">
 
   <style>
@@ -7317,6 +7318,157 @@
     <span id="coldStartText">Waking up server... This may take up to 50 seconds on first visit.</span>
   </div>
 
+  <!-- Landing Page (shown when not logged in) -->
+  <div class="landing-page" id="landingPage" style="display: none;">
+    <!-- Hero Section -->
+    <section class="landing-hero" id="landingHero">
+      <div class="landing-hero__content">
+        <h1 class="landing-hero__headline landing-animate" id="heroHeadline">Build Your AI Content Empire</h1>
+        <p class="landing-hero__subheadline landing-animate landing-animate--delay-1" id="heroSubheadline">Create a character. Generate content. Monetize everywhere.</p>
+        <div class="landing-hero__ctas landing-animate landing-animate--delay-2">
+          <a href="#signup" class="landing-btn landing-btn--primary" id="heroPrimaryCta" onclick="openLoginModal(); return false;">Start Building</a>
+          <a href="#pipeline" class="landing-btn landing-btn--secondary" id="heroSecondaryCta" onclick="scrollToSection('landingPipeline'); return false;">See How It Works</a>
+        </div>
+        <p class="landing-hero__trust landing-animate landing-animate--delay-3" id="heroTrustBadge">Join 500+ creators building their AI empire</p>
+      </div>
+    </section>
+
+    <!-- Stats Bar Section -->
+    <section class="landing-stats" id="landingStats">
+      <div class="landing-stats__grid" id="statsGrid">
+        <!-- Stats populated by JS -->
+      </div>
+    </section>
+
+    <!-- Featured Characters Section -->
+    <section class="landing-section" id="landingCharacters">
+      <div class="landing-section__header">
+        <h2 class="landing-section__headline landing-animate" id="charactersHeadline">Creators Are Building Real Businesses</h2>
+        <p class="landing-section__subheadline landing-animate landing-animate--delay-1" id="charactersSubheadline">See what's possible with Vixxxen</p>
+      </div>
+      <div class="landing-characters__grid" id="charactersGrid">
+        <!-- Characters populated by JS -->
+      </div>
+    </section>
+
+    <!-- Pipeline Section -->
+    <section class="landing-section" id="landingPipeline">
+      <div class="landing-section__header">
+        <h2 class="landing-section__headline landing-animate" id="pipelineHeadline">Your Path to AI Creator Income</h2>
+      </div>
+      <div class="landing-pipeline__steps" id="pipelineSteps">
+        <!-- Pipeline steps populated by JS -->
+      </div>
+    </section>
+
+    <!-- Content Showcase Section -->
+    <section class="landing-section" id="landingShowcase">
+      <div class="landing-section__header">
+        <h2 class="landing-section__headline landing-animate" id="showcaseHeadline">One Character. Unlimited Content.</h2>
+        <p class="landing-section__subheadline landing-animate landing-animate--delay-1" id="showcaseSubheadline">Same face. Same style. Infinite variety.</p>
+      </div>
+      <div class="landing-showcase__grid" id="showcaseGrid">
+        <!-- Showcase items populated by JS -->
+      </div>
+    </section>
+
+    <!-- Capabilities Section -->
+    <section class="landing-section" id="landingCapabilities">
+      <div class="landing-section__header">
+        <h2 class="landing-section__headline landing-animate" id="capabilitiesHeadline">Professional Tools. Stunning Results.</h2>
+      </div>
+      <div class="landing-capabilities__grid" id="capabilitiesGrid">
+        <!-- Capabilities populated by JS -->
+      </div>
+    </section>
+
+    <!-- Education Section -->
+    <section class="landing-section landing-education" id="landingEducation">
+      <div class="landing-education__content">
+        <div class="landing-education__text">
+          <h2 class="landing-education__headline landing-animate" id="educationHeadline">We Don't Just Give You Tools</h2>
+          <h3 class="landing-education__subheadline landing-animate landing-animate--delay-1" id="educationSubheadline">We Teach You The Business</h3>
+          <ul class="landing-education__bullets" id="educationBullets">
+            <!-- Bullets populated by JS -->
+          </ul>
+          <a href="#courses" class="landing-btn landing-btn--primary landing-animate landing-animate--delay-2" id="educationCta" onclick="openLoginModal(); return false;">Explore Courses</a>
+        </div>
+        <div class="landing-education__preview landing-animate landing-animate--delay-1">
+          <div class="landing-education__preview-header">Course Preview</div>
+          <div class="landing-education__modules" id="educationModules">
+            <div class="landing-education__module">
+              <div class="landing-education__module-number">1</div>
+              <div class="landing-education__module-title">Launch Your AI Instagram</div>
+            </div>
+            <div class="landing-education__module">
+              <div class="landing-education__module-number">2</div>
+              <div class="landing-education__module-title">Content Strategy That Converts</div>
+            </div>
+            <div class="landing-education__module">
+              <div class="landing-education__module-number">3</div>
+              <div class="landing-education__module-title">Fanvue Monetization Mastery</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="landing-section" id="landingPricing">
+      <div class="landing-section__header">
+        <h2 class="landing-section__headline landing-animate" id="pricingHeadline">Choose Your Path</h2>
+      </div>
+      <div class="landing-pricing__grid" id="pricingGrid">
+        <div class="landing-pricing-card landing-animate">
+          <div class="landing-pricing-card__name">Starter</div>
+          <div class="landing-pricing-card__price">$20</div>
+          <div class="landing-pricing-card__period">/month</div>
+          <div class="landing-pricing-card__feature">1,000 credits</div>
+          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openLoginModal()">Get Started</button>
+        </div>
+        <div class="landing-pricing-card landing-pricing-card--featured landing-animate landing-animate--delay-1">
+          <div class="landing-pricing-card__name">Creator</div>
+          <div class="landing-pricing-card__price">$50</div>
+          <div class="landing-pricing-card__period">/month</div>
+          <div class="landing-pricing-card__feature">3,000 credits</div>
+          <button class="landing-btn landing-btn--primary landing-pricing-card__cta" onclick="openLoginModal()">Get Started</button>
+        </div>
+        <div class="landing-pricing-card landing-animate landing-animate--delay-2">
+          <div class="landing-pricing-card__name">Pro</div>
+          <div class="landing-pricing-card__price">$95</div>
+          <div class="landing-pricing-card__period">/month</div>
+          <div class="landing-pricing-card__feature">6,500 credits</div>
+          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openLoginModal()">Get Started</button>
+        </div>
+        <div class="landing-pricing-card landing-animate landing-animate--delay-3">
+          <div class="landing-pricing-card__name">Mentorship</div>
+          <div class="landing-pricing-card__price">$100</div>
+          <div class="landing-pricing-card__period">/month</div>
+          <div class="landing-pricing-card__feature">1-on-1 guidance</div>
+          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openLoginModal()">Apply Now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="landing-final-cta" id="landingFinalCta">
+      <div class="landing-final-cta__content">
+        <h2 class="landing-final-cta__headline landing-animate" id="finalCtaHeadline">Ready to Build Your AI Creator Business?</h2>
+        <p class="landing-final-cta__subheadline landing-animate landing-animate--delay-1" id="finalCtaSubheadline">Join hundreds of creators already building their empires</p>
+        <div class="landing-final-cta__buttons landing-animate landing-animate--delay-2">
+          <button class="landing-btn landing-btn--primary" id="finalCtaPrimary" onclick="openLoginModal()">Get Started Free</button>
+          <a href="mailto:admin@digitaldivas.ai" class="landing-btn landing-btn--secondary" id="finalCtaSecondary">Talk to Us</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Landing Page Footer -->
+    <footer class="landing-section" style="text-align: center; padding: 40px 20px; border-top: 1px solid var(--border-color);">
+      <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" style="height: 32px; margin-bottom: 16px;">
+      <p style="color: var(--text-muted); font-size: 14px;">© 2025 Vixxxen. All rights reserved.</p>
+    </footer>
+  </div>
+
   <!-- Top Navbar -->
   <nav class="top-navbar" id="topNavbar">
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
@@ -8585,6 +8737,10 @@
                     <span>Custom Orders</span>
                     <span class="admin-nav-badge" id="customOrdersBadge" style="display: none;">0</span>
                   </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('landing-page')" data-section="landing-page">
+                    <span class="admin-nav-icon">🏠</span>
+                    <span>Landing Page</span>
+                  </div>
                 </nav>
               </div>
 
@@ -9357,6 +9513,20 @@
                   </div>
                 </div>
                 <!-- End Custom Character Orders Admin Section -->
+
+                <!-- Landing Page Admin Section -->
+                <div class="admin-section" id="adminLandingPageSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Landing Page CMS</h2>
+                    <p class="admin-section-subtitle">Edit your landing page content without code changes</p>
+                  </div>
+                  <div id="adminLandingContent">
+                    <div style="text-align: center; padding: 40px; color: #888;">
+                      Loading landing page content...
+                    </div>
+                  </div>
+                </div>
+                <!-- End Landing Page Admin Section -->
 
               </div>
               <!-- End Admin Content Area -->
@@ -10296,6 +10466,7 @@
 
   <!-- External JavaScript Modules (load in order) -->
   <script src="js/config.js"></script>
+  <script src="js/landing-page.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/zoom-controls.js"></script>
   <script src="js/reporting.js"></script>
@@ -10303,6 +10474,7 @@
   <script src="js/admin-reports.js"></script>
   <script src="js/admin-onboarding.js"></script>
   <script src="js/admin-custom-characters.js"></script>
+  <script src="js/admin-landing.js"></script>
   <script src="js/custom-character-order.js"></script>
   <script src="js/payment-modals.js"></script>
   <script src="js/analytics.js"></script>
@@ -11348,6 +11520,30 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Small delay to ensure styles are applied
       setTimeout(hideLoadingSplash, 100);
+    });
+
+    // Initialize landing page or main app on page load based on auth state
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check current auth session
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+          // No session - show landing page
+          console.log('🏠 No session found, showing landing page');
+          if (typeof initLandingPage === 'function') {
+            initLandingPage();
+          }
+        } else {
+          // Has session - main app will be shown (handled by onAuthStateChange)
+          console.log('🔐 Session found, main app will load');
+        }
+      } catch (err) {
+        console.error('❌ Error checking session:', err);
+        // On error, default to showing landing page
+        if (typeof initLandingPage === 'function') {
+          initLandingPage();
+        }
+      }
     });
 
     // Check if session is still valid before starting generation
@@ -15844,6 +16040,11 @@
 
         // Reload marketplace with user's ownership data and admin status
         loadMarketplaceCharacters();
+
+        // Hide landing page and show main app when logged in
+        if (typeof hideLandingPage === 'function') {
+          hideLandingPage();
+        }
       } else {
         console.log('🔐 No user in session, logging out...');
 
@@ -15881,6 +16082,11 @@
 
         // Reload marketplace to hide admin controls and reset ownership
         loadMarketplaceCharacters();
+
+        // Show landing page when logged out
+        if (typeof initLandingPage === 'function') {
+          initLandingPage();
+        }
       }
     });
 
@@ -17805,7 +18011,8 @@
         'content-filter': 'adminContentFilterSection',
         'user-services': 'adminUserServicesSection',
         'onboarding': 'adminOnboardingSection',
-        'custom-orders': 'adminCustomOrdersSection'
+        'custom-orders': 'adminCustomOrdersSection',
+        'landing-page': 'adminLandingPageSection'
       };
 
       const targetSection = document.getElementById(sectionMap[section]);
@@ -17834,6 +18041,10 @@
       } else if (section === 'custom-orders') {
         if (typeof loadCustomOrdersAdmin === 'function') {
           loadCustomOrdersAdmin();
+        }
+      } else if (section === 'landing-page') {
+        if (typeof loadAdminLandingContent === 'function') {
+          loadAdminLandingContent();
         }
       }
     }
