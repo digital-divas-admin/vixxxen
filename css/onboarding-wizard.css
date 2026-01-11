@@ -778,29 +778,99 @@
   margin-right: 8px;
 }
 
-/* Free Plan Card */
+/* Popular/Recommended Plan Card */
+.plan-card.popular {
+  border-color: #00b2ff;
+  border-width: 3px;
+  position: relative;
+  transform: scale(1.02);
+  box-shadow: 0 8px 32px rgba(0, 178, 255, 0.2);
+}
+
+.plan-card.popular:hover {
+  border-color: #00c4ff;
+  box-shadow: 0 12px 40px rgba(0, 178, 255, 0.3);
+}
+
+.plan-card.pro-tier {
+  border-color: #9966ff;
+  position: relative;
+}
+
+.plan-card.pro-tier:hover {
+  border-color: #aa77ff;
+}
+
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #00b2ff, #0088cc);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.pro-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #9966ff, #7744dd);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* Free Plan Card - Less prominent */
 .plan-card.free-plan {
-  border-color: #00cc88;
+  border-color: #444;
   border-style: dashed;
+  opacity: 0.85;
 }
 
 .plan-card.free-plan:hover {
-  border-color: #00cc88;
+  border-color: #555;
   border-style: solid;
+  opacity: 1;
 }
 
 .plan-card.free-plan.selected {
   border-color: #00cc88;
   border-style: solid;
   background: rgba(0, 204, 136, 0.1);
+  opacity: 1;
 }
 
 .plan-card.free-plan .price-amount {
+  color: #888;
+}
+
+.plan-card.free-plan.selected .price-amount {
   color: #00cc88;
 }
 
 .plan-card.free-plan .credits-amount {
+  color: #888;
+}
+
+.plan-card.free-plan.selected .credits-amount {
   color: #00cc88;
+}
+
+.plan-card.free-plan .plan-features li {
+  color: #666;
 }
 
 /* Education Tiers Grid */
@@ -903,33 +973,95 @@
   margin-right: 8px;
 }
 
-/* None Tier Card */
+/* Popular/Recommended Tier Card */
+.tier-card.popular {
+  border-color: #ff2ebb;
+  border-width: 3px;
+  position: relative;
+  transform: scale(1.02);
+  box-shadow: 0 8px 32px rgba(255, 46, 187, 0.2);
+}
+
+.tier-card.popular:hover {
+  border-color: #ff4ec5;
+  box-shadow: 0 12px 40px rgba(255, 46, 187, 0.3);
+}
+
+.tier-card.popular .popular-badge {
+  background: linear-gradient(135deg, #ff2ebb, #cc1799);
+}
+
+.tier-card.premium-tier {
+  border-color: #ffd700;
+  position: relative;
+}
+
+.tier-card.premium-tier:hover {
+  border-color: #ffdf33;
+}
+
+.tier-card.premium-tier .price-amount {
+  color: #ffd700;
+}
+
+.tier-card.premium-tier .highlight-text {
+  color: #ffd700;
+}
+
+.premium-badge-tag {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* None Tier Card - Less prominent */
 .tier-card.none-tier {
-  border-color: #00cc88;
+  border-color: #444;
   border-style: dashed;
+  opacity: 0.85;
 }
 
 .tier-card.none-tier:hover {
-  border-color: #00cc88;
+  border-color: #555;
   border-style: solid;
+  opacity: 1;
 }
 
 .tier-card.none-tier.selected {
-  border-color: #00cc88;
+  border-color: #666;
   border-style: solid;
-  background: rgba(0, 204, 136, 0.1);
+  background: rgba(100, 100, 100, 0.1);
+  opacity: 1;
 }
 
 .tier-card.none-tier .price-amount {
-  color: #00cc88;
+  color: #666;
+}
+
+.tier-card.none-tier.selected .price-amount {
+  color: #888;
 }
 
 .tier-card.none-tier .highlight-text {
-  color: #00cc88;
+  color: #666;
+}
+
+.tier-card.none-tier .tier-features li {
+  color: #555;
 }
 
 .tier-card.none-tier .tier-features li::before {
-  color: #00cc88;
+  color: #555;
 }
 
 /* Welcome Step */

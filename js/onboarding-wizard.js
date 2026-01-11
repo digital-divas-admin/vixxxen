@@ -554,36 +554,20 @@ function renderChoosePlanStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
-  // Free plan card
-  const freePlanHTML = `
-    <div class="plan-card free-plan ${wizardSelections.content_plan === 'free' ? 'selected' : ''}"
-         onclick="selectContentPlan('free')">
-      <div class="plan-header">
-        <h3 class="plan-name">Free</h3>
-        <div class="plan-price">
-          <span class="price-amount">$0</span>
-          <span class="price-period">/mo</span>
-        </div>
-      </div>
-      <div class="plan-credits">
-        <span class="credits-amount">20</span>
-        <span class="credits-label">starter credits</span>
-      </div>
-      <ul class="plan-features">
-        <li>20 one-time credits</li>
-        <li>Standard AI models</li>
-        <li>Community support</li>
-      </ul>
-    </div>
-  `;
+  // Determine which plan to highlight as popular/recommended
+  const popularPlanSlug = 'creator'; // Middle tier is usually best for conversions
 
   const plansHTML = contentPlans.map(plan => {
     const monthlyPrice = plan.price_monthly;
     const features = plan.features || [];
+    const isPopular = plan.slug === popularPlanSlug;
+    const isPro = plan.slug === 'pro';
 
     return `
-      <div class="plan-card ${wizardSelections.content_plan === plan.slug ? 'selected' : ''}"
+      <div class="plan-card ${isPopular ? 'popular' : ''} ${isPro ? 'pro-tier' : ''} ${wizardSelections.content_plan === plan.slug ? 'selected' : ''}"
            onclick="selectContentPlan('${plan.slug}')">
+        ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
+        ${isPro ? '<div class="pro-badge">Best Value</div>' : ''}
         <div class="plan-header">
           <h3 class="plan-name">${plan.name}</h3>
           <div class="plan-price">
@@ -602,18 +586,41 @@ function renderChoosePlanStep(step) {
     `;
   }).join('');
 
+  // Free plan card - at the end, smaller/less prominent
+  const freePlanHTML = `
+    <div class="plan-card free-plan ${wizardSelections.content_plan === 'free' ? 'selected' : ''}"
+         onclick="selectContentPlan('free')">
+      <div class="plan-header">
+        <h3 class="plan-name">Free</h3>
+        <div class="plan-price">
+          <span class="price-amount">$0</span>
+          <span class="price-period">/mo</span>
+        </div>
+      </div>
+      <div class="plan-credits">
+        <span class="credits-amount">20</span>
+        <span class="credits-label">one-time credits</span>
+      </div>
+      <ul class="plan-features">
+        <li>Try before you buy</li>
+        <li>Limited features</li>
+        <li>No monthly credits</li>
+      </ul>
+    </div>
+  `;
+
   contentEl.innerHTML = `
     <div class="wizard-step choose-plan-step">
       <h2 class="wizard-title">${step.title || 'Choose Your Creator Package'}</h2>
-      <p class="wizard-subtitle">${step.subtitle || 'Select the credits and features that fit your needs'}</p>
+      <p class="wizard-subtitle">${step.subtitle || 'Unlock your creative potential with the right plan'}</p>
 
       <div class="plans-grid">
-        ${freePlanHTML}
         ${plansHTML || ''}
+        ${freePlanHTML}
       </div>
 
       <p class="wizard-flexibility-note">
-        You can change your plan anytime. Start with free credits and upgrade later!
+        You can upgrade or change your plan anytime from your account settings.
       </p>
     </div>
   `;
@@ -633,37 +640,22 @@ function renderChooseEducationStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
-  // None option card
-  const noneTierHTML = `
-    <div class="tier-card none-tier ${wizardSelections.education_tier === 'none' ? 'selected' : ''}"
-         onclick="selectEducationTier('none')">
-      <div class="tier-header">
-        <h3 class="tier-name">None</h3>
-        <div class="tier-price">
-          <span class="price-amount">$0</span>
-          <span class="price-period">/mo</span>
-        </div>
-      </div>
-      <div class="tier-highlight">
-        <span class="highlight-text">Self-Guided</span>
-      </div>
-      <ul class="tier-features">
-        <li>Learn on your own</li>
-        <li>Community forums</li>
-        <li>Basic documentation</li>
-      </ul>
-    </div>
-  `;
+  // Determine which tier to highlight
+  const popularTierSlug = 'gold'; // Middle tier for conversions
 
   const tiersHTML = educationTiers.map(tier => {
     const monthlyPrice = tier.price_monthly;
     const features = tier.features || [];
+    const isPopular = tier.slug === popularTierSlug;
+    const isPlatinum = tier.slug === 'platinum';
     // Get a highlight/tagline for each tier
     const tierHighlight = tier.description || getTierHighlight(tier.slug);
 
     return `
-      <div class="tier-card ${wizardSelections.education_tier === tier.slug ? 'selected' : ''}"
+      <div class="tier-card ${isPopular ? 'popular' : ''} ${isPlatinum ? 'premium-tier' : ''} ${wizardSelections.education_tier === tier.slug ? 'selected' : ''}"
            onclick="selectEducationTier('${tier.slug}')">
+        ${isPopular ? '<div class="popular-badge">Recommended</div>' : ''}
+        ${isPlatinum ? '<div class="premium-badge-tag">Complete Package</div>' : ''}
         <div class="tier-header">
           <h3 class="tier-name">${tier.name}</h3>
           <div class="tier-price">
@@ -681,18 +673,40 @@ function renderChooseEducationStep(step) {
     `;
   }).join('');
 
+  // None option card - at the end, less prominent
+  const noneTierHTML = `
+    <div class="tier-card none-tier ${wizardSelections.education_tier === 'none' ? 'selected' : ''}"
+         onclick="selectEducationTier('none')">
+      <div class="tier-header">
+        <h3 class="tier-name">Skip</h3>
+        <div class="tier-price">
+          <span class="price-amount">$0</span>
+          <span class="price-period">/mo</span>
+        </div>
+      </div>
+      <div class="tier-highlight">
+        <span class="highlight-text">Go It Alone</span>
+      </div>
+      <ul class="tier-features">
+        <li>No guided training</li>
+        <li>Basic docs only</li>
+        <li>Longer learning curve</li>
+      </ul>
+    </div>
+  `;
+
   contentEl.innerHTML = `
     <div class="wizard-step choose-education-step">
-      <h2 class="wizard-title">${step.title || 'Level Up Your Skills'}</h2>
-      <p class="wizard-subtitle">${step.subtitle || 'Get the training you need to succeed with your AI influencer'}</p>
+      <h2 class="wizard-title">${step.title || 'Accelerate Your Success'}</h2>
+      <p class="wizard-subtitle">${step.subtitle || 'Creators with training earn 3x more in their first month'}</p>
 
       <div class="tiers-grid">
-        ${noneTierHTML}
         ${tiersHTML || ''}
+        ${noneTierHTML}
       </div>
 
       <p class="wizard-flexibility-note">
-        You can add or change your education tier anytime from the Learn tab.
+        You can add education anytime from the Learn tab.
       </p>
     </div>
   `;
