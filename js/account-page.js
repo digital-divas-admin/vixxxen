@@ -32,6 +32,9 @@ function openAccountPage() {
 function loadAccountData() {
   if (!currentUser) return;
 
+  // Load custom character orders
+  loadCustomCharacterOrders();
+
   // Set display name
   const nameInput = document.getElementById('accountName');
   if (nameInput) {
@@ -308,4 +311,186 @@ function goBackFromAccount() {
     navTab.classList.remove('active');
   });
   document.querySelector('.nav-tab[onclick*="imageSection"]')?.classList.add('active');
+}
+
+// ===========================================
+// CUSTOM CHARACTER ORDERS
+// ===========================================
+
+// Load user's custom character orders
+async function loadCustomCharacterOrders() {
+  const listEl = document.getElementById('customOrdersList');
+  if (!listEl) return;
+
+  if (!currentUser) {
+    listEl.innerHTML = `
+      <div style="text-align: center; color: #888; padding: 20px 0;">
+        Please log in to view your custom character orders.
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = `
+    <div style="text-align: center; color: #888; padding: 20px 0;">
+      Loading orders...
+    </div>
+  `;
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/custom-characters/orders`);
+    if (!response.ok) throw new Error('Failed to load orders');
+
+    const data = await response.json();
+    const orders = data.orders || [];
+
+    if (orders.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; color: #888; padding: 20px 0;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🎨</div>
+          <div>No custom character orders yet.</div>
+          <div style="font-size: 0.85rem; margin-top: 8px;">Commission your own AI character today!</div>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = orders.map(order => {
+      const statusColors = {
+        'pending': { bg: 'rgba(255, 165, 0, 0.15)', color: '#ffa500' },
+        'in_progress': { bg: 'rgba(0, 178, 255, 0.15)', color: '#00b2ff' },
+        'delivered': { bg: 'rgba(157, 78, 221, 0.15)', color: '#9d4edd' },
+        'revision_requested': { bg: 'rgba(255, 46, 187, 0.15)', color: '#ff2ebb' },
+        'completed': { bg: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' }
+      };
+
+      const statusLabels = {
+        'pending': 'Pending',
+        'in_progress': 'In Progress',
+        'delivered': 'Delivered',
+        'revision_requested': 'Revision Requested',
+        'completed': 'Completed'
+      };
+
+      const colors = statusColors[order.status] || statusColors.pending;
+      const statusLabel = statusLabels[order.status] || order.status;
+      const createdDate = new Date(order.created_at).toLocaleDateString();
+      const estimatedDate = order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString() : 'TBD';
+
+      return `
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(157, 78, 221, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-weight: 600; color: #fff;">#${order.order_number} - ${escapeHtml(order.character_name)}</span>
+                ${order.is_rush ? '<span style="background: rgba(255, 68, 68, 0.2); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">RUSH</span>' : ''}
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: #888;">
+                <span>Ordered: ${createdDate}</span>
+                <span>•</span>
+                <span>Est. Delivery: ${estimatedDate}</span>
+              </div>
+            </div>
+            <div style="background: ${colors.bg}; color: ${colors.color}; padding: 4px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 500;">
+              ${statusLabel}
+            </div>
+          </div>
+
+          ${order.status === 'delivered' && order.revisions_purchased > order.revisions_used ? `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <button onclick="openRevisionModal('${order.id}')" style="padding: 8px 16px; background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #9d4edd; cursor: pointer; font-size: 0.85rem;">
+                Request Revision (${order.revisions_purchased - order.revisions_used} remaining)
+              </button>
+            </div>
+          ` : ''}
+
+          ${order.final_character ? `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <span style="color: #4ade80; font-size: 0.85rem;">✓ Character ready: ${escapeHtml(order.final_character.name)}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Error loading custom character orders:', error);
+    listEl.innerHTML = `
+      <div style="text-align: center; color: #ff4444; padding: 20px 0;">
+        Failed to load orders. <button onclick="loadCustomCharacterOrders()" style="color: #9d4edd; background: none; border: none; cursor: pointer; text-decoration: underline;">Retry</button>
+      </div>
+    `;
+  }
+}
+
+// Open revision request modal
+function openRevisionModal(orderId) {
+  const modal = document.createElement('div');
+  modal.id = 'revisionModal';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px;';
+
+  modal.innerHTML = `
+    <div style="background: #1a1a1a; border-radius: 16px; padding: 32px; max-width: 500px; width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #fff; font-size: 1.2rem;">Request Revision</h3>
+        <button onclick="closeRevisionModal()" style="background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; color: #888; font-size: 0.9rem; margin-bottom: 8px;">What would you like changed?</label>
+        <textarea id="revisionFeedback" rows="4" placeholder="Please describe the changes you'd like made to your character..." style="width: 100%; padding: 12px; background: #252525; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; resize: vertical;"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button onclick="closeRevisionModal()" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #888; cursor: pointer;">Cancel</button>
+        <button onclick="submitRevisionRequest('${orderId}')" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600;">Submit Request</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeRevisionModal();
+  });
+}
+
+function closeRevisionModal() {
+  const modal = document.getElementById('revisionModal');
+  if (modal) modal.remove();
+}
+
+async function submitRevisionRequest(orderId) {
+  const feedback = document.getElementById('revisionFeedback')?.value.trim();
+
+  if (!feedback) {
+    alert('Please provide feedback for your revision request.');
+    return;
+  }
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/custom-characters/orders/${orderId}/revision`, {
+      method: 'POST',
+      body: JSON.stringify({ feedback })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to submit revision');
+    }
+
+    alert('Revision request submitted successfully!');
+    closeRevisionModal();
+    loadCustomCharacterOrders();
+  } catch (error) {
+    console.error('Error submitting revision:', error);
+    alert(error.message || 'Failed to submit revision request.');
+  }
+}
+
+// Helper function
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }

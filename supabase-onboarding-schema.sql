@@ -408,5 +408,31 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ===========================================
+-- MIGRATIONS: Run these if tables already exist
+-- ===========================================
+
+-- Add badge_text column to content_plans (for "Most Popular", "Best Value", etc.)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'content_plans' AND column_name = 'badge_text'
+  ) THEN
+    ALTER TABLE content_plans ADD COLUMN badge_text TEXT;
+  END IF;
+END $$;
+
+-- Add badge_text column to education_tiers (for "Popular", "Premium", etc.)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'education_tiers' AND column_name = 'badge_text'
+  ) THEN
+    ALTER TABLE education_tiers ADD COLUMN badge_text TEXT;
+  END IF;
+END $$;
+
+-- ===========================================
 -- DONE! Run this in Supabase SQL Editor
 -- ===========================================

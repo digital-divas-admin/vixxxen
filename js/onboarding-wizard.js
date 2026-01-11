@@ -766,6 +766,24 @@ function renderChooseCharacterStep(step) {
           : 'Please select at least one character to continue'}
       </p>
 
+      <!-- Custom Character Option -->
+      <div class="character-section custom-section">
+        <div class="custom-character-card" onclick="openCustomCharacterFromWizard()">
+          <div class="custom-character-icon">
+            <span style="font-size: 2.5rem;">🎨</span>
+          </div>
+          <div class="custom-character-content">
+            <h3 class="custom-character-title">Create Your Own Custom Character</h3>
+            <p class="custom-character-desc">Commission a fully custom AI character based on your Instagram inspiration. 100% unique, exclusively yours.</p>
+            <div class="custom-character-meta">
+              <span class="custom-price">Starting at $795</span>
+              <span class="custom-delivery">3-5 business days</span>
+            </div>
+          </div>
+          <div class="custom-character-arrow">→</div>
+        </div>
+      </div>
+
       <!-- Free Characters Section -->
       <div class="character-section">
         <div class="section-header">
@@ -1023,6 +1041,22 @@ function renderWelcomeStep(step) {
     ? displayStarters.find(c => c.id === wizardSelections.starter_character)
     : null;
 
+  // Check for custom character order (from custom-character-order.js)
+  const customCharOrder = typeof getSubmittedCustomCharacterOrder === 'function'
+    ? getSubmittedCustomCharacterOrder()
+    : null;
+
+  // Calculate custom character order total if exists
+  let customCharPrice = 0;
+  if (customCharOrder) {
+    const customConfig = customCharOrder.config || {};
+    const basePrice = parseFloat(customConfig.base_price || 795);
+    const revisionPrice = parseFloat(customConfig.revision_price || 100);
+    const rushFee = customCharOrder.is_rush ? parseFloat(customConfig.rush_fee || 200) : 0;
+    const revisionsTotal = (customCharOrder.revisions_purchased || 0) * revisionPrice;
+    customCharPrice = basePrice + revisionsTotal + rushFee;
+  }
+
   // Calculate prices based on individual billing cycles
   const planMonthly = selectedPlan ? parseFloat(selectedPlan.price_monthly) : 0;
   const planAnnual = selectedPlan ? parseFloat(selectedPlan.price_annual) : 0;
@@ -1039,8 +1073,8 @@ function renderWelcomeStep(step) {
   // Premium character is one-time, no discount
   const premiumCharPrice = selectedPremiumChar ? parseFloat(selectedPremiumChar.price) : 0;
 
-  // Calculate total due today
-  const totalDueToday = premiumCharPrice + planPrice + tierPrice;
+  // Calculate total due today (include custom character order)
+  const totalDueToday = premiumCharPrice + planPrice + tierPrice + customCharPrice;
   const hasRecurring = planMonthly > 0 || tierMonthly > 0;
   const hasPaidItems = totalDueToday > 0;
 
@@ -1058,7 +1092,28 @@ function renderWelcomeStep(step) {
             <button class="review-edit-btn" onclick="goToStep(1)">Edit</button>
           </div>
           <div class="review-section-content">
-            ${selectedPremiumChar ? `
+            ${customCharOrder ? `
+              <!-- Custom Character Order -->
+              <div class="review-item custom" style="border: 1px solid rgba(157, 78, 221, 0.3); background: rgba(157, 78, 221, 0.05); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                  <span class="item-name" style="color: #9d4edd; font-weight: 600;">${customCharOrder.character_name}</span>
+                  <span class="item-badge" style="background: linear-gradient(135deg, #9d4edd, #ff2ebb); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem;">Custom Order</span>
+                </div>
+                <div style="font-size: 0.8rem; color: #888; margin-bottom: 4px;">
+                  Order #${customCharOrder.order_number} • ${customCharOrder.is_rush ? 'Rush' : 'Standard'} delivery
+                  ${customCharOrder.revisions_purchased > 0 ? ` • ${customCharOrder.revisions_purchased} revision${customCharOrder.revisions_purchased > 1 ? 's' : ''}` : ''}
+                </div>
+                <span class="item-price" style="color: #4ade80; font-weight: 600;">$${customCharPrice.toFixed(2)} <small>(one-time)</small></span>
+              </div>
+              ${selectedStarterChar ? `
+                <!-- Interim starter while custom is being made -->
+                <div class="review-item free" style="opacity: 0.8;">
+                  <span class="item-name">${selectedStarterChar.name}</span>
+                  <span class="item-badge free" style="font-size: 0.7rem;">Interim Character</span>
+                  <span class="item-price">$0</span>
+                </div>
+              ` : ''}
+            ` : selectedPremiumChar ? `
               <div class="review-item premium">
                 <span class="item-name">${selectedPremiumChar.name}</span>
                 <span class="item-badge premium">Premium Exclusive</span>
@@ -1158,6 +1213,13 @@ function renderWelcomeStep(step) {
         <div class="checkout-summary">
           <h4>Payment Summary</h4>
 
+          ${customCharPrice > 0 ? `
+            <div class="summary-line" style="background: rgba(157, 78, 221, 0.1); padding: 8px 12px; border-radius: 6px; margin-bottom: 8px;">
+              <span style="color: #9d4edd;">${customCharOrder.character_name} - Custom Character</span>
+              <span class="summary-amount" style="color: #9d4edd;">$${customCharPrice.toFixed(2)}</span>
+            </div>
+          ` : ''}
+
           ${premiumCharPrice > 0 ? `
             <div class="summary-line">
               <span>${selectedPremiumChar.name} (one-time)</span>
@@ -1215,13 +1277,24 @@ function renderWelcomeStep(step) {
 
 // Handle final checkout
 async function handleCheckout() {
+  // Check for custom character order
+  const customCharOrder = typeof getSubmittedCustomCharacterOrder === 'function'
+    ? getSubmittedCustomCharacterOrder()
+    : null;
+
   const hasPaidItems = wizardSelections.content_plan ||
                        wizardSelections.education_tier ||
-                       wizardSelections.premium_character;
+                       wizardSelections.premium_character ||
+                       customCharOrder;
 
   if (hasPaidItems) {
     // TODO: Integrate with payment system (Stripe, etc.)
     alert('Payment integration coming soon! For now, enjoy exploring Vixxxen.');
+  }
+
+  // Clear custom character order after checkout completes
+  if (typeof clearSubmittedCustomCharacterOrder === 'function') {
+    clearSubmittedCustomCharacterOrder();
   }
 
   await completeOnboarding();
@@ -1640,6 +1713,10 @@ function triggerOnboardingOrLogin(action = 'generate') {
     educationBillingCycle = 'monthly';
     selectedStarterCharacter = null;
     purchasedPremiumCharacter = null;
+    // Clear any pending custom character order
+    if (typeof clearSubmittedCustomCharacterOrder === 'function') {
+      clearSubmittedCustomCharacterOrder();
+    }
     console.log('✅ Wizard state reset complete');
   }
 
@@ -1675,6 +1752,20 @@ function triggerOnboardingOrLogin(action = 'generate') {
   window.selectStarterCharacter = selectStarterCharacter;
   window.selectPremiumCharacter = selectPremiumCharacter;
   window.handleCharacterContinue = handleCharacterContinue;
+
+  // Open custom character order modal from wizard
+  // Selects a starter character as interim and opens the custom order form
+  window.openCustomCharacterFromWizard = function() {
+    // If user has selected a starter, use it as interim character
+    const interimId = selectedStarterCharacter || null;
+    // Open custom character order modal (function from custom-character-order.js)
+    if (typeof openCustomCharacterOrderModal === 'function') {
+      openCustomCharacterOrderModal(interimId);
+    } else {
+      console.error('Custom character order modal not available');
+      alert('Custom character orders are not available at the moment. Please try again later.');
+    }
+  };
 
   // Plan/tier selection (called from onclick in templates)
   window.selectContentPlan = selectContentPlan;
