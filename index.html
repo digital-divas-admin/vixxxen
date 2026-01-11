@@ -15453,6 +15453,11 @@
       } else {
         console.log('🔐 No user in session, logging out...');
 
+        // Reset wizard state for fresh start
+        if (typeof resetWizard === 'function') {
+          resetWizard();
+        }
+
         // Check if there were active generations - warn user
         const hadActiveGenerations = Object.keys(activeGenerationJobs).length > 0 ||
                                       isGenerating || isGeneratingVideo;
