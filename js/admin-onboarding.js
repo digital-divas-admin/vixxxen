@@ -87,7 +87,7 @@ async function loadOnboardingAdmin() {
 
 async function loadAdminPlans() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/plans`);
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/plans`);
     if (!response.ok) throw new Error('Failed to load plans');
 
     const data = await response.json();
@@ -328,9 +328,8 @@ async function savePlan(event, existingSlug) {
       ? `${API_BASE_URL}/api/onboarding/admin/plans/${existingSlug}`
       : `${API_BASE_URL}/api/onboarding/admin/plans`;
 
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method: isEdit ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(planData)
     });
 
@@ -351,7 +350,7 @@ async function savePlan(event, existingSlug) {
 
 async function togglePlanActive(slug, active) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/plans/${slug}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/plans/${slug}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: active })
@@ -379,7 +378,7 @@ async function duplicatePlan(slug) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/plans`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/plans`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -405,7 +404,7 @@ async function duplicatePlan(slug) {
 
 async function loadAdminTiers() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/tiers`);
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/tiers`);
     if (!response.ok) throw new Error('Failed to load tiers');
 
     const data = await response.json();
@@ -640,9 +639,8 @@ async function saveTier(event, existingSlug) {
       ? `${API_BASE_URL}/api/onboarding/admin/tiers/${existingSlug}`
       : `${API_BASE_URL}/api/onboarding/admin/tiers`;
 
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method: isEdit ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tierData)
     });
 
@@ -663,7 +661,7 @@ async function saveTier(event, existingSlug) {
 
 async function toggleTierActive(slug, active) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/tiers/${slug}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/tiers/${slug}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: active })
@@ -686,7 +684,7 @@ async function duplicateTier(slug) {
   if (!newSlug) return;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/tiers`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/tiers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -713,7 +711,7 @@ async function duplicateTier(slug) {
 async function loadAdminCharacters() {
   try {
     // Load all characters from marketplace
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/all-characters`);
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/all-characters`);
     if (!response.ok) throw new Error('Failed to load characters');
 
     const data = await response.json();
@@ -838,7 +836,7 @@ function filterPremiumCharacters() {
 
 async function makeStarter(charId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/starter-character/${charId}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/starter-character/${charId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_starter: true })
@@ -855,7 +853,7 @@ async function makeStarter(charId) {
 
 async function removeFromStarters(charId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/starter-character/${charId}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/starter-character/${charId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_starter: false })
@@ -876,7 +874,7 @@ async function removeFromStarters(charId) {
 
 async function loadAdminSteps() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/config`);
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/config`);
     if (!response.ok) throw new Error('Failed to load steps');
 
     const data = await response.json();
@@ -1005,7 +1003,7 @@ async function saveStep(stepKey) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/admin/config/${stepKey}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/admin/config/${stepKey}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(stepData)
@@ -1149,7 +1147,7 @@ async function reorderStarters(fromIndex, toIndex) {
   sorted.splice(toIndex, 0, moved);
 
   try {
-    await fetch(`${API_BASE_URL}/api/onboarding/admin/starter-order`, {
+    await authFetch(`${API_BASE_URL}/api/onboarding/admin/starter-order`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
