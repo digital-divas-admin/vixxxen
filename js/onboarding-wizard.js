@@ -1622,12 +1622,18 @@ function triggerOnboardingOrLogin(action = 'generate') {
   // ===========================================
   // Expose functions needed by onclick handlers and other scripts
 
+  // Helper to check if wizard is ready (config loaded)
+  function isWizardReady() {
+    return onboardingConfig !== null;
+  }
+
   // Main entry points (called from other JS files)
   window.showOnboardingWizard = showOnboardingWizard;
   window.hideOnboardingWizard = hideOnboardingWizard;
   window.triggerOnboardingOrLogin = triggerOnboardingOrLogin;
   window.initializeOnboarding = initializeOnboarding;
   window.checkAndShowPrompts = checkAndShowPrompts;
+  window.isWizardReady = isWizardReady;
 
   // Step navigation (called from onclick in templates)
   window.nextStep = nextStep;

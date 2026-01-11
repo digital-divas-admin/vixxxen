@@ -15071,7 +15071,7 @@
     // Now shows the onboarding wizard for new users
     function showLoginRequiredModal() {
       // Check if onboarding wizard is initialized
-      if (typeof showOnboardingWizard === 'function' && onboardingConfig) {
+      if (typeof showOnboardingWizard === 'function' && typeof isWizardReady === 'function' && isWizardReady()) {
         showOnboardingWizard('create_account');
         return;
       }
