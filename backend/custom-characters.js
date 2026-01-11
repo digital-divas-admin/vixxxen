@@ -87,14 +87,29 @@ router.post('/orders', requireAuth, async (req, res) => {
       is_rush,
       revisions_purchased,
       interim_character_id,
-      acknowledgments
+      acknowledgments,
+      providing_own_references
     } = req.body;
 
     // Validate required fields
-    if (!character_name || !face_instagram_1 || !face_instagram_2 || !body_instagram) {
-      return res.status(400).json({
-        error: 'Character name and all Instagram accounts are required'
-      });
+    if (!character_name) {
+      return res.status(400).json({ error: 'Character name is required' });
+    }
+
+    // If providing own references, require Google Drive link
+    // Otherwise require all 3 Instagram accounts
+    if (providing_own_references) {
+      if (!google_drive_link) {
+        return res.status(400).json({
+          error: 'Google Drive link is required when providing your own reference images'
+        });
+      }
+    } else {
+      if (!face_instagram_1 || !face_instagram_2 || !body_instagram) {
+        return res.status(400).json({
+          error: 'All 3 Instagram account URLs are required'
+        });
+      }
     }
 
     // Get current pricing config

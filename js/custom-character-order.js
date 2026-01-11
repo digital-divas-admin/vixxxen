@@ -19,10 +19,26 @@ let customCharacterOrderData = {
   is_rush: false,
   revisions_purchased: 0,
   interim_character_id: null,
-  acknowledgments: []
+  acknowledgments: [],
+  // New: flag for providing own references instead of Instagram
+  providing_own_references: false
 };
 let customOrderCurrentStep = 1;
 const CUSTOM_ORDER_TOTAL_STEPS = 5;
+
+// Instagram URL validation helper
+function isValidInstagramUrl(url) {
+  if (!url) return false;
+  // Must be a proper Instagram URL
+  const pattern = /^https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+\/?$/i;
+  return pattern.test(url.trim());
+}
+
+function formatInstagramInput(input) {
+  let value = input.value.trim();
+  // If they just typed a username without URL, don't auto-format - let validation catch it
+  return value;
+}
 
 // ===========================================
 // LOAD CONFIG
@@ -75,7 +91,8 @@ async function openCustomCharacterOrderModal(interimCharacterId = null) {
     is_rush: false,
     revisions_purchased: 0,
     interim_character_id: interimCharacterId,
-    acknowledgments: []
+    acknowledgments: [],
+    providing_own_references: false
   };
   customOrderCurrentStep = 1;
 
@@ -279,79 +296,137 @@ function renderStep1_CharacterName() {
 
 // Step 2: Face Inspiration
 function renderStep2_FaceInspiration() {
+  const providingOwn = customCharacterOrderData.providing_own_references;
+
   return `
-    <div style="text-align: center; margin-bottom: 24px;">
+    <div style="text-align: center; margin-bottom: 20px;">
       <div style="font-size: 2.5rem; margin-bottom: 12px;">😊</div>
       <h3 style="color: #fff; font-size: 1.3rem; margin: 0 0 8px;">Face Inspiration</h3>
-      <p style="color: #888; font-size: 0.9rem; margin: 0;">Provide 2 Instagram accounts for face reference</p>
+      <p style="color: #888; font-size: 0.9rem; margin: 0;">Provide 2 Instagram profile URLs for face reference</p>
     </div>
 
-    <!-- Face Instagram 1 -->
-    <div style="margin-bottom: 20px;">
-      <label style="display: block; color: #9d4edd; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px;">
-        Face Reference #1 <span style="color: #ff4444;">*</span>
+    <!-- Option to provide own references -->
+    <div style="background: rgba(157, 78, 221, 0.1); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 12px; padding: 14px; margin-bottom: 20px;">
+      <label style="display: flex; align-items: start; gap: 12px; cursor: pointer;">
+        <input type="checkbox" id="customOrderProvidingOwn" ${providingOwn ? 'checked' : ''} onchange="toggleProvidingOwnReferences()"
+          style="width: 20px; height: 20px; accent-color: #9d4edd; margin-top: 2px; flex-shrink: 0;">
+        <div>
+          <div style="color: #fff; font-weight: 500; font-size: 0.9rem;">I'll provide my own reference images or Google Drive link instead</div>
+          <div style="color: #888; font-size: 0.8rem; margin-top: 4px;">Check this if you're uploading images or sharing a Google Drive folder with reference photos.</div>
+        </div>
       </label>
-      <input type="text" id="customOrderFaceIG1" placeholder="instagram.com/username or @username" value="${escapeHtml(customCharacterOrderData.face_instagram_1)}"
-        style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none; margin-bottom: 8px;"
-        onfocus="this.style.borderColor='#9d4edd'" onblur="this.style.borderColor='rgba(157, 78, 221, 0.3)'">
-      <textarea id="customOrderFaceIG1Notes" placeholder="Optional notes (e.g., 'Love the eyes in her photos')" rows="2"
-        style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #aaa; font-size: 0.85rem; outline: none; resize: none;">${escapeHtml(customCharacterOrderData.face_instagram_1_notes)}</textarea>
     </div>
 
-    <!-- Face Instagram 2 -->
-    <div style="margin-bottom: 20px;">
-      <label style="display: block; color: #9d4edd; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px;">
-        Face Reference #2 <span style="color: #ff4444;">*</span>
-      </label>
-      <input type="text" id="customOrderFaceIG2" placeholder="instagram.com/username or @username" value="${escapeHtml(customCharacterOrderData.face_instagram_2)}"
-        style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none; margin-bottom: 8px;"
-        onfocus="this.style.borderColor='#9d4edd'" onblur="this.style.borderColor='rgba(157, 78, 221, 0.3)'">
-      <textarea id="customOrderFaceIG2Notes" placeholder="Optional notes (e.g., 'Nose and jawline are perfect')" rows="2"
-        style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #aaa; font-size: 0.85rem; outline: none; resize: none;">${escapeHtml(customCharacterOrderData.face_instagram_2_notes)}</textarea>
+    <!-- Instagram inputs (shown unless providing own) -->
+    <div id="faceInstagramInputs" style="${providingOwn ? 'opacity: 0.4; pointer-events: none;' : ''}">
+      <!-- Face Instagram 1 -->
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; color: #9d4edd; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px;">
+          Face Reference #1 ${!providingOwn ? '<span style="color: #ff4444;">*</span>' : ''}
+        </label>
+        <input type="url" id="customOrderFaceIG1" placeholder="https://instagram.com/username" value="${escapeHtml(customCharacterOrderData.face_instagram_1)}"
+          style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none; margin-bottom: 8px;"
+          onfocus="this.style.borderColor='#9d4edd'" onblur="this.style.borderColor='rgba(157, 78, 221, 0.3)'">
+        <textarea id="customOrderFaceIG1Notes" placeholder="Optional notes (e.g., 'Love the eyes in her photos')" rows="2"
+          style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #aaa; font-size: 0.85rem; outline: none; resize: none;">${escapeHtml(customCharacterOrderData.face_instagram_1_notes)}</textarea>
+      </div>
+
+      <!-- Face Instagram 2 -->
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; color: #9d4edd; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px;">
+          Face Reference #2 ${!providingOwn ? '<span style="color: #ff4444;">*</span>' : ''}
+        </label>
+        <input type="url" id="customOrderFaceIG2" placeholder="https://instagram.com/username" value="${escapeHtml(customCharacterOrderData.face_instagram_2)}"
+          style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none; margin-bottom: 8px;"
+          onfocus="this.style.borderColor='#9d4edd'" onblur="this.style.borderColor='rgba(157, 78, 221, 0.3)'">
+        <textarea id="customOrderFaceIG2Notes" placeholder="Optional notes (e.g., 'Nose and jawline are perfect')" rows="2"
+          style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #aaa; font-size: 0.85rem; outline: none; resize: none;">${escapeHtml(customCharacterOrderData.face_instagram_2_notes)}</textarea>
+      </div>
     </div>
 
     <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.2); border-radius: 12px; padding: 14px;">
       <div style="color: #ffa500; font-size: 0.85rem; line-height: 1.5;">
+        <strong>URL Format:</strong> Enter full Instagram URLs like <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">https://instagram.com/username</code><br>
         <strong>Requirements:</strong> ${customCharacterConfig?.requirements_text || 'Accounts should have 50+ posts with variety of face shots and minimal tattoos.'}
       </div>
     </div>
   `;
 }
 
+// Toggle providing own references
+function toggleProvidingOwnReferences() {
+  const checkbox = document.getElementById('customOrderProvidingOwn');
+  customCharacterOrderData.providing_own_references = checkbox?.checked || false;
+  renderCurrentStep();
+}
+
 // Step 3: Body Inspiration
 function renderStep3_BodyInspiration() {
+  const providingOwn = customCharacterOrderData.providing_own_references;
+
   return `
-    <div style="text-align: center; margin-bottom: 24px;">
+    <div style="text-align: center; margin-bottom: 20px;">
       <div style="font-size: 2.5rem; margin-bottom: 12px;">💃</div>
-      <h3 style="color: #fff; font-size: 1.3rem; margin: 0 0 8px;">Body Inspiration</h3>
-      <p style="color: #888; font-size: 0.9rem; margin: 0;">Provide 1 Instagram account for body reference</p>
+      <h3 style="color: #fff; font-size: 1.3rem; margin: 0 0 8px;">${providingOwn ? 'Your Reference Images' : 'Body Inspiration'}</h3>
+      <p style="color: #888; font-size: 0.9rem; margin: 0;">${providingOwn ? 'Provide your reference images via Google Drive' : 'Provide 1 Instagram profile URL for body reference'}</p>
     </div>
 
-    <!-- Body Instagram -->
-    <div style="margin-bottom: 20px;">
-      <label style="display: block; color: #ff2ebb; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px;">
-        Body Reference <span style="color: #ff4444;">*</span>
-      </label>
-      <input type="text" id="customOrderBodyIG" placeholder="instagram.com/username or @username" value="${escapeHtml(customCharacterOrderData.body_instagram)}"
-        style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none; margin-bottom: 8px;"
-        onfocus="this.style.borderColor='#ff2ebb'" onblur="this.style.borderColor='rgba(255, 46, 187, 0.3)'">
-      <textarea id="customOrderBodyIGNotes" placeholder="Optional notes (e.g., 'Athletic build, similar proportions')" rows="2"
-        style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #aaa; font-size: 0.85rem; outline: none; resize: none;">${escapeHtml(customCharacterOrderData.body_instagram_notes)}</textarea>
-    </div>
+    ${providingOwn ? `
+      <!-- Google Drive Required when providing own -->
+      <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <span style="font-size: 1.2rem;">📁</span>
+          <div style="color: #4ade80; font-weight: 500;">Google Drive Link Required</div>
+        </div>
+        <p style="color: #aaa; font-size: 0.85rem; margin: 0 0 16px;">Since you're providing your own reference images, please share a Google Drive folder containing your photos.</p>
 
-    <!-- Additional References -->
-    <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-      <label style="display: block; color: #888; font-size: 0.9rem; font-weight: 500; margin-bottom: 12px;">
-        Additional References (Optional)
-      </label>
+        <input type="url" id="customOrderGoogleDrive" placeholder="https://drive.google.com/..." value="${escapeHtml(customCharacterOrderData.google_drive_link)}"
+          style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none;"
+          onfocus="this.style.borderColor='#4ade80'" onblur="this.style.borderColor='rgba(74, 222, 128, 0.3)'">
 
-      <input type="url" id="customOrderGoogleDrive" placeholder="Google Drive link to additional reference images" value="${escapeHtml(customCharacterOrderData.google_drive_link)}"
-        style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 0.9rem; outline: none; margin-bottom: 12px;">
-
-      <div style="color: #666; font-size: 0.8rem; text-align: center;">
-        You can share a Google Drive folder with additional reference images if needed. Make sure the link is set to "Anyone with link can view".
+        <div style="color: #888; font-size: 0.8rem; margin-top: 10px;">
+          Make sure the link is set to <strong>"Anyone with link can view"</strong>
+        </div>
       </div>
-    </div>
+
+      <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.2); border-radius: 12px; padding: 14px;">
+        <div style="color: #ffa500; font-size: 0.85rem; line-height: 1.5;">
+          <strong>Required images:</strong> Include a variety of face shots (front, side angles) and body shots. The more reference images you provide, the better we can match your vision.
+        </div>
+      </div>
+    ` : `
+      <!-- Body Instagram -->
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; color: #ff2ebb; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px;">
+          Body Reference <span style="color: #ff4444;">*</span>
+        </label>
+        <input type="url" id="customOrderBodyIG" placeholder="https://instagram.com/username" value="${escapeHtml(customCharacterOrderData.body_instagram)}"
+          style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 10px; color: #fff; font-size: 0.95rem; outline: none; margin-bottom: 8px;"
+          onfocus="this.style.borderColor='#ff2ebb'" onblur="this.style.borderColor='rgba(255, 46, 187, 0.3)'">
+        <textarea id="customOrderBodyIGNotes" placeholder="Optional notes (e.g., 'Athletic build, similar proportions')" rows="2"
+          style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #aaa; font-size: 0.85rem; outline: none; resize: none;">${escapeHtml(customCharacterOrderData.body_instagram_notes)}</textarea>
+      </div>
+
+      <!-- Additional References (Optional) -->
+      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <label style="display: block; color: #888; font-size: 0.9rem; font-weight: 500; margin-bottom: 12px;">
+          Additional References (Optional)
+        </label>
+
+        <input type="url" id="customOrderGoogleDrive" placeholder="https://drive.google.com/... (optional)" value="${escapeHtml(customCharacterOrderData.google_drive_link)}"
+          style="width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 0.9rem; outline: none; margin-bottom: 10px;">
+
+        <div style="color: #666; font-size: 0.8rem; text-align: center;">
+          Optionally share additional reference images via Google Drive.
+        </div>
+      </div>
+
+      <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.2); border-radius: 12px; padding: 14px; margin-top: 16px;">
+        <div style="color: #ffa500; font-size: 0.85rem; line-height: 1.5;">
+          <strong>URL Format:</strong> Enter full Instagram URL like <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">https://instagram.com/username</code>
+        </div>
+      </div>
+    `}
   `;
 }
 
@@ -393,7 +468,7 @@ function renderStep4_Options() {
         <div style="color: #9d4edd; font-weight: 600; font-size: 0.9rem;">$${revisionPrice.toFixed(0)} each</div>
       </div>
 
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
         ${[0, 1, 2, 3].filter(n => n <= maxRevisions).map(num => `
           <button onclick="selectRevisionPackage(${num})" id="revisionBtn${num}"
             style="flex: 1; min-width: 70px; padding: 12px 16px; background: ${customCharacterOrderData.revisions_purchased === num ? 'linear-gradient(135deg, #9d4edd, #ff2ebb)' : 'rgba(255,255,255,0.05)'}; border: 1px solid ${customCharacterOrderData.revisions_purchased === num ? 'transparent' : 'rgba(157, 78, 221, 0.3)'}; border-radius: 10px; color: #fff; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;">
@@ -401,6 +476,13 @@ function renderStep4_Options() {
             <div style="font-size: 0.75rem; opacity: 0.8;">${num === 0 ? 'None' : `+$${(num * revisionPrice).toFixed(0)}`}</div>
           </button>
         `).join('')}
+      </div>
+
+      <!-- Revision timeline warning -->
+      <div style="background: rgba(255, 165, 0, 0.1); border-radius: 8px; padding: 10px 12px;">
+        <div style="color: #ffa500; font-size: 0.8rem; line-height: 1.4;">
+          <strong>⏱️ Timeline Note:</strong> Each revision adds approximately 3 business days to your delivery. For example, if your character is delivered in 4 days and you request a revision, expect the revision in ~3 additional days.
+        </div>
       </div>
     </div>
 
@@ -438,12 +520,17 @@ function renderStep5_Review() {
   const totalPrice = basePrice + revisionsTotal + rushFee;
 
   const deliveryDays = customCharacterOrderData.is_rush ? (config?.rush_days || 2) : `${config?.standard_days_min || 3}-${config?.standard_days_max || 5}`;
+  const providingOwn = customCharacterOrderData.providing_own_references;
 
-  const disclaimers = config?.disclaimers || [
+  // Build disclaimers based on whether they're providing own references
+  const disclaimers = [
     "I understand the final result is based on AI and may not exactly match my inspiration references",
     "I understand individual features (eyes, nose, etc.) cannot be altered without using a full revision",
-    "I understand the character creation process takes 3-5 business days (or 2 days for rush orders)",
-    "I confirm all Instagram accounts I provided meet the requirements (50+ posts, variety of shots, minimal tattoos)"
+    "I understand each revision request adds approximately 3 business days to the delivery timeline",
+    "I understand the initial character creation takes " + deliveryDays + " business days",
+    providingOwn
+      ? "I confirm my Google Drive contains sufficient reference images (face and body shots from multiple angles)"
+      : "I confirm all Instagram accounts I provided meet the requirements (50+ posts, variety of shots, minimal tattoos)"
   ];
 
   return `
@@ -461,17 +548,19 @@ function renderStep5_Review() {
           <span style="color: #fff; font-weight: 500;">${escapeHtml(customCharacterOrderData.character_name)}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span style="color: #888;">Face References</span>
-          <span style="color: #9d4edd;">2 Instagram accounts</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span style="color: #888;">Body Reference</span>
-          <span style="color: #ff2ebb;">1 Instagram account</span>
+          <span style="color: #888;">Reference Source</span>
+          <span style="color: ${providingOwn ? '#4ade80' : '#9d4edd'};">${providingOwn ? 'Google Drive (own images)' : '3 Instagram accounts'}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: #888;">Estimated Delivery</span>
           <span style="color: #fff;">${deliveryDays} business days</span>
         </div>
+        ${customCharacterOrderData.revisions_purchased > 0 ? `
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #888;">Revisions Included</span>
+            <span style="color: #9d4edd;">${customCharacterOrderData.revisions_purchased} revision${customCharacterOrderData.revisions_purchased > 1 ? 's' : ''} (+3 days each if used)</span>
+          </div>
+        ` : ''}
         <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 4px;">
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #888;">Base Price</span>
@@ -564,23 +653,34 @@ function saveCustomOrderStepData(step) {
       break;
 
     case 2:
-      const face1 = document.getElementById('customOrderFaceIG1');
-      const face1Notes = document.getElementById('customOrderFaceIG1Notes');
-      const face2 = document.getElementById('customOrderFaceIG2');
-      const face2Notes = document.getElementById('customOrderFaceIG2Notes');
-      if (face1) customCharacterOrderData.face_instagram_1 = face1.value.trim();
-      if (face1Notes) customCharacterOrderData.face_instagram_1_notes = face1Notes.value.trim();
-      if (face2) customCharacterOrderData.face_instagram_2 = face2.value.trim();
-      if (face2Notes) customCharacterOrderData.face_instagram_2_notes = face2Notes.value.trim();
+      // Save the providing own references checkbox
+      const providingOwnCheckbox = document.getElementById('customOrderProvidingOwn');
+      if (providingOwnCheckbox) customCharacterOrderData.providing_own_references = providingOwnCheckbox.checked;
+
+      // Only save Instagram values if not providing own
+      if (!customCharacterOrderData.providing_own_references) {
+        const face1 = document.getElementById('customOrderFaceIG1');
+        const face1Notes = document.getElementById('customOrderFaceIG1Notes');
+        const face2 = document.getElementById('customOrderFaceIG2');
+        const face2Notes = document.getElementById('customOrderFaceIG2Notes');
+        if (face1) customCharacterOrderData.face_instagram_1 = face1.value.trim();
+        if (face1Notes) customCharacterOrderData.face_instagram_1_notes = face1Notes.value.trim();
+        if (face2) customCharacterOrderData.face_instagram_2 = face2.value.trim();
+        if (face2Notes) customCharacterOrderData.face_instagram_2_notes = face2Notes.value.trim();
+      }
       break;
 
     case 3:
-      const body = document.getElementById('customOrderBodyIG');
-      const bodyNotes = document.getElementById('customOrderBodyIGNotes');
       const gdrive = document.getElementById('customOrderGoogleDrive');
-      if (body) customCharacterOrderData.body_instagram = body.value.trim();
-      if (bodyNotes) customCharacterOrderData.body_instagram_notes = bodyNotes.value.trim();
       if (gdrive) customCharacterOrderData.google_drive_link = gdrive.value.trim();
+
+      // Only save body Instagram if not providing own references
+      if (!customCharacterOrderData.providing_own_references) {
+        const body = document.getElementById('customOrderBodyIG');
+        const bodyNotes = document.getElementById('customOrderBodyIGNotes');
+        if (body) customCharacterOrderData.body_instagram = body.value.trim();
+        if (bodyNotes) customCharacterOrderData.body_instagram_notes = bodyNotes.value.trim();
+      }
       break;
 
     case 4:
@@ -599,6 +699,8 @@ function saveCustomOrderStepData(step) {
 }
 
 function validateCustomOrderStep(step) {
+  const providingOwn = customCharacterOrderData.providing_own_references;
+
   switch (step) {
     case 1:
       const name = document.getElementById('customOrderCharacterName')?.value.trim();
@@ -613,22 +715,56 @@ function validateCustomOrderStep(step) {
       return true;
 
     case 2:
+      // If providing own references, no Instagram validation needed
+      if (providingOwn) {
+        return true;
+      }
+
       const face1 = document.getElementById('customOrderFaceIG1')?.value.trim();
       const face2 = document.getElementById('customOrderFaceIG2')?.value.trim();
+
       if (!face1) {
-        showCustomOrderError('Please provide Face Reference #1');
+        showCustomOrderError('Please provide Face Reference #1 Instagram URL');
         return false;
       }
+      if (!isValidInstagramUrl(face1)) {
+        showCustomOrderError('Face Reference #1 must be a valid Instagram URL (e.g., https://instagram.com/username)');
+        return false;
+      }
+
       if (!face2) {
-        showCustomOrderError('Please provide Face Reference #2');
+        showCustomOrderError('Please provide Face Reference #2 Instagram URL');
+        return false;
+      }
+      if (!isValidInstagramUrl(face2)) {
+        showCustomOrderError('Face Reference #2 must be a valid Instagram URL (e.g., https://instagram.com/username)');
         return false;
       }
       return true;
 
     case 3:
+      // If providing own references, require Google Drive
+      if (providingOwn) {
+        const gdrive = document.getElementById('customOrderGoogleDrive')?.value.trim();
+        if (!gdrive) {
+          showCustomOrderError('Please provide a Google Drive link with your reference images');
+          return false;
+        }
+        if (!gdrive.includes('drive.google.com')) {
+          showCustomOrderError('Please provide a valid Google Drive link');
+          return false;
+        }
+        return true;
+      }
+
+      // Otherwise require Instagram body reference
       const body = document.getElementById('customOrderBodyIG')?.value.trim();
       if (!body) {
-        showCustomOrderError('Please provide a Body Reference');
+        showCustomOrderError('Please provide a Body Reference Instagram URL');
+        return false;
+      }
+      if (!isValidInstagramUrl(body)) {
+        showCustomOrderError('Body Reference must be a valid Instagram URL (e.g., https://instagram.com/username)');
         return false;
       }
       return true;
@@ -639,7 +775,7 @@ function validateCustomOrderStep(step) {
 
     case 5:
       const checkboxes = document.querySelectorAll('.customOrderAcknowledgment');
-      const disclaimersCount = customCharacterConfig?.disclaimers?.length || 4;
+      const disclaimersCount = 5; // We have 5 custom disclaimers
       let checkedCount = 0;
       checkboxes.forEach(cb => { if (cb.checked) checkedCount++; });
       if (checkedCount < disclaimersCount) {
