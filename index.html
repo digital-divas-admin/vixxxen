@@ -65,6 +65,7 @@
 
   <!-- External CSS - Organized styles -->
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/onboarding-wizard.css">
 
   <style>
     /* ===========================================
@@ -9916,6 +9917,7 @@
   <script src="js/account-page.js"></script>
   <script src="js/billing-page.js"></script>
   <script src="js/delete-functions.js"></script>
+  <script src="js/onboarding-wizard.js"></script>
 
   <script>
     // ===========================================
@@ -10926,6 +10928,17 @@
 
     // Run health check on page load
     document.addEventListener('DOMContentLoaded', checkServerHealth);
+
+    // Initialize onboarding system on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initializeOnboarding === 'function') {
+        initializeOnboarding().then(() => {
+          console.log('Onboarding system initialized');
+        }).catch(err => {
+          console.warn('Onboarding initialization failed:', err);
+        });
+      }
+    });
 
     // Hide loading splash when page is ready
     function hideLoadingSplash() {
@@ -15055,24 +15068,35 @@
     }
 
     // Show login required modal with message
+    // Now shows the onboarding wizard for new users
     function showLoginRequiredModal() {
-      // Create a brief notification then open login
-      const notification = document.createElement('div');
-      notification.className = 'login-required-toast';
-      notification.innerHTML = `
-        <div style="background: linear-gradient(135deg, #ff6b6b, #ee5a5a); color: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 12px; font-weight: 500;">
-          <span style="font-size: 24px;">🔐</span>
-          <span>Sign up to start creating! Get 20 free credits.</span>
-        </div>
-      `;
-      notification.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; animation: slideDown 0.3s ease;';
-      document.body.appendChild(notification);
+      // Check if onboarding wizard is initialized
+      if (typeof showOnboardingWizard === 'function' && typeof isWizardReady === 'function' && isWizardReady()) {
+        showOnboardingWizard('create_account');
+        return;
+      }
 
-      // Remove notification after delay and open login
-      setTimeout(() => {
-        notification.remove();
-        openLoginModal();
-      }, 1500);
+      // Fallback: Initialize onboarding and then show wizard
+      if (typeof initializeOnboarding === 'function') {
+        initializeOnboarding().then(() => {
+          if (typeof showOnboardingWizard === 'function') {
+            showOnboardingWizard('create_account');
+          } else {
+            openLoginModal();
+          }
+        }).catch(() => {
+          openLoginModal();
+        });
+        return;
+      }
+
+      // Ultimate fallback: show regular login modal
+      openLoginModal();
+    }
+
+    // Show the traditional login modal (for returning users)
+    function showLoginModal() {
+      openLoginModal();
     }
 
     function closeLoginModal() {
@@ -15168,6 +15192,21 @@
           } catch (e) {
             // Ignore email errors - non-critical
           }
+
+          // Start the onboarding wizard for new users (skip account creation step)
+          if (typeof initializeOnboarding === 'function') {
+            initializeOnboarding().then(() => {
+              if (typeof showOnboardingWizard === 'function') {
+                showOnboardingWizard();
+                // Skip to character selection (step 1) since account already created
+                if (typeof startWizardAtStep === 'function') {
+                  startWizardAtStep(1);
+                }
+              }
+            }).catch(err => {
+              console.warn('Could not start onboarding wizard:', err);
+            });
+          }
         }
       } catch (err) {
         console.error('Sign up error:', err);
@@ -15223,6 +15262,11 @@
       currentUser = null;
       userCredits = 0;
       ownedCharacters = ['aika', 'jessica', 'alexis']; // Reset to defaults
+
+      // Reset wizard state so next user starts fresh
+      if (typeof resetWizard === 'function') {
+        resetWizard();
+      }
 
       // Reset UI (with null checks)
       const userAvatar = document.getElementById('userAvatar');
@@ -15281,6 +15325,13 @@
             }
 
             console.log('📊 Profile loaded:', { credits: userCredits, plan: userPlan, characters: ownedCharacters });
+
+            // Merge profile data into currentUser for chat and other features
+            if (currentUser) {
+              currentUser.display_name = data.profile.display_name;
+              currentUser.full_name = data.profile.full_name;
+              currentUser.avatar_url = data.profile.avatar_url;
+            }
 
             // Load history in parallel
             Promise.all([
@@ -15347,6 +15398,13 @@
 
         console.log('📊 Profile loaded:', { credits: userCredits, plan: userPlan, characters: ownedCharacters });
 
+        // Merge profile data into currentUser for chat and other features
+        if (currentUser) {
+          currentUser.display_name = profile.display_name;
+          currentUser.full_name = profile.full_name;
+          currentUser.avatar_url = profile.avatar_url;
+        }
+
         // Load history
         try { await displayImageHistory(); } catch (e) { console.warn('📁 Could not load image history:', e.message); }
         try { await displayVideoHistory(); } catch (e) { console.warn('🎬 Could not load video history:', e.message); }
@@ -15381,6 +15439,11 @@
         try {
           await loadUserProfile(session.user.id);
           console.log('🔐 loadUserProfile completed');
+
+          // Check for prompts/reminders after profile load
+          if (typeof checkAndShowPrompts === 'function') {
+            setTimeout(() => checkAndShowPrompts(), 2000);
+          }
         } catch (err) {
           console.error('🔐 loadUserProfile failed:', err);
         }
@@ -15389,6 +15452,11 @@
         loadMarketplaceCharacters();
       } else {
         console.log('🔐 No user in session, logging out...');
+
+        // Reset wizard state for fresh start
+        if (typeof resetWizard === 'function') {
+          resetWizard();
+        }
 
         // Check if there were active generations - warn user
         const hadActiveGenerations = Object.keys(activeGenerationJobs).length > 0 ||
@@ -16408,12 +16476,12 @@
       chatSocket.on('connect', () => {
         console.log('Connected to chat server');
 
-        // Authenticate with user info
+        // Authenticate with user info - use profile data from currentUser for display name
         chatSocket.emit('authenticate', {
           userId: user.id,
           email: user.email,
-          displayName: user.user_metadata?.display_name || user.email?.split('@')[0],
-          avatar: user.user_metadata?.avatar_url
+          displayName: currentUser?.display_name || currentUser?.full_name || user.email?.split('@')[0],
+          avatar: currentUser?.avatar_url || user.user_metadata?.avatar_url
         });
       });
 
@@ -17159,8 +17227,8 @@
           chatSocket.emit('authenticate', {
             userId: currentUser.id,
             email: currentUser.email,
-            displayName: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0],
-            avatar: currentUser.user_metadata?.avatar_url
+            displayName: currentUser.display_name || currentUser.full_name || currentUser.email?.split('@')[0],
+            avatar: currentUser.avatar_url
           });
         }
 
@@ -17212,8 +17280,8 @@
           chatSocket.emit('authenticate', {
             userId: currentUser.id,
             email: currentUser.email,
-            displayName: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0],
-            avatar: currentUser.user_metadata?.avatar_url
+            displayName: currentUser.display_name || currentUser.full_name || currentUser.email?.split('@')[0],
+            avatar: currentUser.avatar_url
           });
         }
 

@@ -194,7 +194,7 @@ router.get('/bootstrap', requireAuth, async (req, res) => {
       // Get profile
       supabase
         .from('profiles')
-        .select('id, email, full_name, credits, plan, avatar_url')
+        .select('id, email, full_name, display_name, credits, plan, avatar_url')
         .eq('id', userId)
         .single(),
 
