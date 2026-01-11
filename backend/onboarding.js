@@ -623,6 +623,58 @@ router.put('/admin/plans/:slug', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/onboarding/admin/plans - Create a new content plan
+router.post('/admin/plans', requireAuth, async (req, res) => {
+  try {
+    if (!await isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { slug, name, description, price_monthly, price_annual, credits_monthly, badge_text, features, display_order, is_active } = req.body;
+
+    if (!slug || !name) {
+      return res.status(400).json({ error: 'Slug and name are required' });
+    }
+
+    // Check if slug already exists
+    const { data: existing } = await supabase
+      .from('content_plans')
+      .select('slug')
+      .eq('slug', slug)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ error: 'A plan with this slug already exists' });
+    }
+
+    const { data: plan, error } = await supabase
+      .from('content_plans')
+      .insert({
+        slug,
+        name,
+        description: description || null,
+        price_monthly: price_monthly || 0,
+        price_annual: price_annual || 0,
+        credits_monthly: credits_monthly || 0,
+        badge_text: badge_text || null,
+        features: features || [],
+        display_order: display_order || 0,
+        is_active: is_active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ plan });
+  } catch (error) {
+    console.error('Error creating content plan:', error);
+    res.status(500).json({ error: 'Failed to create content plan' });
+  }
+});
+
 // GET /api/onboarding/admin/tiers - Get all education tiers (including inactive)
 router.get('/admin/tiers', requireAuth, async (req, res) => {
   try {
@@ -675,6 +727,81 @@ router.put('/admin/tiers/:slug', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/onboarding/admin/tiers - Create a new education tier
+router.post('/admin/tiers', requireAuth, async (req, res) => {
+  try {
+    if (!await isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { slug, name, description, price_monthly, price_annual, badge_text, features, display_order, has_live_workshops, has_mentorship, is_active } = req.body;
+
+    if (!slug || !name) {
+      return res.status(400).json({ error: 'Slug and name are required' });
+    }
+
+    // Check if slug already exists
+    const { data: existing } = await supabase
+      .from('education_tiers')
+      .select('slug')
+      .eq('slug', slug)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ error: 'A tier with this slug already exists' });
+    }
+
+    const { data: tier, error } = await supabase
+      .from('education_tiers')
+      .insert({
+        slug,
+        name,
+        description: description || null,
+        price_monthly: price_monthly || 0,
+        price_annual: price_annual || 0,
+        badge_text: badge_text || null,
+        features: features || [],
+        display_order: display_order || 0,
+        has_live_workshops: has_live_workshops || false,
+        has_mentorship: has_mentorship || false,
+        is_active: is_active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ tier });
+  } catch (error) {
+    console.error('Error creating education tier:', error);
+    res.status(500).json({ error: 'Failed to create education tier' });
+  }
+});
+
+// GET /api/onboarding/admin/all-characters - Get all marketplace characters
+router.get('/admin/all-characters', requireAuth, async (req, res) => {
+  try {
+    if (!await isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { data: characters, error } = await supabase
+      .from('marketplace_characters')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ characters });
+  } catch (error) {
+    console.error('Error fetching all characters:', error);
+    res.status(500).json({ error: 'Failed to fetch characters' });
+  }
+});
+
 // PUT /api/onboarding/admin/starter-character/:id - Toggle starter status
 router.put('/admin/starter-character/:id', requireAuth, async (req, res) => {
   try {
@@ -701,6 +828,42 @@ router.put('/admin/starter-character/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating starter character:', error);
     res.status(500).json({ error: 'Failed to update starter character' });
+  }
+});
+
+// PUT /api/onboarding/admin/starter-order - Update starter character display order
+router.put('/admin/starter-order', requireAuth, async (req, res) => {
+  try {
+    if (!await isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { order } = req.body;
+
+    if (!Array.isArray(order)) {
+      return res.status(400).json({ error: 'Order must be an array' });
+    }
+
+    // Update each character's sort_order
+    const updates = await Promise.all(
+      order.map(item =>
+        supabase
+          .from('marketplace_characters')
+          .update({ sort_order: item.sort_order })
+          .eq('id', item.id)
+      )
+    );
+
+    // Check for errors
+    const errors = updates.filter(u => u.error);
+    if (errors.length > 0) {
+      throw new Error('Some updates failed');
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating starter order:', error);
+    res.status(500).json({ error: 'Failed to update starter order' });
   }
 });
 
