@@ -554,6 +554,29 @@ function renderChoosePlanStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
 
+  // Free plan card
+  const freePlanHTML = `
+    <div class="plan-card free-plan ${wizardSelections.content_plan === 'free' ? 'selected' : ''}"
+         onclick="selectContentPlan('free')">
+      <div class="plan-header">
+        <h3 class="plan-name">Free</h3>
+        <div class="plan-price">
+          <span class="price-amount">$0</span>
+          <span class="price-period">/mo</span>
+        </div>
+      </div>
+      <div class="plan-credits">
+        <span class="credits-amount">20</span>
+        <span class="credits-label">starter credits</span>
+      </div>
+      <ul class="plan-features">
+        <li>20 one-time credits</li>
+        <li>Standard AI models</li>
+        <li>Community support</li>
+      </ul>
+    </div>
+  `;
+
   const plansHTML = contentPlans.map(plan => {
     const monthlyPrice = plan.price_monthly;
     const features = plan.features || [];
@@ -585,7 +608,8 @@ function renderChoosePlanStep(step) {
       <p class="wizard-subtitle">${step.subtitle || 'Select the credits and features that fit your needs'}</p>
 
       <div class="plans-grid">
-        ${plansHTML || '<p>Loading plans...</p>'}
+        ${freePlanHTML}
+        ${plansHTML || ''}
       </div>
 
       <p class="wizard-flexibility-note">
@@ -598,7 +622,7 @@ function renderChoosePlanStep(step) {
     <div class="wizard-actions-row">
       <button class="wizard-btn back" onclick="prevStep()">Back</button>
       <button class="wizard-btn primary" onclick="nextStep()">
-        ${wizardSelections.content_plan ? 'Continue' : 'Skip for now'}
+        Continue
       </button>
     </div>
   `;
@@ -608,6 +632,28 @@ function renderChoosePlanStep(step) {
 function renderChooseEducationStep(step) {
   const contentEl = document.getElementById('wizardContent');
   const actionsEl = document.getElementById('wizardActions');
+
+  // None option card
+  const noneTierHTML = `
+    <div class="tier-card none-tier ${wizardSelections.education_tier === 'none' ? 'selected' : ''}"
+         onclick="selectEducationTier('none')">
+      <div class="tier-header">
+        <h3 class="tier-name">None</h3>
+        <div class="tier-price">
+          <span class="price-amount">$0</span>
+          <span class="price-period">/mo</span>
+        </div>
+      </div>
+      <div class="tier-highlight">
+        <span class="highlight-text">Self-Guided</span>
+      </div>
+      <ul class="tier-features">
+        <li>Learn on your own</li>
+        <li>Community forums</li>
+        <li>Basic documentation</li>
+      </ul>
+    </div>
+  `;
 
   const tiersHTML = educationTiers.map(tier => {
     const monthlyPrice = tier.price_monthly;
@@ -637,11 +683,12 @@ function renderChooseEducationStep(step) {
 
   contentEl.innerHTML = `
     <div class="wizard-step choose-education-step">
-      <h2 class="wizard-title">${step.title || 'Choose Your Education Level'}</h2>
+      <h2 class="wizard-title">${step.title || 'Level Up Your Skills'}</h2>
       <p class="wizard-subtitle">${step.subtitle || 'Get the training you need to succeed with your AI influencer'}</p>
 
       <div class="tiers-grid">
-        ${tiersHTML || '<p>Loading tiers...</p>'}
+        ${noneTierHTML}
+        ${tiersHTML || ''}
       </div>
 
       <p class="wizard-flexibility-note">
@@ -654,7 +701,7 @@ function renderChooseEducationStep(step) {
     <div class="wizard-actions-row">
       <button class="wizard-btn back" onclick="prevStep()">Back</button>
       <button class="wizard-btn primary" onclick="nextStep()">
-        ${wizardSelections.education_tier ? 'Continue to Review' : 'Skip for now'}
+        Continue to Review
       </button>
     </div>
   `;

@@ -778,6 +778,31 @@
   margin-right: 8px;
 }
 
+/* Free Plan Card */
+.plan-card.free-plan {
+  border-color: #00cc88;
+  border-style: dashed;
+}
+
+.plan-card.free-plan:hover {
+  border-color: #00cc88;
+  border-style: solid;
+}
+
+.plan-card.free-plan.selected {
+  border-color: #00cc88;
+  border-style: solid;
+  background: rgba(0, 204, 136, 0.1);
+}
+
+.plan-card.free-plan .price-amount {
+  color: #00cc88;
+}
+
+.plan-card.free-plan .credits-amount {
+  color: #00cc88;
+}
+
 /* Education Tiers Grid */
 .tiers-grid {
   display: grid;
@@ -876,6 +901,35 @@
   content: "✓";
   color: #ff2ebb;
   margin-right: 8px;
+}
+
+/* None Tier Card */
+.tier-card.none-tier {
+  border-color: #00cc88;
+  border-style: dashed;
+}
+
+.tier-card.none-tier:hover {
+  border-color: #00cc88;
+  border-style: solid;
+}
+
+.tier-card.none-tier.selected {
+  border-color: #00cc88;
+  border-style: solid;
+  background: rgba(0, 204, 136, 0.1);
+}
+
+.tier-card.none-tier .price-amount {
+  color: #00cc88;
+}
+
+.tier-card.none-tier .highlight-text {
+  color: #00cc88;
+}
+
+.tier-card.none-tier .tier-features li::before {
+  color: #00cc88;
 }
 
 /* Welcome Step */
