@@ -1103,9 +1103,8 @@ async function reorderPlans(fromIndex, toIndex) {
 
   try {
     await Promise.all(updates.map(u =>
-      fetch(`${API_BASE_URL}/api/onboarding/admin/plans/${u.slug}`, {
+      authFetch(`${API_BASE_URL}/api/onboarding/admin/plans/${u.slug}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ display_order: u.display_order })
       })
     ));
@@ -1128,9 +1127,8 @@ async function reorderTiers(fromIndex, toIndex) {
 
   try {
     await Promise.all(updates.map(u =>
-      fetch(`${API_BASE_URL}/api/onboarding/admin/tiers/${u.slug}`, {
+      authFetch(`${API_BASE_URL}/api/onboarding/admin/tiers/${u.slug}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ display_order: u.display_order })
       })
     ));
