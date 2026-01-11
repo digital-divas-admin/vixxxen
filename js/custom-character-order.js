@@ -6,6 +6,8 @@
 
 // State
 let customCharacterConfig = null;
+// Stores the submitted order so the wizard review can access it
+let submittedCustomCharacterOrder = null;
 let customCharacterOrderData = {
   character_name: '',
   face_instagram_1: '',
@@ -842,6 +844,12 @@ async function submitCustomCharacterOrder() {
 
     const data = await response.json();
 
+    // Store the order for wizard review step access
+    submittedCustomCharacterOrder = {
+      ...data.order,
+      config: customCharacterConfig  // Include config for pricing info
+    };
+
     // Show success
     showCustomOrderSuccess(data.order);
 
@@ -1020,3 +1028,21 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ===========================================
+// EXPOSED FUNCTIONS FOR WIZARD INTEGRATION
+// ===========================================
+
+// Get the submitted custom character order (for wizard review step)
+function getSubmittedCustomCharacterOrder() {
+  return submittedCustomCharacterOrder;
+}
+
+// Clear the submitted order (e.g., when starting fresh)
+function clearSubmittedCustomCharacterOrder() {
+  submittedCustomCharacterOrder = null;
+}
+
+// Expose functions globally
+window.getSubmittedCustomCharacterOrder = getSubmittedCustomCharacterOrder;
+window.clearSubmittedCustomCharacterOrder = clearSubmittedCustomCharacterOrder;
