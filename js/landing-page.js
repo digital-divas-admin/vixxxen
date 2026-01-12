@@ -533,9 +533,9 @@ function showCaseStudyModal(character) {
   modal.id = 'caseStudyModal';
   modal.className = 'landing-modal';
   modal.innerHTML = `
-    <div class="landing-modal__overlay" onclick="closeCaseStudyModal()"></div>
+    <div class="landing-modal__overlay"></div>
     <div class="landing-modal__content landing-modal__content--case-study">
-      <button class="landing-modal__close" onclick="closeCaseStudyModal()">&times;</button>
+      <button class="landing-modal__close">&times;</button>
 
       <div class="case-study">
         <div class="case-study__hero">
@@ -570,7 +570,7 @@ function showCaseStudyModal(character) {
 
         <div class="case-study__cta">
           <p>Ready to build your own success story?</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); if(window.showOnboardingWizard) window.showOnboardingWizard();">
+          <button class="landing-btn landing-btn--primary case-study__cta-btn">
             Start Your Journey
           </button>
         </div>
@@ -579,6 +579,16 @@ function showCaseStudyModal(character) {
   `;
 
   document.body.appendChild(modal);
+
+  // Attach event listeners
+  modal.querySelector('.landing-modal__overlay').addEventListener('click', closeCaseStudyModal);
+  modal.querySelector('.landing-modal__close').addEventListener('click', closeCaseStudyModal);
+  modal.querySelector('.case-study__cta-btn').addEventListener('click', function() {
+    closeCaseStudyModal();
+    if (typeof window.showOnboardingWizard === 'function') {
+      window.showOnboardingWizard();
+    }
+  });
 
   // Prevent body scroll
   document.body.style.overflow = 'hidden';
@@ -615,9 +625,9 @@ function openCoursePreview() {
   modal.id = 'coursePreviewModal';
   modal.className = 'landing-modal';
   modal.innerHTML = `
-    <div class="landing-modal__overlay" onclick="closeCoursePreview()"></div>
+    <div class="landing-modal__overlay"></div>
     <div class="landing-modal__content landing-modal__content--courses">
-      <button class="landing-modal__close" onclick="closeCoursePreview()">&times;</button>
+      <button class="landing-modal__close">&times;</button>
 
       <div class="course-preview">
         <div class="course-preview__header">
@@ -665,7 +675,7 @@ function openCoursePreview() {
 
         <div class="course-preview__cta">
           <p>Get full access to all courses and mentorship</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); if(window.showOnboardingWizard) window.showOnboardingWizard();">
+          <button class="landing-btn landing-btn--primary course-preview__cta-btn">
             Unlock Full Access
           </button>
         </div>
@@ -674,6 +684,16 @@ function openCoursePreview() {
   `;
 
   document.body.appendChild(modal);
+
+  // Attach event listeners
+  modal.querySelector('.landing-modal__overlay').addEventListener('click', closeCoursePreview);
+  modal.querySelector('.landing-modal__close').addEventListener('click', closeCoursePreview);
+  modal.querySelector('.course-preview__cta-btn').addEventListener('click', function() {
+    closeCoursePreview();
+    if (typeof window.showOnboardingWizard === 'function') {
+      window.showOnboardingWizard();
+    }
+  });
 
   // Prevent body scroll
   document.body.style.overflow = 'hidden';
