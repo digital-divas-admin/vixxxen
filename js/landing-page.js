@@ -55,12 +55,15 @@ function attachLandingCTAListeners() {
     heroCta.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('🚀 Hero CTA clicked via event listener');
-      try {
-        console.log('📞 About to call openLoginModal, typeof:', typeof openLoginModal);
-        openLoginModal();
-        console.log('✅ openLoginModal returned');
-      } catch (err) {
-        console.error('❌ Error calling openLoginModal:', err);
+      console.log('🔍 window.showOnboardingWizard:', typeof window.showOnboardingWizard);
+
+      // Call wizard directly
+      if (typeof window.showOnboardingWizard === 'function') {
+        console.log('✅ Calling wizard directly...');
+        window.showOnboardingWizard();
+      } else {
+        console.error('❌ showOnboardingWizard not available yet');
+        alert('Please wait a moment and try again.');
       }
     });
     console.log('✅ Hero CTA listener attached');
@@ -72,10 +75,11 @@ function attachLandingCTAListeners() {
     finalCta.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('🚀 Final CTA clicked via event listener');
-      try {
-        openLoginModal();
-      } catch (err) {
-        console.error('❌ Error calling openLoginModal:', err);
+
+      if (typeof window.showOnboardingWizard === 'function') {
+        window.showOnboardingWizard();
+      } else {
+        alert('Please wait a moment and try again.');
       }
     });
     console.log('✅ Final CTA listener attached');
@@ -575,7 +579,7 @@ function showCaseStudyModal(character) {
 
         <div class="case-study__cta">
           <p>Ready to build your own success story?</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); window.openLoginModal();">
+          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); if(window.showOnboardingWizard) window.showOnboardingWizard();">
             Start Your Journey
           </button>
         </div>
@@ -670,7 +674,7 @@ function openCoursePreview() {
 
         <div class="course-preview__cta">
           <p>Get full access to all courses and mentorship</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); window.openLoginModal();">
+          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); if(window.showOnboardingWizard) window.showOnboardingWizard();">
             Unlock Full Access
           </button>
         </div>
