@@ -31,11 +31,55 @@ async function initLandingPage() {
     // Initialize scroll animations
     initLandingScrollAnimations();
 
+    // Attach event listeners to CTA buttons (backup for onclick)
+    attachLandingCTAListeners();
+
     console.log('🏠 Landing page initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize landing page:', error);
     // Show fallback content (already in HTML)
     renderFallbackContent();
+  }
+}
+
+/**
+ * Attach event listeners to landing page CTA buttons
+ * This ensures the onclick handlers work even if there are scoping issues
+ */
+function attachLandingCTAListeners() {
+  console.log('🔗 Attaching CTA listeners...');
+
+  // Hero primary CTA - "Start Building"
+  const heroCta = document.getElementById('heroPrimaryCta');
+  if (heroCta) {
+    heroCta.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('🚀 Hero CTA clicked via event listener');
+      openLoginModal();
+    });
+    console.log('✅ Hero CTA listener attached');
+  }
+
+  // Final CTA - "Get Started Free"
+  const finalCta = document.getElementById('finalCtaPrimary');
+  if (finalCta) {
+    finalCta.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('🚀 Final CTA clicked via event listener');
+      openLoginModal();
+    });
+    console.log('✅ Final CTA listener attached');
+  }
+
+  // Education CTA - "Explore Courses"
+  const educationCta = document.getElementById('educationCta');
+  if (educationCta) {
+    educationCta.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('🚀 Education CTA clicked via event listener');
+      openCoursePreview();
+    });
+    console.log('✅ Education CTA listener attached');
   }
 }
 
