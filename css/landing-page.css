@@ -168,6 +168,27 @@
   color: var(--accent-primary);
 }
 
+.landing-btn--loading {
+  pointer-events: none;
+  opacity: 0.7;
+  position: relative;
+}
+
+.landing-btn--loading .landing-btn__text {
+  visibility: hidden;
+}
+
+.landing-btn--loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* ===========================================
    STATS BAR
    =========================================== */

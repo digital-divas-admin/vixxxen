@@ -311,6 +311,8 @@
   border-top: 1px solid var(--border-color);
   padding: 12px 32px;
   z-index: 100;
+  display: flex;
+  justify-content: center;
   transition: background 0.3s, border-color 0.3s;
 }
 

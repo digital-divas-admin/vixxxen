@@ -200,6 +200,36 @@ let wizardLoadState = {
   failedResources: []
 };
 
+// Default timeout for API calls (10 seconds)
+const FETCH_TIMEOUT_MS = 10000;
+
+/**
+ * Fetch with timeout - prevents indefinite hangs
+ * @param {string} url - URL to fetch
+ * @param {Object} options - Fetch options
+ * @param {number} timeout - Timeout in milliseconds
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, options = {}, timeout = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeout}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Wrapper for async API calls with error tracking
  * @param {string} resourceName - Name of the resource being loaded
@@ -219,7 +249,7 @@ async function safeLoad(resourceName, loaderFn, fallback = null) {
 
 // Load onboarding configuration from server
 async function loadOnboardingConfig() {
-  const response = await fetch(`${API_BASE_URL}/api/onboarding/config`);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/onboarding/config`);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   onboardingConfig = data.steps;
@@ -228,7 +258,7 @@ async function loadOnboardingConfig() {
 
 // Load content plans
 async function loadContentPlans() {
-  const response = await fetch(`${API_BASE_URL}/api/onboarding/content-plans`);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/onboarding/content-plans`);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   contentPlans = data.plans || [];
@@ -237,7 +267,7 @@ async function loadContentPlans() {
 
 // Load education tiers
 async function loadEducationTiers() {
-  const response = await fetch(`${API_BASE_URL}/api/onboarding/education-tiers`);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/onboarding/education-tiers`);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   educationTiers = data.tiers || [];
@@ -246,7 +276,7 @@ async function loadEducationTiers() {
 
 // Load starter characters
 async function loadStarterCharacters() {
-  const response = await fetch(`${API_BASE_URL}/api/onboarding/starter-characters`);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/onboarding/starter-characters`);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   starterCharacters = data.characters || [];
@@ -255,7 +285,7 @@ async function loadStarterCharacters() {
 
 // Load premium marketplace characters (non-starter, paid)
 async function loadPremiumCharacters() {
-  const response = await fetch(`${API_BASE_URL}/api/characters`);
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/characters`);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   // Filter to only paid characters (not starters)
@@ -1703,6 +1733,23 @@ function triggerOnboardingOrLogin(action = 'generate') {
     return onboardingConfig !== null;
   }
 
+  // Preload wizard config in background (call from landing page)
+  // Safe to call multiple times - will only load once
+  function preloadOnboardingConfig() {
+    // Already loaded
+    if (onboardingConfig !== null) {
+      return Promise.resolve();
+    }
+    // Already loading
+    if (wizardLoadState.isLoading) {
+      return Promise.resolve();
+    }
+    // Start loading in background, swallow errors
+    return initializeOnboarding().catch(err => {
+      console.warn('Preload failed (will retry when wizard opens):', err.message);
+    });
+  }
+
   // Reset wizard state (call on logout)
   function resetWizard() {
     console.log('🧹 Resetting wizard state...');
@@ -1732,6 +1779,7 @@ function triggerOnboardingOrLogin(action = 'generate') {
   window.hideOnboardingWizard = hideOnboardingWizard;
   window.triggerOnboardingOrLogin = triggerOnboardingOrLogin;
   window.initializeOnboarding = initializeOnboarding;
+  window.preloadOnboardingConfig = preloadOnboardingConfig;
   window.checkAndShowPrompts = checkAndShowPrompts;
   window.isWizardReady = isWizardReady;
   window.resetWizard = resetWizard;

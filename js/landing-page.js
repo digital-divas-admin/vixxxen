@@ -11,6 +11,34 @@ let landingPageData = null;
 let landingPageLoaded = false;
 
 // ===========================================
+// UTILITIES
+// ===========================================
+
+/**
+ * Set loading state on a button
+ * @param {HTMLElement} button - The button element
+ * @param {boolean} isLoading - Whether to show loading state
+ */
+function setButtonLoading(button, isLoading) {
+  if (!button) return;
+
+  if (isLoading) {
+    // Store original text and wrap it for hiding
+    if (!button.querySelector('.landing-btn__text')) {
+      button.innerHTML = `<span class="landing-btn__text">${button.innerHTML}</span>`;
+    }
+    button.classList.add('landing-btn--loading');
+  } else {
+    button.classList.remove('landing-btn--loading');
+    // Restore original text
+    const textSpan = button.querySelector('.landing-btn__text');
+    if (textSpan) {
+      button.innerHTML = textSpan.innerHTML;
+    }
+  }
+}
+
+// ===========================================
 // LANDING PAGE INITIALIZATION
 // ===========================================
 
@@ -31,8 +59,13 @@ async function initLandingPage() {
     // Initialize scroll animations
     initLandingScrollAnimations();
 
-    // Attach event listeners to CTA buttons (backup for onclick)
+    // Attach event listeners to CTA buttons
     attachLandingCTAListeners();
+
+    // Preload wizard config in background for instant wizard experience
+    if (typeof window.preloadOnboardingConfig === 'function') {
+      window.preloadOnboardingConfig();
+    }
 
     console.log('🏠 Landing page initialized successfully');
   } catch (error) {
@@ -44,29 +77,32 @@ async function initLandingPage() {
 
 /**
  * Attach event listeners to landing page CTA buttons
- * This ensures the onclick handlers work even if there are scoping issues
+ * This is the single source of truth for all CTA button click handling.
+ * Button elements in HTML have no inline onclick handlers.
  */
 function attachLandingCTAListeners() {
   console.log('🔗 Attaching CTA listeners...');
+
+  // Helper to handle wizard CTA clicks with loading state
+  function handleWizardClick(button) {
+    if (typeof window.showOnboardingWizard === 'function') {
+      setButtonLoading(button, true);
+      window.showOnboardingWizard();
+      // Clear loading when wizard modal appears or after timeout
+      waitForWizardModal(() => setButtonLoading(button, false));
+    } else {
+      console.error('showOnboardingWizard not available');
+      alert('Please wait a moment and try again.');
+    }
+  }
 
   // Hero primary CTA - "Start Building"
   const heroCta = document.getElementById('heroPrimaryCta');
   if (heroCta) {
     heroCta.addEventListener('click', function(e) {
       e.preventDefault();
-      console.log('🚀 Hero CTA clicked via event listener');
-      console.log('🔍 window.showOnboardingWizard:', typeof window.showOnboardingWizard);
-
-      // Call wizard directly
-      if (typeof window.showOnboardingWizard === 'function') {
-        console.log('✅ Calling wizard directly...');
-        window.showOnboardingWizard();
-      } else {
-        console.error('❌ showOnboardingWizard not available yet');
-        alert('Please wait a moment and try again.');
-      }
+      handleWizardClick(this);
     });
-    console.log('✅ Hero CTA listener attached');
   }
 
   // Final CTA - "Get Started Free"
@@ -74,15 +110,8 @@ function attachLandingCTAListeners() {
   if (finalCta) {
     finalCta.addEventListener('click', function(e) {
       e.preventDefault();
-      console.log('🚀 Final CTA clicked via event listener');
-
-      if (typeof window.showOnboardingWizard === 'function') {
-        window.showOnboardingWizard();
-      } else {
-        alert('Please wait a moment and try again.');
-      }
+      handleWizardClick(this);
     });
-    console.log('✅ Final CTA listener attached');
   }
 
   // Education CTA - "Explore Courses"
@@ -90,15 +119,33 @@ function attachLandingCTAListeners() {
   if (educationCta) {
     educationCta.addEventListener('click', function(e) {
       e.preventDefault();
-      console.log('🚀 Education CTA clicked via event listener');
-      try {
+      if (typeof openCoursePreview === 'function') {
         openCoursePreview();
-      } catch (err) {
-        console.error('❌ Error calling openCoursePreview:', err);
+      } else {
+        console.error('openCoursePreview not available');
       }
     });
-    console.log('✅ Education CTA listener attached');
   }
+}
+
+/**
+ * Wait for the wizard modal to appear, then call callback
+ * Falls back to timeout if modal doesn't appear
+ */
+function waitForWizardModal(callback) {
+  const maxWait = 3000;
+  const checkInterval = 50;
+  let elapsed = 0;
+
+  const check = setInterval(() => {
+    const modal = document.getElementById('onboardingWizardModal');
+    elapsed += checkInterval;
+
+    if (modal || elapsed >= maxWait) {
+      clearInterval(check);
+      callback();
+    }
+  }, checkInterval);
 }
 
 /**
@@ -147,9 +194,16 @@ function hideLandingPage() {
   if (container) container.style.display = 'flex';
   if (siteFooter) siteFooter.style.display = 'flex';
 
-  // Restore body overflow for main app
-  document.body.style.overflow = 'hidden';
-  document.body.style.height = '100vh';
+  // Restore body overflow for main app (desktop only)
+  // On mobile (<=900px), CSS handles scrolling via media queries
+  if (window.innerWidth > 900) {
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+  } else {
+    // Clear inline styles so CSS media queries take effect
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+  }
 }
 
 // ===========================================
@@ -477,19 +531,20 @@ function scrollToSection(sectionId) {
 }
 
 /**
- * Open the onboarding wizard from landing page
- * This is the main conversion action
+ * Open the onboarding wizard (overrides the default openLoginModal in index.html)
+ * This function is exported to window.openLoginModal to intercept calls from
+ * other parts of the app (e.g., toggleUserMenu, purchaseCharacter) and redirect
+ * them to the onboarding wizard instead of the simple login modal.
  */
 function openLoginModal() {
-  console.log('🚀 openLoginModal called, checking for wizard...');
-
-  // Call the onboarding wizard (using window. to access the global export)
   if (typeof window.showOnboardingWizard === 'function') {
-    console.log('✅ Wizard found, opening...');
     window.showOnboardingWizard();
   } else {
-    console.warn('❌ Onboarding wizard not available, window.showOnboardingWizard =', window.showOnboardingWizard);
-    alert('Please refresh the page and try again.');
+    // Fallback to original login modal if wizard isn't ready
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+      loginModal.classList.add('active');
+    }
   }
 }
 
@@ -542,9 +597,9 @@ function showCaseStudyModal(character) {
   modal.id = 'caseStudyModal';
   modal.className = 'landing-modal';
   modal.innerHTML = `
-    <div class="landing-modal__overlay" onclick="closeCaseStudyModal()"></div>
+    <div class="landing-modal__overlay"></div>
     <div class="landing-modal__content landing-modal__content--case-study">
-      <button class="landing-modal__close" onclick="closeCaseStudyModal()">&times;</button>
+      <button class="landing-modal__close">&times;</button>
 
       <div class="case-study">
         <div class="case-study__hero">
@@ -579,7 +634,7 @@ function showCaseStudyModal(character) {
 
         <div class="case-study__cta">
           <p>Ready to build your own success story?</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); if(window.showOnboardingWizard) window.showOnboardingWizard();">
+          <button class="landing-btn landing-btn--primary case-study__cta-btn">
             Start Your Journey
           </button>
         </div>
@@ -588,6 +643,16 @@ function showCaseStudyModal(character) {
   `;
 
   document.body.appendChild(modal);
+
+  // Attach event listeners
+  modal.querySelector('.landing-modal__overlay').addEventListener('click', closeCaseStudyModal);
+  modal.querySelector('.landing-modal__close').addEventListener('click', closeCaseStudyModal);
+  modal.querySelector('.case-study__cta-btn').addEventListener('click', function() {
+    closeCaseStudyModal();
+    if (typeof window.showOnboardingWizard === 'function') {
+      window.showOnboardingWizard();
+    }
+  });
 
   // Prevent body scroll
   document.body.style.overflow = 'hidden';
@@ -624,9 +689,9 @@ function openCoursePreview() {
   modal.id = 'coursePreviewModal';
   modal.className = 'landing-modal';
   modal.innerHTML = `
-    <div class="landing-modal__overlay" onclick="closeCoursePreview()"></div>
+    <div class="landing-modal__overlay"></div>
     <div class="landing-modal__content landing-modal__content--courses">
-      <button class="landing-modal__close" onclick="closeCoursePreview()">&times;</button>
+      <button class="landing-modal__close">&times;</button>
 
       <div class="course-preview">
         <div class="course-preview__header">
@@ -674,7 +739,7 @@ function openCoursePreview() {
 
         <div class="course-preview__cta">
           <p>Get full access to all courses and mentorship</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); if(window.showOnboardingWizard) window.showOnboardingWizard();">
+          <button class="landing-btn landing-btn--primary course-preview__cta-btn">
             Unlock Full Access
           </button>
         </div>
@@ -683,6 +748,16 @@ function openCoursePreview() {
   `;
 
   document.body.appendChild(modal);
+
+  // Attach event listeners
+  modal.querySelector('.landing-modal__overlay').addEventListener('click', closeCoursePreview);
+  modal.querySelector('.landing-modal__close').addEventListener('click', closeCoursePreview);
+  modal.querySelector('.course-preview__cta-btn').addEventListener('click', function() {
+    closeCoursePreview();
+    if (typeof window.showOnboardingWizard === 'function') {
+      window.showOnboardingWizard();
+    }
+  });
 
   // Prevent body scroll
   document.body.style.overflow = 'hidden';
