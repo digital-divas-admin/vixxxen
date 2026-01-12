@@ -55,7 +55,13 @@ function attachLandingCTAListeners() {
     heroCta.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('🚀 Hero CTA clicked via event listener');
-      openLoginModal();
+      try {
+        console.log('📞 About to call openLoginModal, typeof:', typeof openLoginModal);
+        openLoginModal();
+        console.log('✅ openLoginModal returned');
+      } catch (err) {
+        console.error('❌ Error calling openLoginModal:', err);
+      }
     });
     console.log('✅ Hero CTA listener attached');
   }
@@ -66,7 +72,11 @@ function attachLandingCTAListeners() {
     finalCta.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('🚀 Final CTA clicked via event listener');
-      openLoginModal();
+      try {
+        openLoginModal();
+      } catch (err) {
+        console.error('❌ Error calling openLoginModal:', err);
+      }
     });
     console.log('✅ Final CTA listener attached');
   }
@@ -77,7 +87,11 @@ function attachLandingCTAListeners() {
     educationCta.addEventListener('click', function(e) {
       e.preventDefault();
       console.log('🚀 Education CTA clicked via event listener');
-      openCoursePreview();
+      try {
+        openCoursePreview();
+      } catch (err) {
+        console.error('❌ Error calling openCoursePreview:', err);
+      }
     });
     console.log('✅ Education CTA listener attached');
   }
