@@ -11,6 +11,34 @@ let landingPageData = null;
 let landingPageLoaded = false;
 
 // ===========================================
+// UTILITIES
+// ===========================================
+
+/**
+ * Set loading state on a button
+ * @param {HTMLElement} button - The button element
+ * @param {boolean} isLoading - Whether to show loading state
+ */
+function setButtonLoading(button, isLoading) {
+  if (!button) return;
+
+  if (isLoading) {
+    // Store original text and wrap it for hiding
+    if (!button.querySelector('.landing-btn__text')) {
+      button.innerHTML = `<span class="landing-btn__text">${button.innerHTML}</span>`;
+    }
+    button.classList.add('landing-btn--loading');
+  } else {
+    button.classList.remove('landing-btn--loading');
+    // Restore original text
+    const textSpan = button.querySelector('.landing-btn__text');
+    if (textSpan) {
+      button.innerHTML = textSpan.innerHTML;
+    }
+  }
+}
+
+// ===========================================
 // LANDING PAGE INITIALIZATION
 // ===========================================
 
@@ -50,17 +78,25 @@ async function initLandingPage() {
 function attachLandingCTAListeners() {
   console.log('🔗 Attaching CTA listeners...');
 
+  // Helper to handle wizard CTA clicks with loading state
+  function handleWizardClick(button) {
+    if (typeof window.showOnboardingWizard === 'function') {
+      setButtonLoading(button, true);
+      window.showOnboardingWizard();
+      // Clear loading when wizard modal appears or after timeout
+      waitForWizardModal(() => setButtonLoading(button, false));
+    } else {
+      console.error('showOnboardingWizard not available');
+      alert('Please wait a moment and try again.');
+    }
+  }
+
   // Hero primary CTA - "Start Building"
   const heroCta = document.getElementById('heroPrimaryCta');
   if (heroCta) {
     heroCta.addEventListener('click', function(e) {
       e.preventDefault();
-      if (typeof window.showOnboardingWizard === 'function') {
-        window.showOnboardingWizard();
-      } else {
-        console.error('showOnboardingWizard not available');
-        alert('Please wait a moment and try again.');
-      }
+      handleWizardClick(this);
     });
   }
 
@@ -69,11 +105,7 @@ function attachLandingCTAListeners() {
   if (finalCta) {
     finalCta.addEventListener('click', function(e) {
       e.preventDefault();
-      if (typeof window.showOnboardingWizard === 'function') {
-        window.showOnboardingWizard();
-      } else {
-        alert('Please wait a moment and try again.');
-      }
+      handleWizardClick(this);
     });
   }
 
@@ -89,6 +121,26 @@ function attachLandingCTAListeners() {
       }
     });
   }
+}
+
+/**
+ * Wait for the wizard modal to appear, then call callback
+ * Falls back to timeout if modal doesn't appear
+ */
+function waitForWizardModal(callback) {
+  const maxWait = 3000;
+  const checkInterval = 50;
+  let elapsed = 0;
+
+  const check = setInterval(() => {
+    const modal = document.getElementById('onboardingWizardModal');
+    elapsed += checkInterval;
+
+    if (modal || elapsed >= maxWait) {
+      clearInterval(check);
+      callback();
+    }
+  }, checkInterval);
 }
 
 /**
