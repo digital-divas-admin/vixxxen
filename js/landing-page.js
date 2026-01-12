@@ -44,7 +44,8 @@ async function initLandingPage() {
 
 /**
  * Attach event listeners to landing page CTA buttons
- * This ensures the onclick handlers work even if there are scoping issues
+ * This is the single source of truth for all CTA button click handling.
+ * Button elements in HTML have no inline onclick handlers.
  */
 function attachLandingCTAListeners() {
   console.log('🔗 Attaching CTA listeners...');
@@ -54,19 +55,13 @@ function attachLandingCTAListeners() {
   if (heroCta) {
     heroCta.addEventListener('click', function(e) {
       e.preventDefault();
-      console.log('🚀 Hero CTA clicked via event listener');
-      console.log('🔍 window.showOnboardingWizard:', typeof window.showOnboardingWizard);
-
-      // Call wizard directly
       if (typeof window.showOnboardingWizard === 'function') {
-        console.log('✅ Calling wizard directly...');
         window.showOnboardingWizard();
       } else {
-        console.error('❌ showOnboardingWizard not available yet');
+        console.error('showOnboardingWizard not available');
         alert('Please wait a moment and try again.');
       }
     });
-    console.log('✅ Hero CTA listener attached');
   }
 
   // Final CTA - "Get Started Free"
@@ -74,15 +69,12 @@ function attachLandingCTAListeners() {
   if (finalCta) {
     finalCta.addEventListener('click', function(e) {
       e.preventDefault();
-      console.log('🚀 Final CTA clicked via event listener');
-
       if (typeof window.showOnboardingWizard === 'function') {
         window.showOnboardingWizard();
       } else {
         alert('Please wait a moment and try again.');
       }
     });
-    console.log('✅ Final CTA listener attached');
   }
 
   // Education CTA - "Explore Courses"
@@ -90,14 +82,12 @@ function attachLandingCTAListeners() {
   if (educationCta) {
     educationCta.addEventListener('click', function(e) {
       e.preventDefault();
-      console.log('🚀 Education CTA clicked via event listener');
-      try {
+      if (typeof openCoursePreview === 'function') {
         openCoursePreview();
-      } catch (err) {
-        console.error('❌ Error calling openCoursePreview:', err);
+      } else {
+        console.error('openCoursePreview not available');
       }
     });
-    console.log('✅ Education CTA listener attached');
   }
 }
 
@@ -477,19 +467,20 @@ function scrollToSection(sectionId) {
 }
 
 /**
- * Open the onboarding wizard from landing page
- * This is the main conversion action
+ * Open the onboarding wizard (overrides the default openLoginModal in index.html)
+ * This function is exported to window.openLoginModal to intercept calls from
+ * other parts of the app (e.g., toggleUserMenu, purchaseCharacter) and redirect
+ * them to the onboarding wizard instead of the simple login modal.
  */
 function openLoginModal() {
-  console.log('🚀 openLoginModal called, checking for wizard...');
-
-  // Call the onboarding wizard (using window. to access the global export)
   if (typeof window.showOnboardingWizard === 'function') {
-    console.log('✅ Wizard found, opening...');
     window.showOnboardingWizard();
   } else {
-    console.warn('❌ Onboarding wizard not available, window.showOnboardingWizard =', window.showOnboardingWizard);
-    alert('Please refresh the page and try again.');
+    // Fallback to original login modal if wizard isn't ready
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+      loginModal.classList.add('active');
+    }
   }
 }
 
