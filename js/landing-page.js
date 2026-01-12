@@ -59,8 +59,13 @@ async function initLandingPage() {
     // Initialize scroll animations
     initLandingScrollAnimations();
 
-    // Attach event listeners to CTA buttons (backup for onclick)
+    // Attach event listeners to CTA buttons
     attachLandingCTAListeners();
+
+    // Preload wizard config in background for instant wizard experience
+    if (typeof window.preloadOnboardingConfig === 'function') {
+      window.preloadOnboardingConfig();
+    }
 
     console.log('🏠 Landing page initialized successfully');
   } catch (error) {

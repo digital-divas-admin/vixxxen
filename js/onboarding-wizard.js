@@ -1703,6 +1703,23 @@ function triggerOnboardingOrLogin(action = 'generate') {
     return onboardingConfig !== null;
   }
 
+  // Preload wizard config in background (call from landing page)
+  // Safe to call multiple times - will only load once
+  function preloadOnboardingConfig() {
+    // Already loaded
+    if (onboardingConfig !== null) {
+      return Promise.resolve();
+    }
+    // Already loading
+    if (wizardLoadState.isLoading) {
+      return Promise.resolve();
+    }
+    // Start loading in background, swallow errors
+    return initializeOnboarding().catch(err => {
+      console.warn('Preload failed (will retry when wizard opens):', err.message);
+    });
+  }
+
   // Reset wizard state (call on logout)
   function resetWizard() {
     console.log('🧹 Resetting wizard state...');
@@ -1732,6 +1749,7 @@ function triggerOnboardingOrLogin(action = 'generate') {
   window.hideOnboardingWizard = hideOnboardingWizard;
   window.triggerOnboardingOrLogin = triggerOnboardingOrLogin;
   window.initializeOnboarding = initializeOnboarding;
+  window.preloadOnboardingConfig = preloadOnboardingConfig;
   window.checkAndShowPrompts = checkAndShowPrompts;
   window.isWizardReady = isWizardReady;
   window.resetWizard = resetWizard;
