@@ -419,11 +419,14 @@ function scrollToSection(sectionId) {
  * This is the main conversion action
  */
 function openLoginModal() {
-  // Call the onboarding wizard
-  if (typeof showOnboardingWizard === 'function') {
-    showOnboardingWizard();
+  console.log('🚀 openLoginModal called, checking for wizard...');
+
+  // Call the onboarding wizard (using window. to access the global export)
+  if (typeof window.showOnboardingWizard === 'function') {
+    console.log('✅ Wizard found, opening...');
+    window.showOnboardingWizard();
   } else {
-    console.warn('Onboarding wizard not available');
+    console.warn('❌ Onboarding wizard not available, window.showOnboardingWizard =', window.showOnboardingWizard);
     alert('Please refresh the page and try again.');
   }
 }
@@ -433,13 +436,16 @@ function openLoginModal() {
  * @param {string} tier - The tier key (starter, creator, pro, mentorship)
  */
 function openWizardWithTier(tier) {
+  console.log('🚀 openWizardWithTier called with tier:', tier);
+
   // Store the selected tier for the wizard to pick up
   sessionStorage.setItem('selectedPricingTier', tier);
 
-  if (typeof showOnboardingWizard === 'function') {
-    showOnboardingWizard();
+  if (typeof window.showOnboardingWizard === 'function') {
+    console.log('✅ Wizard found, opening...');
+    window.showOnboardingWizard();
   } else {
-    console.warn('Onboarding wizard not available');
+    console.warn('❌ Onboarding wizard not available');
     alert('Please refresh the page and try again.');
   }
 }
@@ -511,7 +517,7 @@ function showCaseStudyModal(character) {
 
         <div class="case-study__cta">
           <p>Ready to build your own success story?</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); openLoginModal();">
+          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); window.openLoginModal();">
             Start Your Journey
           </button>
         </div>
@@ -606,7 +612,7 @@ function openCoursePreview() {
 
         <div class="course-preview__cta">
           <p>Get full access to all courses and mentorship</p>
-          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); openLoginModal();">
+          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); window.openLoginModal();">
             Unlock Full Access
           </button>
         </div>
