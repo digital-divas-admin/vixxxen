@@ -135,6 +135,15 @@ function attachLandingCTAListeners() {
       openTrialModal();
     });
   }
+
+  // Secondary CTA - "See How It Works"
+  const secondaryCta = document.getElementById('heroSecondaryCta');
+  if (secondaryCta) {
+    secondaryCta.addEventListener('click', function(e) {
+      e.preventDefault();
+      scrollToSection('landingPipeline');
+    });
+  }
 }
 
 /**
