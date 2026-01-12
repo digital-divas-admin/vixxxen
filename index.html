@@ -7391,7 +7391,7 @@
           <ul class="landing-education__bullets" id="educationBullets">
             <!-- Bullets populated by JS -->
           </ul>
-          <a href="#courses" class="landing-btn landing-btn--primary landing-animate landing-animate--delay-2" id="educationCta" onclick="openLoginModal(); return false;">Explore Courses</a>
+          <a href="#courses" class="landing-btn landing-btn--primary landing-animate landing-animate--delay-2" id="educationCta" onclick="openCoursePreview(); return false;">Explore Courses</a>
         </div>
         <div class="landing-education__preview landing-animate landing-animate--delay-1">
           <div class="landing-education__preview-header">Course Preview</div>
@@ -7424,28 +7424,28 @@
           <div class="landing-pricing-card__price">$20</div>
           <div class="landing-pricing-card__period">/month</div>
           <div class="landing-pricing-card__feature">1,000 credits</div>
-          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openLoginModal()">Get Started</button>
+          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openWizardWithTier('starter')">Get Started</button>
         </div>
         <div class="landing-pricing-card landing-pricing-card--featured landing-animate landing-animate--delay-1">
           <div class="landing-pricing-card__name">Creator</div>
           <div class="landing-pricing-card__price">$50</div>
           <div class="landing-pricing-card__period">/month</div>
           <div class="landing-pricing-card__feature">3,000 credits</div>
-          <button class="landing-btn landing-btn--primary landing-pricing-card__cta" onclick="openLoginModal()">Get Started</button>
+          <button class="landing-btn landing-btn--primary landing-pricing-card__cta" onclick="openWizardWithTier('creator')">Get Started</button>
         </div>
         <div class="landing-pricing-card landing-animate landing-animate--delay-2">
           <div class="landing-pricing-card__name">Pro</div>
           <div class="landing-pricing-card__price">$95</div>
           <div class="landing-pricing-card__period">/month</div>
           <div class="landing-pricing-card__feature">6,500 credits</div>
-          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openLoginModal()">Get Started</button>
+          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openWizardWithTier('pro')">Get Started</button>
         </div>
         <div class="landing-pricing-card landing-animate landing-animate--delay-3">
           <div class="landing-pricing-card__name">Mentorship</div>
           <div class="landing-pricing-card__price">$100</div>
           <div class="landing-pricing-card__period">/month</div>
           <div class="landing-pricing-card__feature">1-on-1 guidance</div>
-          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openLoginModal()">Apply Now</button>
+          <button class="landing-btn landing-btn--secondary landing-pricing-card__cta" onclick="openWizardWithTier('mentorship')">Apply Now</button>
         </div>
       </div>
     </section>

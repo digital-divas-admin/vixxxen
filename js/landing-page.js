@@ -224,7 +224,7 @@ function renderCharacters() {
               </div>
             `).join('')}
           </div>
-          ${char.cta_text ? `<a href="${char.cta_link || '#'}" class="landing-character-card__cta" onclick="openLoginModal(); return false;">${char.cta_text}</a>` : ''}
+          ${char.cta_text ? `<a href="${char.cta_link || '#'}" class="landing-character-card__cta" onclick="openCharacterCaseStudy('${char.id}'); return false;">${char.cta_text}</a>` : ''}
         </div>
       </div>
     `;
@@ -415,18 +415,228 @@ function scrollToSection(sectionId) {
 }
 
 /**
- * Open login modal (connects to main app's auth system)
+ * Open the onboarding wizard from landing page
+ * This is the main conversion action
  */
 function openLoginModal() {
-  // This function should be defined in the main app
-  if (typeof showLoginModal === 'function') {
-    showLoginModal();
-  } else if (typeof openAuthModal === 'function') {
-    openAuthModal();
+  // Call the onboarding wizard
+  if (typeof showOnboardingWizard === 'function') {
+    showOnboardingWizard();
   } else {
-    console.warn('Login modal function not found');
-    // Fallback: scroll to signup section or show alert
-    alert('Please sign up to get started!');
+    console.warn('Onboarding wizard not available');
+    alert('Please refresh the page and try again.');
+  }
+}
+
+/**
+ * Open onboarding wizard with a specific pricing tier pre-selected
+ * @param {string} tier - The tier key (starter, creator, pro, mentorship)
+ */
+function openWizardWithTier(tier) {
+  // Store the selected tier for the wizard to pick up
+  sessionStorage.setItem('selectedPricingTier', tier);
+
+  if (typeof showOnboardingWizard === 'function') {
+    showOnboardingWizard();
+  } else {
+    console.warn('Onboarding wizard not available');
+    alert('Please refresh the page and try again.');
+  }
+}
+
+/**
+ * Open character case study modal
+ * @param {string} characterId - The character ID to show
+ */
+function openCharacterCaseStudy(characterId) {
+  // Find the character data
+  const character = landingPageData?.characters?.find(c => c.id === characterId);
+  if (!character) {
+    console.warn('Character not found:', characterId);
+    return;
+  }
+
+  showCaseStudyModal(character);
+}
+
+/**
+ * Show the case study modal with character details
+ */
+function showCaseStudyModal(character) {
+  // Remove existing modal if any
+  document.getElementById('caseStudyModal')?.remove();
+
+  const metrics = typeof character.metrics === 'string'
+    ? JSON.parse(character.metrics)
+    : character.metrics;
+
+  const modal = document.createElement('div');
+  modal.id = 'caseStudyModal';
+  modal.className = 'landing-modal';
+  modal.innerHTML = `
+    <div class="landing-modal__overlay" onclick="closeCaseStudyModal()"></div>
+    <div class="landing-modal__content landing-modal__content--case-study">
+      <button class="landing-modal__close" onclick="closeCaseStudyModal()">&times;</button>
+
+      <div class="case-study">
+        <div class="case-study__hero">
+          <img src="${character.image_url}" alt="${character.name}" class="case-study__image">
+          <div class="case-study__intro">
+            <h2 class="case-study__name">${character.name}</h2>
+            <p class="case-study__handle">${character.handle || ''}</p>
+            <div class="case-study__metrics">
+              ${metrics.map(m => `
+                <div class="case-study__metric">
+                  <span class="case-study__metric-icon">${m.icon}</span>
+                  <span class="case-study__metric-value">${m.value}</span>
+                  <span class="case-study__metric-label">${m.label}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="case-study__story">
+          <h3>The Journey</h3>
+          <p>${character.long_description || 'This creator built a successful AI character business using Vixxxen. Starting from zero, they grew their audience organically on Instagram and converted followers into paying subscribers on Fanvue.'}</p>
+
+          <h3>Key to Success</h3>
+          <ul>
+            <li>Consistent character identity across all content</li>
+            <li>Daily posting schedule with varied content types</li>
+            <li>Strategic use of stories and reels for engagement</li>
+            <li>Clear call-to-actions driving to paid platform</li>
+          </ul>
+        </div>
+
+        <div class="case-study__cta">
+          <p>Ready to build your own success story?</p>
+          <button class="landing-btn landing-btn--primary" onclick="closeCaseStudyModal(); openLoginModal();">
+            Start Your Journey
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+
+  // Animate in
+  requestAnimationFrame(() => {
+    modal.classList.add('landing-modal--active');
+  });
+}
+
+/**
+ * Close the case study modal
+ */
+function closeCaseStudyModal() {
+  const modal = document.getElementById('caseStudyModal');
+  if (modal) {
+    modal.classList.remove('landing-modal--active');
+    setTimeout(() => {
+      modal.remove();
+      // Restore body scroll for landing page
+      document.body.style.overflow = 'auto';
+    }, 300);
+  }
+}
+
+/**
+ * Open course preview modal
+ */
+function openCoursePreview() {
+  // Remove existing modal if any
+  document.getElementById('coursePreviewModal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'coursePreviewModal';
+  modal.className = 'landing-modal';
+  modal.innerHTML = `
+    <div class="landing-modal__overlay" onclick="closeCoursePreview()"></div>
+    <div class="landing-modal__content landing-modal__content--courses">
+      <button class="landing-modal__close" onclick="closeCoursePreview()">&times;</button>
+
+      <div class="course-preview">
+        <div class="course-preview__header">
+          <h2>Learn the Business</h2>
+          <p>Step-by-step courses to build your AI creator empire</p>
+        </div>
+
+        <div class="course-preview__modules">
+          <div class="course-preview__module">
+            <div class="course-preview__module-icon">📱</div>
+            <div class="course-preview__module-content">
+              <h4>Module 1: Launch Your AI Instagram</h4>
+              <p>Set up your character's Instagram presence, optimize your bio, and create your first week of content.</p>
+              <span class="course-preview__module-meta">8 lessons • 45 min</span>
+            </div>
+          </div>
+
+          <div class="course-preview__module">
+            <div class="course-preview__module-icon">📈</div>
+            <div class="course-preview__module-content">
+              <h4>Module 2: Content Strategy That Converts</h4>
+              <p>Learn the content mix that drives engagement and converts followers into paying subscribers.</p>
+              <span class="course-preview__module-meta">12 lessons • 1.5 hrs</span>
+            </div>
+          </div>
+
+          <div class="course-preview__module">
+            <div class="course-preview__module-icon">💰</div>
+            <div class="course-preview__module-content">
+              <h4>Module 3: Fanvue Monetization Mastery</h4>
+              <p>Set up your Fanvue account, price your tiers, and create content that keeps subscribers paying.</p>
+              <span class="course-preview__module-meta">10 lessons • 1 hr</span>
+            </div>
+          </div>
+
+          <div class="course-preview__module">
+            <div class="course-preview__module-icon">🚀</div>
+            <div class="course-preview__module-content">
+              <h4>Module 4: Scaling to $10K/Month</h4>
+              <p>Advanced strategies for growing multiple characters and building a sustainable income stream.</p>
+              <span class="course-preview__module-meta">15 lessons • 2 hrs</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="course-preview__cta">
+          <p>Get full access to all courses and mentorship</p>
+          <button class="landing-btn landing-btn--primary" onclick="closeCoursePreview(); openLoginModal();">
+            Unlock Full Access
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+
+  // Animate in
+  requestAnimationFrame(() => {
+    modal.classList.add('landing-modal--active');
+  });
+}
+
+/**
+ * Close the course preview modal
+ */
+function closeCoursePreview() {
+  const modal = document.getElementById('coursePreviewModal');
+  if (modal) {
+    modal.classList.remove('landing-modal--active');
+    setTimeout(() => {
+      modal.remove();
+      // Restore body scroll for landing page
+      document.body.style.overflow = 'auto';
+    }, 300);
   }
 }
 
@@ -502,3 +712,10 @@ window.initLandingPage = initLandingPage;
 window.showLandingPage = showLandingPage;
 window.hideLandingPage = hideLandingPage;
 window.scrollToSection = scrollToSection;
+window.openLoginModal = openLoginModal;
+window.openWizardWithTier = openWizardWithTier;
+window.openCharacterCaseStudy = openCharacterCaseStudy;
+window.showCaseStudyModal = showCaseStudyModal;
+window.closeCaseStudyModal = closeCaseStudyModal;
+window.openCoursePreview = openCoursePreview;
+window.closeCoursePreview = closeCoursePreview;
