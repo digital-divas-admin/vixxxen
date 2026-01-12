@@ -126,6 +126,24 @@ function attachLandingCTAListeners() {
       }
     });
   }
+
+  // Trial CTA - "Try It Now"
+  const trialCta = document.getElementById('heroTrialCta');
+  if (trialCta) {
+    trialCta.addEventListener('click', function(e) {
+      e.preventDefault();
+      openTrialModal();
+    });
+  }
+
+  // Secondary CTA - "See How It Works"
+  const secondaryCta = document.getElementById('heroSecondaryCta');
+  if (secondaryCta) {
+    secondaryCta.addEventListener('click', function(e) {
+      e.preventDefault();
+      scrollToSection('landingPipeline');
+    });
+  }
 }
 
 /**
@@ -847,6 +865,447 @@ function animateValue(el, start, end, duration, finalText) {
 }
 
 // ===========================================
+// TRIAL MODAL - "Try It Now" Feature
+// ===========================================
+
+let trialFingerprint = null;
+let trialRemaining = 2;
+
+/**
+ * Initialize FingerprintJS and get browser fingerprint
+ */
+async function initTrialFingerprint() {
+  try {
+    if (typeof FingerprintJS !== 'undefined') {
+      const fp = await FingerprintJS.load();
+      const result = await fp.get();
+      trialFingerprint = result.visitorId;
+      console.log('[Trial] Fingerprint initialized');
+    }
+  } catch (error) {
+    console.warn('[Trial] Fingerprint init failed:', error);
+  }
+}
+
+/**
+ * Check trial status from server
+ */
+async function checkTrialStatus() {
+  try {
+    const url = trialFingerprint
+      ? `/api/trial/status?fingerprint=${encodeURIComponent(trialFingerprint)}`
+      : '/api/trial/status';
+
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      trialRemaining = data.remaining;
+      return data;
+    }
+  } catch (error) {
+    console.warn('[Trial] Status check failed:', error);
+  }
+  return { remaining: trialRemaining, canGenerate: trialRemaining > 0 };
+}
+
+/**
+ * Open the trial modal
+ */
+async function openTrialModal() {
+  // Track funnel: modal opened
+  trackTrialEvent('modal_opened');
+
+  // Initialize fingerprint if not done
+  if (!trialFingerprint) {
+    await initTrialFingerprint();
+  }
+
+  // Check trial status
+  const status = await checkTrialStatus();
+
+  // Remove existing modal if any
+  document.getElementById('trialModal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'trialModal';
+  modal.className = 'landing-modal';
+
+  // Show exhausted state if no trials remaining
+  if (status.remaining <= 0) {
+    modal.innerHTML = createTrialExhaustedHTML();
+  } else {
+    modal.innerHTML = createTrialFormHTML(status.remaining);
+  }
+
+  document.body.appendChild(modal);
+  attachTrialModalListeners(modal);
+
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+
+  // Animate in
+  requestAnimationFrame(() => {
+    modal.classList.add('landing-modal--active');
+  });
+}
+
+/**
+ * Create the trial form HTML
+ */
+function createTrialFormHTML(remaining) {
+  const remainingClass = remaining === 1 ? 'trial-modal__remaining--warning' : '';
+
+  return `
+    <div class="landing-modal__overlay"></div>
+    <div class="landing-modal__content landing-modal__content--trial">
+      <button class="landing-modal__close">&times;</button>
+
+      <div class="trial-modal">
+        <div class="trial-modal__header">
+          <h2>Try AI Image Generation</h2>
+          <p>See what you can create - no signup required</p>
+        </div>
+
+        <div class="trial-modal__character">
+          <div class="trial-modal__character-image" style="background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 28px;">
+            &#10024;
+          </div>
+          <div class="trial-modal__character-info">
+            <div class="trial-modal__character-name">Luna - Demo Character</div>
+            <div class="trial-modal__character-desc">A beautiful AI companion with silver hair and blue eyes</div>
+          </div>
+        </div>
+
+        <div class="trial-modal__form" id="trialForm">
+          <div class="trial-modal__input-group">
+            <label for="trialPrompt">Describe your image</label>
+            <textarea
+              id="trialPrompt"
+              class="trial-modal__textarea"
+              placeholder="e.g. wearing a red dress at sunset, smiling warmly at the camera..."
+              maxlength="500"
+            ></textarea>
+          </div>
+
+          <div class="trial-modal__actions">
+            <span class="trial-modal__remaining ${remainingClass}" id="trialRemainingText">
+              ${remaining} free ${remaining === 1 ? 'try' : 'tries'} remaining
+            </span>
+            <button class="trial-modal__generate-btn" id="trialGenerateBtn">
+              Generate
+            </button>
+          </div>
+        </div>
+
+        <div class="trial-modal__result" id="trialResult">
+          <img src="" alt="Generated image" class="trial-modal__result-image" id="trialResultImage">
+          <div class="trial-modal__result-actions">
+            <button class="trial-modal__result-btn trial-modal__result-btn--try-again" id="trialTryAgainBtn">
+              Try Again (<span id="trialTryAgainCount">${remaining - 1}</span> left)
+            </button>
+          </div>
+        </div>
+
+        <div class="trial-modal__conversion" id="trialConversion">
+          <h3>Like what you see?</h3>
+          <ul class="trial-modal__benefits">
+            <li>20 free credits every month</li>
+            <li>Choose from 50+ unique characters</li>
+            <li>Access NSFW content</li>
+            <li>Save and download your images</li>
+          </ul>
+          <button class="trial-modal__conversion-btn" id="trialSignupBtn">
+            Create Free Account
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Create the exhausted state HTML
+ */
+function createTrialExhaustedHTML() {
+  return `
+    <div class="landing-modal__overlay"></div>
+    <div class="landing-modal__content landing-modal__content--trial">
+      <button class="landing-modal__close">&times;</button>
+
+      <div class="trial-modal">
+        <div class="trial-modal__exhausted trial-modal__exhausted--visible">
+          <div class="trial-modal__exhausted-icon">&#128275;</div>
+          <h3>You've used your free trials!</h3>
+          <p>Create a free account to continue generating amazing AI images.</p>
+          <button class="trial-modal__conversion-btn" id="trialSignupBtn">
+            Create Free Account
+          </button>
+
+          <div style="margin-top: 24px;">
+            <ul class="trial-modal__benefits">
+              <li>20 free credits every month</li>
+              <li>Choose from 50+ unique characters</li>
+              <li>Access NSFW content</li>
+              <li>Save and download your images</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Attach event listeners to the trial modal
+ */
+function attachTrialModalListeners(modal) {
+  // Close button
+  modal.querySelector('.landing-modal__overlay')?.addEventListener('click', closeTrialModal);
+  modal.querySelector('.landing-modal__close')?.addEventListener('click', closeTrialModal);
+
+  // Generate button
+  const generateBtn = modal.querySelector('#trialGenerateBtn');
+  if (generateBtn) {
+    generateBtn.addEventListener('click', handleTrialGenerate);
+  }
+
+  // Try again button
+  const tryAgainBtn = modal.querySelector('#trialTryAgainBtn');
+  if (tryAgainBtn) {
+    tryAgainBtn.addEventListener('click', handleTrialTryAgain);
+  }
+
+  // Signup button
+  const signupBtn = modal.querySelector('#trialSignupBtn');
+  if (signupBtn) {
+    signupBtn.addEventListener('click', handleTrialSignup);
+  }
+
+  // Enter key on textarea
+  const textarea = modal.querySelector('#trialPrompt');
+  if (textarea) {
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleTrialGenerate();
+      }
+    });
+  }
+}
+
+/**
+ * Handle trial image generation
+ */
+async function handleTrialGenerate() {
+  const promptInput = document.getElementById('trialPrompt');
+  const generateBtn = document.getElementById('trialGenerateBtn');
+  const prompt = promptInput?.value?.trim();
+
+  if (!prompt) {
+    promptInput?.focus();
+    return;
+  }
+
+  // Track funnel: generation started
+  trackTrialEvent('generation_started');
+
+  // Show loading state
+  generateBtn.classList.add('trial-modal__generate-btn--loading');
+  generateBtn.disabled = true;
+
+  try {
+    const response = await fetch('/api/trial/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        fingerprint: trialFingerprint
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        // Rate limited or exhausted
+        if (data.code === 'TRIAL_LIMIT_REACHED') {
+          showTrialExhausted();
+          trackTrialEvent('trial_exhausted');
+        } else {
+          alert(data.error || 'Please try again in a moment.');
+        }
+        return;
+      }
+      throw new Error(data.error || 'Generation failed');
+    }
+
+    // Track funnel: generation completed
+    trackTrialEvent('generation_completed');
+
+    // Update remaining count
+    trialRemaining = data.remaining;
+
+    // Show result
+    showTrialResult(data.image, data.remaining);
+
+  } catch (error) {
+    console.error('[Trial] Generation error:', error);
+    alert(error.message || 'Generation failed. Please try again.');
+  } finally {
+    generateBtn.classList.remove('trial-modal__generate-btn--loading');
+    generateBtn.disabled = false;
+  }
+}
+
+/**
+ * Show the generated image result
+ */
+function showTrialResult(imageUrl, remaining) {
+  const formSection = document.getElementById('trialForm');
+  const resultSection = document.getElementById('trialResult');
+  const resultImage = document.getElementById('trialResultImage');
+  const tryAgainBtn = document.getElementById('trialTryAgainBtn');
+  const tryAgainCount = document.getElementById('trialTryAgainCount');
+
+  // Hide form, show result
+  if (formSection) formSection.style.display = 'none';
+  if (resultSection) resultSection.classList.add('trial-modal__result--visible');
+  if (resultImage) resultImage.src = imageUrl;
+
+  // Update try again button
+  if (tryAgainCount) tryAgainCount.textContent = remaining;
+  if (tryAgainBtn) {
+    tryAgainBtn.disabled = remaining <= 0;
+    if (remaining <= 0) {
+      tryAgainBtn.textContent = 'No tries left';
+    }
+  }
+}
+
+/**
+ * Handle try again button click
+ */
+function handleTrialTryAgain() {
+  if (trialRemaining <= 0) {
+    showTrialExhausted();
+    return;
+  }
+
+  const formSection = document.getElementById('trialForm');
+  const resultSection = document.getElementById('trialResult');
+  const promptInput = document.getElementById('trialPrompt');
+  const remainingText = document.getElementById('trialRemainingText');
+
+  // Show form, hide result
+  if (resultSection) resultSection.classList.remove('trial-modal__result--visible');
+  if (formSection) formSection.style.display = 'block';
+
+  // Update remaining text
+  if (remainingText) {
+    remainingText.textContent = `${trialRemaining} free ${trialRemaining === 1 ? 'try' : 'tries'} remaining`;
+    remainingText.className = trialRemaining === 1
+      ? 'trial-modal__remaining trial-modal__remaining--warning'
+      : 'trial-modal__remaining';
+  }
+
+  // Clear and focus prompt
+  if (promptInput) {
+    promptInput.value = '';
+    promptInput.focus();
+  }
+}
+
+/**
+ * Show exhausted state
+ */
+function showTrialExhausted() {
+  const modal = document.getElementById('trialModal');
+  if (!modal) return;
+
+  const content = modal.querySelector('.landing-modal__content');
+  if (content) {
+    content.innerHTML = `
+      <button class="landing-modal__close">&times;</button>
+      <div class="trial-modal">
+        <div class="trial-modal__exhausted trial-modal__exhausted--visible">
+          <div class="trial-modal__exhausted-icon">&#128275;</div>
+          <h3>You've used your free trials!</h3>
+          <p>Create a free account to continue generating amazing AI images.</p>
+          <button class="trial-modal__conversion-btn" id="trialSignupBtn">
+            Create Free Account
+          </button>
+          <div style="margin-top: 24px;">
+            <ul class="trial-modal__benefits">
+              <li>20 free credits every month</li>
+              <li>Choose from 50+ unique characters</li>
+              <li>Access NSFW content</li>
+              <li>Save and download your images</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Re-attach listeners
+    content.querySelector('.landing-modal__close')?.addEventListener('click', closeTrialModal);
+    content.querySelector('#trialSignupBtn')?.addEventListener('click', handleTrialSignup);
+  }
+}
+
+/**
+ * Handle signup button click
+ */
+function handleTrialSignup() {
+  // Track funnel: signup clicked
+  trackTrialEvent('signup_clicked');
+
+  closeTrialModal();
+
+  // Open the onboarding wizard
+  if (typeof window.showOnboardingWizard === 'function') {
+    window.showOnboardingWizard();
+  }
+}
+
+/**
+ * Close the trial modal
+ */
+function closeTrialModal() {
+  const modal = document.getElementById('trialModal');
+  if (modal) {
+    modal.classList.remove('landing-modal--active');
+    setTimeout(() => {
+      modal.remove();
+      document.body.style.overflow = 'auto';
+    }, 300);
+  }
+}
+
+/**
+ * Track trial funnel events
+ */
+function trackTrialEvent(eventName, data = {}) {
+  console.log(`[Trial Analytics] ${eventName}`, data);
+
+  // If analytics is available, track the event
+  if (typeof window.trackEvent === 'function') {
+    window.trackEvent('trial', eventName, data);
+  }
+
+  // Also send to backend for server-side analytics
+  try {
+    navigator.sendBeacon('/api/trial/analytics', JSON.stringify({
+      event: eventName,
+      fingerprint: trialFingerprint,
+      timestamp: new Date().toISOString(),
+      ...data
+    }));
+  } catch (e) {
+    // Silently fail - analytics shouldn't break UX
+  }
+}
+
+// ===========================================
 // EXPORT FOR GLOBAL ACCESS
 // ===========================================
 
@@ -862,3 +1321,5 @@ window.showCaseStudyModal = showCaseStudyModal;
 window.closeCaseStudyModal = closeCaseStudyModal;
 window.openCoursePreview = openCoursePreview;
 window.closeCoursePreview = closeCoursePreview;
+window.openTrialModal = openTrialModal;
+window.closeTrialModal = closeTrialModal;
