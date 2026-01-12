@@ -194,9 +194,16 @@ function hideLandingPage() {
   if (container) container.style.display = 'flex';
   if (siteFooter) siteFooter.style.display = 'flex';
 
-  // Restore body overflow for main app
-  document.body.style.overflow = 'hidden';
-  document.body.style.height = '100vh';
+  // Restore body overflow for main app (desktop only)
+  // On mobile (<=900px), CSS handles scrolling via media queries
+  if (window.innerWidth > 900) {
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+  } else {
+    // Clear inline styles so CSS media queries take effect
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+  }
 }
 
 // ===========================================
