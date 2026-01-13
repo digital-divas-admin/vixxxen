@@ -9087,7 +9087,7 @@
 
                 <!-- Filter and Search -->
                 <div class="blocked-words-filters" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 800px; margin-left: auto; margin-right: auto;">
-                  <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="filterBlockedWordsList()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                  <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="debouncedFilter('filterBlockedWordsList')()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
                   <select id="categoryFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                     <option value="all">All Categories</option>
                     <option value="explicit">Explicit</option>
@@ -9138,7 +9138,7 @@
                   <!-- Action Bar -->
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
                     <div style="display: flex; gap: 12px; align-items: center;">
-                      <input type="text" id="adminCharSearchInput" placeholder="Search characters..." oninput="filterCharactersList()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; width: 200px;">
+                      <input type="text" id="adminCharSearchInput" placeholder="Search characters..." oninput="debouncedFilter('filterCharactersList')()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; width: 200px;">
                       <select id="adminCharListFilter" onchange="filterCharactersList()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
                         <option value="all">All Characters</option>
                         <option value="listed">Listed Only</option>
@@ -9461,7 +9461,7 @@
                         </h3>
                         <!-- Search/Filter -->
                         <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-                          <input type="text" id="characterSearchInput" placeholder="Search characters..." oninput="filterPremiumCharacters()" style="flex: 1; min-width: 200px; padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                          <input type="text" id="characterSearchInput" placeholder="Search characters..." oninput="debouncedFilter('filterPremiumCharacters')()" style="flex: 1; min-width: 200px; padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
                           <select id="characterCategoryFilter" onchange="filterPremiumCharacters()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                             <option value="">All Categories</option>
                           </select>
@@ -9541,7 +9541,7 @@
                         <option value="revision_requested">Revision Requested</option>
                         <option value="completed">Completed</option>
                       </select>
-                      <input type="text" id="customOrdersSearch" placeholder="Search by email or name..." oninput="filterCustomOrders()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; min-width: 200px;">
+                      <input type="text" id="customOrdersSearch" placeholder="Search by email or name..." oninput="debouncedFilter('filterCustomOrders')()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; min-width: 200px;">
                       <button onclick="loadCustomOrders()" style="padding: 10px 20px; background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #9d4edd; cursor: pointer; font-size: 0.9rem;">
                         🔄 Refresh
                       </button>
@@ -11192,7 +11192,7 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size" loading="lazy">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -11433,7 +11433,7 @@
 
         outputItem.innerHTML = `
           ${isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-          <img src="${img.public_url}" alt="Edited image" onclick="showImageModal('${img.public_url}')">
+          <img src="${img.public_url}" alt="Edited image" onclick="showImageModal('${img.public_url}')" loading="lazy">
           <div class="output-item-overlay">
             <div class="output-item-info">
               ${typeLabel} · ${metadata.aspectRatio || 'Edited'}
@@ -15136,7 +15136,7 @@
       placeholder.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -15191,7 +15191,7 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -16500,7 +16500,7 @@
         card.innerHTML = `
           ${inactiveBadge}
           ${editButton}
-          <img src="${character.image}" alt="${character.name}" class="character-image">
+          <img src="${character.image}" alt="${character.name}" class="character-image" loading="lazy">
           <div class="character-info">
             <div class="character-name">${character.name}</div>
             <div class="character-category">${character.category}</div>
@@ -16557,7 +16557,7 @@
 
         card.innerHTML = `
           <div class="library-character-badge">✓ Owned</div>
-          <img src="${character.image}" alt="${character.name}" class="character-image">
+          <img src="${character.image}" alt="${character.name}" class="character-image" loading="lazy">
           <div class="character-info">
             <div class="character-name">${character.name}</div>
             <div class="character-category">${character.category}</div>
@@ -16855,7 +16855,7 @@
 
       container.innerHTML = characterGalleryImages.map((url, index) => `
         <div style="position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #333;">
-          <img src="${url}" alt="Gallery ${index + 1}" style="width: 100%; height: 100%; object-fit: cover;">
+          <img src="${url}" alt="Gallery ${index + 1}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
           <button type="button" onclick="removeCharacterGalleryImage(${index})" style="position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: #ff4444; border: none; color: white; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
         </div>
       `).join('');

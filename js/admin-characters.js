@@ -96,7 +96,7 @@
         <!-- Image -->
         <div style="height: 160px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; overflow: hidden;">
           ${char.image_url
-            ? `<img src="${char.image_url}" alt="${char.name}" style="width: 100%; height: 100%; object-fit: cover;">`
+            ? `<img src="${char.image_url}" alt="${char.name}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">`
             : `<span style="font-size: 3rem; opacity: 0.3;">👤</span>`
           }
         </div>

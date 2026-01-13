@@ -87,4 +87,48 @@
     return (Date.now() - cache.timestamp) / 1000;
   };
 
+  // ===========================================
+  // DEBOUNCE UTILITY
+  // ===========================================
+
+  /**
+   * Creates a debounced version of a function
+   * @param {Function} func - Function to debounce
+   * @param {number} wait - Milliseconds to wait before calling
+   * @returns {Function} - Debounced function
+   */
+  window.debounce = function(func, wait = 250) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Store for debounced filter functions
+  const debouncedFilters = {};
+
+  /**
+   * Get or create a debounced version of a filter function
+   * @param {string} name - Name of the filter function
+   * @param {number} wait - Debounce wait time in ms
+   * @returns {Function} - Debounced filter function
+   */
+  window.debouncedFilter = function(name, wait = 250) {
+    if (!debouncedFilters[name]) {
+      const originalFunc = window[name];
+      if (typeof originalFunc === 'function') {
+        debouncedFilters[name] = debounce(originalFunc, wait);
+      } else {
+        console.warn(`Filter function ${name} not found`);
+        return () => {};
+      }
+    }
+    return debouncedFilters[name];
+  };
+
 })();
