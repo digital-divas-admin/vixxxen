@@ -6,17 +6,22 @@
 (function() {
   'use strict';
 
+  console.log('👤 Admin Characters module loaded');
+
   let allAdminCharacters = [];
   let editingCharacterId = null;
 
   // Load all characters for admin
   window.loadAdminCharacters = async function() {
+    console.log('👤 loadAdminCharacters called');
     const container = document.getElementById('adminCharactersList');
+    console.log('👤 Container found:', !!container);
     if (!container) return;
 
     container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888; grid-column: 1 / -1;">Loading characters...</div>';
 
     try {
+      console.log('👤 Fetching characters from API...');
       const response = await authFetch(`${API_BASE_URL}/api/characters/all`);
       if (!response.ok) throw new Error('Failed to load characters');
 

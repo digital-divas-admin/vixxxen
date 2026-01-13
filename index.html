@@ -18170,8 +18170,12 @@
       } else if (section === 'content-filter') {
         loadBlockedWordsAdmin();
       } else if (section === 'characters') {
+        console.log('👤 Switching to characters section');
+        console.log('👤 loadAdminCharacters type:', typeof loadAdminCharacters);
         if (typeof loadAdminCharacters === 'function') {
           loadAdminCharacters();
+        } else {
+          console.error('👤 loadAdminCharacters is not defined!');
         }
       } else if (section === 'user-services') {
         loadUserServicesData();
