@@ -16336,11 +16336,9 @@
         const userId = currentUser?.id;
         const isAdmin = userId && await checkIfUserIsAdmin(userId);
 
-        // Admins get all characters (including inactive), others get only active
-        // Use authFetch to include JWT token - backend gets user from token, not query param
-        const endpoint = isAdmin
-          ? `${API_BASE_URL}/api/characters/all`
-          : `${API_BASE_URL}/api/characters`;
+        // Marketplace always uses the public endpoint (shows only listed characters)
+        // Admins can manage all characters in the Admin > Characters section
+        const endpoint = `${API_BASE_URL}/api/characters`;
 
         const response = await authFetch(endpoint);
         if (!response.ok) throw new Error('Failed to fetch characters');
