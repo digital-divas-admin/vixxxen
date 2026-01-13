@@ -1419,7 +1419,12 @@ function showWizardError(message) {
 // Switch to regular login modal
 function switchToLogin() {
   hideOnboardingWizard();
-  showLoginModal();
+  // Directly show the login modal element instead of calling showLoginModal()
+  // which goes through openLoginModal() that redirects back to the wizard
+  const loginModal = document.getElementById('loginModal');
+  if (loginModal) {
+    loginModal.classList.add('active');
+  }
 }
 
 // Go to next step
