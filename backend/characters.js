@@ -99,7 +99,7 @@ router.post('/', requireAdmin, async (req, res) => {
     const {
       name, category, description, price, tags,
       image_url, gallery_images, lora_url, trigger_word,
-      is_active, sort_order
+      is_active, is_listed, sort_order
     } = req.body;
 
     if (!name || !category) {
@@ -119,6 +119,7 @@ router.post('/', requireAdmin, async (req, res) => {
         lora_url,
         trigger_word,
         is_active: is_active !== false,
+        is_listed: is_listed !== false,
         sort_order: sort_order || 0
       })
       .select()
@@ -150,7 +151,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const {
       name, category, description, price, rating, purchases, tags,
       image_url, gallery_images, lora_url, trigger_word,
-      is_active, sort_order
+      is_active, is_listed, sort_order
     } = req.body;
 
     const updateData = {};
@@ -166,6 +167,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     if (lora_url !== undefined) updateData.lora_url = lora_url;
     if (trigger_word !== undefined) updateData.trigger_word = trigger_word;
     if (is_active !== undefined) updateData.is_active = is_active;
+    if (is_listed !== undefined) updateData.is_listed = is_listed;
     if (sort_order !== undefined) updateData.sort_order = sort_order;
     updateData.updated_at = new Date().toISOString();
 

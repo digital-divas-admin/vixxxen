@@ -8727,6 +8727,10 @@
                     <span class="admin-nav-icon">🚫</span>
                     <span>Content Filter</span>
                   </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('characters')" data-section="characters">
+                    <span class="admin-nav-icon">👤</span>
+                    <span>Characters</span>
+                  </div>
                   <div class="admin-nav-item" onclick="switchAdminSection('user-services')" data-section="user-services">
                     <span class="admin-nav-icon">🎁</span>
                     <span>User Services</span>
@@ -9119,6 +9123,119 @@
                 </div>
                 </div>
                 <!-- End Content Filter Section -->
+
+                <!-- Characters Management Section -->
+                <div class="admin-section" id="adminCharactersSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Character & LoRA Management</h2>
+                    <p class="admin-section-subtitle">Create, edit, and manage marketplace characters and private LoRAs</p>
+                  </div>
+
+                  <!-- Action Bar -->
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                      <input type="text" id="characterSearchInput" placeholder="Search characters..." oninput="filterCharactersList()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; width: 200px;">
+                      <select id="characterListFilter" onchange="filterCharactersList()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        <option value="all">All Characters</option>
+                        <option value="listed">Listed Only</option>
+                        <option value="unlisted">Unlisted/Private Only</option>
+                      </select>
+                    </div>
+                    <button onclick="showAddCharacterModal()" style="padding: 10px 20px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                      <span>+</span> Add Character
+                    </button>
+                  </div>
+
+                  <!-- Characters List -->
+                  <div id="adminCharactersList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                    <div style="text-align: center; padding: 40px; color: #888; grid-column: 1 / -1;">
+                      Loading characters...
+                    </div>
+                  </div>
+                </div>
+                <!-- End Characters Section -->
+
+                <!-- Character Add/Edit Modal -->
+                <div id="characterModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+                  <div style="background: #1a1a1a; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(157, 78, 221, 0.3);">
+                    <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                      <h3 id="characterModalTitle" style="margin: 0; font-size: 1.25rem;">Add New Character</h3>
+                    </div>
+                    <form id="characterForm" onsubmit="saveCharacter(event)" style="padding: 24px;">
+                      <input type="hidden" id="characterId">
+
+                      <div style="display: grid; gap: 16px;">
+                        <!-- Name -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Name *</label>
+                          <input type="text" id="charName" required style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Category -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Category *</label>
+                          <input type="text" id="charCategory" required placeholder="e.g. Fashion & Lifestyle" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Description -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Description</label>
+                          <textarea id="charDescription" rows="3" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem; resize: vertical;"></textarea>
+                        </div>
+
+                        <!-- Image URL -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Image URL</label>
+                          <input type="url" id="charImageUrl" placeholder="https://..." style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- LoRA URL -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">LoRA URL</label>
+                          <input type="url" id="charLoraUrl" placeholder="https://..." style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Trigger Word -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Trigger Word</label>
+                          <input type="text" id="charTriggerWord" placeholder="e.g. ohwx woman" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Price -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Price (0 = free)</label>
+                          <input type="number" id="charPrice" value="0" min="0" step="0.01" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Toggles Row -->
+                        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                          <!-- Is Listed Toggle -->
+                          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="charIsListed" checked style="width: 18px; height: 18px; accent-color: #9d4edd;">
+                            <span style="color: #fff; font-size: 0.9rem;">Listed on Marketplace</span>
+                          </label>
+
+                          <!-- Is Active Toggle -->
+                          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="charIsActive" checked style="width: 18px; height: 18px; accent-color: #9d4edd;">
+                            <span style="color: #fff; font-size: 0.9rem;">Active</span>
+                          </label>
+                        </div>
+
+                        <!-- Help Text -->
+                        <div style="background: rgba(157, 78, 221, 0.1); border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #888;">
+                          <strong style="color: #9d4edd;">Unlisted Characters:</strong> Uncheck "Listed on Marketplace" to create a private LoRA that won't appear in the public marketplace. You can then grant access to specific users via User Services.
+                        </div>
+                      </div>
+
+                      <!-- Buttons -->
+                      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <button type="button" onclick="closeCharacterModal()" style="padding: 10px 20px; background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; cursor: pointer;">Cancel</button>
+                        <button type="submit" id="characterSubmitBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 500;">Save Character</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
 
                 <!-- User Services Section -->
                 <div class="admin-section" id="adminUserServicesSection">
@@ -10475,6 +10592,7 @@
   <script src="js/reporting.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/admin-reports.js"></script>
+  <script src="js/admin-characters.js"></script>
   <script src="js/admin-onboarding.js"></script>
   <script src="js/admin-custom-characters.js"></script>
   <script src="js/admin-landing.js"></script>
@@ -18027,6 +18145,7 @@
         'reports': 'adminReportsSection',
         'policies': 'adminPoliciesSection',
         'content-filter': 'adminContentFilterSection',
+        'characters': 'adminCharactersSection',
         'user-services': 'adminUserServicesSection',
         'onboarding': 'adminOnboardingSection',
         'custom-orders': 'adminCustomOrdersSection',
@@ -18050,6 +18169,10 @@
         renderPoliciesAdminGrid();
       } else if (section === 'content-filter') {
         loadBlockedWordsAdmin();
+      } else if (section === 'characters') {
+        if (typeof loadAdminCharacters === 'function') {
+          loadAdminCharacters();
+        }
       } else if (section === 'user-services') {
         loadUserServicesData();
       } else if (section === 'onboarding') {
