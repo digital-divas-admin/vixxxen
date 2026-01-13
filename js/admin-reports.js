@@ -561,7 +561,8 @@ function populateCharacterSelect() {
   allCharacters.forEach(char => {
     const option = document.createElement('option');
     option.value = char.id;
-    option.textContent = `${char.name} (${char.category})`;
+    const unlistedTag = char.is_listed === false ? ' [PRIVATE]' : '';
+    option.textContent = `${char.name} (${char.category})${unlistedTag}`;
     select.appendChild(option);
   });
 }
@@ -638,9 +639,10 @@ async function loadUserCharacters(userId) {
 
   try {
     const response = await authFetch(`/api/admin/users/${userId}/characters`);
-    if (!response.ok) throw new Error('Failed to load characters');
-
     const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.details || data.error || 'Failed to load characters');
+    }
     const ownedCharacters = data.ownedCharacters || [];
 
     if (ownedCharacters.length === 0) {
@@ -694,7 +696,7 @@ async function grantCharacterAccess() {
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.error || 'Failed to grant character access');
+      alert(data.details || data.error || 'Failed to grant character access');
       return;
     }
 
