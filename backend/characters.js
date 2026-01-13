@@ -12,6 +12,38 @@ if (supabaseUrl && supabaseServiceKey) {
   supabase = createClient(supabaseUrl, supabaseServiceKey);
 }
 
+// ===========================================
+// SERVER-SIDE CHARACTER CACHE
+// ===========================================
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
+let charactersCache = {
+  public: { data: null, timestamp: 0 },
+  all: { data: null, timestamp: 0 }
+};
+
+function getCachedCharacters(type) {
+  const cache = charactersCache[type];
+  if (cache.data && (Date.now() - cache.timestamp) < CACHE_TTL) {
+    console.log(`📦 Characters cache HIT (${type})`);
+    return cache.data;
+  }
+  return null;
+}
+
+function setCachedCharacters(type, data) {
+  charactersCache[type] = { data, timestamp: Date.now() };
+  console.log(`📦 Characters cache SET (${type}): ${data?.length || 0} items`);
+}
+
+function clearCharactersCache() {
+  charactersCache = {
+    public: { data: null, timestamp: 0 },
+    all: { data: null, timestamp: 0 }
+  };
+  console.log('📦 Characters cache CLEARED');
+}
+
 // GET /api/characters - Get all characters with ownership status
 router.get('/', optionalAuth, async (req, res) => {
   try {
@@ -33,23 +65,28 @@ router.get('/', optionalAuth, async (req, res) => {
       ownedCharacterIds = owned?.map(o => o.character_id) || [];
     }
 
-    // Get all active AND listed characters (public marketplace)
-    // Exclude characters explicitly marked as unlisted (is_listed = false)
-    // Characters with is_listed = true or NULL are shown
-    const { data: characters, error } = await supabase
-      .from('marketplace_characters')
-      .select('*')
-      .eq('is_active', true)
-      .not('is_listed', 'eq', false)
-      .order('sort_order', { ascending: true });
+    // Try to get from cache first
+    let characters = getCachedCharacters('public');
 
-    if (error) {
-      console.error('Error fetching characters:', error);
-      return res.status(500).json({ error: 'Failed to fetch characters' });
+    if (!characters) {
+      // Get all active AND listed characters (public marketplace)
+      // Exclude characters explicitly marked as unlisted (is_listed = false)
+      // Characters with is_listed = true or NULL are shown
+      const { data, error } = await supabase
+        .from('marketplace_characters')
+        .select('*')
+        .eq('is_active', true)
+        .not('is_listed', 'eq', false)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching characters:', error);
+        return res.status(500).json({ error: 'Failed to fetch characters' });
+      }
+
+      characters = data;
+      setCachedCharacters('public', characters);
     }
-
-    // Debug: log characters and their is_listed values
-    console.log('📦 Marketplace characters:', characters?.map(c => ({ name: c.name, is_listed: c.is_listed })));
 
     // Add ownership status
     const processedCharacters = characters.map(char => ({
@@ -74,14 +111,22 @@ router.get('/all', requireAdmin, async (req, res) => {
 
     // User is verified admin via requireAdmin middleware
 
-    const { data: characters, error } = await supabase
-      .from('marketplace_characters')
-      .select('*')
-      .order('sort_order', { ascending: true });
+    // Try to get from cache first
+    let characters = getCachedCharacters('all');
 
-    if (error) {
-      console.error('Error fetching all characters:', error);
-      return res.status(500).json({ error: 'Failed to fetch characters' });
+    if (!characters) {
+      const { data, error } = await supabase
+        .from('marketplace_characters')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching all characters:', error);
+        return res.status(500).json({ error: 'Failed to fetch characters' });
+      }
+
+      characters = data;
+      setCachedCharacters('all', characters);
     }
 
     res.json({ characters });
@@ -134,6 +179,9 @@ router.post('/', requireAdmin, async (req, res) => {
       console.error('Error creating character:', error);
       return res.status(500).json({ error: 'Failed to create character' });
     }
+
+    // Clear cache so new character appears immediately
+    clearCharactersCache();
 
     res.status(201).json({ character });
 
@@ -188,6 +236,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
       return res.status(500).json({ error: 'Failed to update character' });
     }
 
+    // Clear cache so updates appear immediately
+    clearCharactersCache();
+
     res.json({ character });
 
   } catch (error) {
@@ -215,6 +266,9 @@ router.delete('/:id', requireAdmin, async (req, res) => {
       console.error('Error deleting character:', error);
       return res.status(500).json({ error: 'Failed to delete character' });
     }
+
+    // Clear cache so deletion is reflected immediately
+    clearCharactersCache();
 
     res.json({ success: true });
 

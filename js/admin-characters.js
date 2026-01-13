@@ -12,21 +12,37 @@
   let editingCharacterId = null;
 
   // Load all characters for admin - using unique name to avoid conflict with admin-onboarding.js
-  window.loadCharactersManagement = async function() {
+  window.loadCharactersManagement = async function(forceRefresh = false) {
     console.log('👤 loadCharactersManagement called');
     const container = document.getElementById('adminCharactersList');
     console.log('👤 Container found:', !!container);
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #888; grid-column: 1 / -1;">Loading characters...</div>';
+    container.innerHTML = '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #888; grid-column: 1 / -1;"><div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 16px;"></div><div style="font-size: 1rem;">Loading characters...</div></div>';
 
     try {
-      console.log('👤 Fetching characters from API...');
-      const response = await authFetch(`${API_BASE_URL}/api/characters/all`);
-      if (!response.ok) throw new Error('Failed to load characters');
+      // Check client cache first (unless force refresh)
+      let characters = null;
+      if (!forceRefresh && typeof getCachedCharactersClient === 'function') {
+        characters = getCachedCharactersClient('admin');
+      }
 
-      const data = await response.json();
-      allAdminCharacters = data.characters || [];
+      // Fetch from API if no cache
+      if (!characters) {
+        console.log('👤 Fetching characters from API...');
+        const response = await authFetch(`${API_BASE_URL}/api/characters/all`);
+        if (!response.ok) throw new Error('Failed to load characters');
+
+        const data = await response.json();
+        characters = data.characters || [];
+
+        // Update cache
+        if (typeof setCachedCharactersClient === 'function') {
+          setCachedCharactersClient('admin', characters);
+        }
+      }
+
+      allAdminCharacters = characters;
       console.log('👤 Loaded', allAdminCharacters.length, 'characters');
 
       renderCharactersList();
@@ -205,8 +221,13 @@
         throw new Error(error.error || 'Failed to save character');
       }
 
+      // Clear both client caches so changes appear everywhere
+      if (typeof clearCharactersCacheClient === 'function') {
+        clearCharactersCacheClient();
+      }
+
       closeAdminCharModal();
-      await loadCharactersManagement();
+      await loadCharactersManagement(true); // Force refresh
 
       // Show success message
       const action = editingCharacterId ? 'updated' : 'created';
@@ -238,7 +259,12 @@
         throw new Error(error.error || 'Failed to delete character');
       }
 
-      await loadCharactersManagement();
+      // Clear both client caches so deletion appears everywhere
+      if (typeof clearCharactersCacheClient === 'function') {
+        clearCharactersCacheClient();
+      }
+
+      await loadCharactersManagement(true); // Force refresh
       alert('Character deleted successfully!');
 
     } catch (error) {

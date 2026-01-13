@@ -8315,7 +8315,11 @@
         <!-- Browse Marketplace -->
         <div id="browseMarketplace">
           <div class="marketplace-grid" id="marketplaceGrid">
-            <!-- Character cards will be populated here -->
+            <!-- Loading state shown initially -->
+            <div class="marketplace-loading" id="marketplaceLoading" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #888;">
+              <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 16px;"></div>
+              <div style="font-size: 1rem;">Loading characters...</div>
+            </div>
           </div>
         </div>
 
@@ -9148,8 +9152,9 @@
 
                   <!-- Characters List -->
                   <div id="adminCharactersList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
-                    <div style="text-align: center; padding: 40px; color: #888; grid-column: 1 / -1;">
-                      Loading characters...
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #888; grid-column: 1 / -1;">
+                      <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 16px;"></div>
+                      <div style="font-size: 1rem;">Loading characters...</div>
                     </div>
                   </div>
                 </div>
@@ -10592,6 +10597,7 @@
   <script src="js/reporting.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/admin-reports.js"></script>
+  <script src="js/character-cache.js"></script>
   <script src="js/admin-characters.js"></script>
   <script src="js/admin-onboarding.js"></script>
   <script src="js/admin-custom-characters.js"></script>
@@ -16153,6 +16159,11 @@
         currentUser = session.user;
         isUserLoggedIn = true;
 
+        // Preload characters in background (starts fetching while profile loads)
+        if (typeof preloadCharacters === 'function') {
+          preloadCharacters();
+        }
+
         // Update UI to logged in state (with null checks)
         console.log('🔐 Updating UI to logged in state...');
         const userAvatar = document.getElementById('userAvatar');
@@ -16174,7 +16185,7 @@
           console.error('🔐 loadUserProfile failed:', err);
         }
 
-        // Reload marketplace with user's ownership data and admin status
+        // Reload marketplace with user's ownership data and admin status (will use preloaded cache)
         loadMarketplaceCharacters();
 
         // Hide landing page and show main app when logged in
@@ -16330,21 +16341,38 @@
     let currentCharacterModal = null;
     let allMarketplaceCharacters = []; // Will be loaded from API
 
-    // Load marketplace characters from API
-    async function loadMarketplaceCharacters() {
+    // Load marketplace characters from API (with client-side caching)
+    async function loadMarketplaceCharacters(forceRefresh = false) {
       try {
         const userId = currentUser?.id;
         const isAdmin = userId && await checkIfUserIsAdmin(userId);
 
-        // Marketplace always uses the public endpoint (shows only listed characters)
-        // Admins can manage all characters in the Admin > Characters section
-        const endpoint = `${API_BASE_URL}/api/characters`;
+        // Check client cache first (unless force refresh)
+        let rawCharacters = null;
+        if (!forceRefresh && typeof getCachedCharactersClient === 'function') {
+          rawCharacters = getCachedCharactersClient('marketplace');
+        }
 
-        const response = await authFetch(endpoint);
-        if (!response.ok) throw new Error('Failed to fetch characters');
+        // Fetch from API if no cache
+        if (!rawCharacters) {
+          // Marketplace always uses the public endpoint (shows only listed characters)
+          // Admins can manage all characters in the Admin > Characters section
+          const endpoint = `${API_BASE_URL}/api/characters`;
 
-        const data = await response.json();
-        allMarketplaceCharacters = data.characters.map(char => ({
+          const response = await authFetch(endpoint);
+          if (!response.ok) throw new Error('Failed to fetch characters');
+
+          const data = await response.json();
+          rawCharacters = data.characters;
+
+          // Update cache
+          if (typeof setCachedCharactersClient === 'function') {
+            setCachedCharactersClient('marketplace', rawCharacters);
+          }
+        }
+
+        // Process characters for display
+        allMarketplaceCharacters = rawCharacters.map(char => ({
           id: char.id,
           name: char.name,
           category: char.category,
@@ -16381,7 +16409,7 @@
 
         // Debug: log characters with lora_url
         const charsWithLora = allMarketplaceCharacters.filter(c => c.lora_url);
-        console.log('🛍️ Marketplace loaded with', allMarketplaceCharacters.length, 'characters from API');
+        console.log('🛍️ Marketplace loaded with', allMarketplaceCharacters.length, 'characters');
         console.log('🎭 Characters with lora_url:', charsWithLora.map(c => `${c.name}: ${c.lora_url}`));
         console.log('👤 isUserAdmin:', isUserAdmin, '| ownedCharacters:', ownedCharacters);
       } catch (error) {
