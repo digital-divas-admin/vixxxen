@@ -16,6 +16,7 @@ create table if not exists public.marketplace_characters (
   lora_url text,
   trigger_word varchar(100),
   is_active boolean default true,
+  is_listed boolean default true,
   sort_order integer default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null

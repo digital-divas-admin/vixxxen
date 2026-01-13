@@ -15,6 +15,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="dns-prefetch" href="https://cdn.socket.io">
+  <!-- Supabase API and storage -->
+  <link rel="preconnect" href="https://kdgjbyfqytjtywxlekpz.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="https://kdgjbyfqytjtywxlekpz.supabase.co">
 
   <!-- Critical loading splash (inline to show immediately) -->
   <style id="splash-styles">
@@ -8315,7 +8318,11 @@
         <!-- Browse Marketplace -->
         <div id="browseMarketplace">
           <div class="marketplace-grid" id="marketplaceGrid">
-            <!-- Character cards will be populated here -->
+            <!-- Loading state shown initially -->
+            <div class="marketplace-loading" id="marketplaceLoading" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #888;">
+              <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 16px;"></div>
+              <div style="font-size: 1rem;">Loading characters...</div>
+            </div>
           </div>
         </div>
 
@@ -8727,6 +8734,10 @@
                     <span class="admin-nav-icon">🚫</span>
                     <span>Content Filter</span>
                   </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('characters')" data-section="characters">
+                    <span class="admin-nav-icon">👤</span>
+                    <span>Characters</span>
+                  </div>
                   <div class="admin-nav-item" onclick="switchAdminSection('user-services')" data-section="user-services">
                     <span class="admin-nav-icon">🎁</span>
                     <span>User Services</span>
@@ -9079,7 +9090,7 @@
 
                 <!-- Filter and Search -->
                 <div class="blocked-words-filters" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 800px; margin-left: auto; margin-right: auto;">
-                  <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="filterBlockedWordsList()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
+                  <input type="text" id="searchBlockedWords" placeholder="Search words..." oninput="debouncedFilter('filterBlockedWordsList')()" style="flex: 1; min-width: 150px; padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem;">
                   <select id="categoryFilter" onchange="loadBlockedWordsAdmin()" style="padding: 12px 20px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 10px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                     <option value="all">All Categories</option>
                     <option value="explicit">Explicit</option>
@@ -9119,6 +9130,120 @@
                 </div>
                 </div>
                 <!-- End Content Filter Section -->
+
+                <!-- Characters Management Section -->
+                <div class="admin-section" id="adminCharactersSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Character & LoRA Management</h2>
+                    <p class="admin-section-subtitle">Create, edit, and manage marketplace characters and private LoRAs</p>
+                  </div>
+
+                  <!-- Action Bar -->
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                      <input type="text" id="adminCharSearchInput" placeholder="Search characters..." oninput="debouncedFilter('filterCharactersList')()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; width: 200px;">
+                      <select id="adminCharListFilter" onchange="filterCharactersList()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        <option value="all">All Characters</option>
+                        <option value="listed">Listed Only</option>
+                        <option value="unlisted">Unlisted/Private Only</option>
+                      </select>
+                    </div>
+                    <button onclick="showAddCharacterModal()" style="padding: 10px 20px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                      <span>+</span> Add Character
+                    </button>
+                  </div>
+
+                  <!-- Characters List -->
+                  <div id="adminCharactersList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #888; grid-column: 1 / -1;">
+                      <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px; margin-bottom: 16px;"></div>
+                      <div style="font-size: 1rem;">Loading characters...</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- End Characters Section -->
+
+                <!-- Admin Character Add/Edit Modal -->
+                <div id="adminCharModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+                  <div style="background: #1a1a1a; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(157, 78, 221, 0.3);">
+                    <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                      <h3 id="adminCharModalTitle" style="margin: 0; font-size: 1.25rem;">Add New Character</h3>
+                    </div>
+                    <form id="adminCharForm" onsubmit="saveAdminCharacter(event)" style="padding: 24px;">
+                      <input type="hidden" id="adminCharId">
+
+                      <div style="display: grid; gap: 16px;">
+                        <!-- Name -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Name *</label>
+                          <input type="text" id="adminCharName" required style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Category -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Category *</label>
+                          <input type="text" id="adminCharCategory" required placeholder="e.g. Fashion & Lifestyle" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Description -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Description</label>
+                          <textarea id="adminCharDescription" rows="3" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem; resize: vertical;"></textarea>
+                        </div>
+
+                        <!-- Image URL -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Image URL</label>
+                          <input type="url" id="adminCharImageUrl" placeholder="https://..." style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- LoRA URL -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">LoRA URL / Path</label>
+                          <input type="text" id="adminCharLoraUrl" placeholder="URL or path to .safetensors file" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Trigger Word -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Trigger Word</label>
+                          <input type="text" id="adminCharTriggerWord" placeholder="e.g. ohwx woman" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Price -->
+                        <div>
+                          <label style="display: block; margin-bottom: 6px; color: #888; font-size: 0.85rem;">Price (0 = free)</label>
+                          <input type="number" id="adminCharPrice" value="0" min="0" step="0.01" style="width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                        </div>
+
+                        <!-- Toggles Row -->
+                        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                          <!-- Is Listed Toggle -->
+                          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="adminCharIsListed" checked style="width: 18px; height: 18px; accent-color: #9d4edd;">
+                            <span style="color: #fff; font-size: 0.9rem;">Listed on Marketplace</span>
+                          </label>
+
+                          <!-- Is Active Toggle -->
+                          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="adminCharIsActive" checked style="width: 18px; height: 18px; accent-color: #9d4edd;">
+                            <span style="color: #fff; font-size: 0.9rem;">Active</span>
+                          </label>
+                        </div>
+
+                        <!-- Help Text -->
+                        <div style="background: rgba(157, 78, 221, 0.1); border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #888;">
+                          <strong style="color: #9d4edd;">Unlisted Characters:</strong> Uncheck "Listed on Marketplace" to create a private LoRA that won't appear in the public marketplace. You can then grant access to specific users via User Services.
+                        </div>
+                      </div>
+
+                      <!-- Buttons -->
+                      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <button type="button" onclick="closeAdminCharModal()" style="padding: 10px 20px; background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; cursor: pointer;">Cancel</button>
+                        <button type="submit" id="adminCharSubmitBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 500;">Save Character</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
 
                 <!-- User Services Section -->
                 <div class="admin-section" id="adminUserServicesSection">
@@ -9339,7 +9464,7 @@
                         </h3>
                         <!-- Search/Filter -->
                         <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-                          <input type="text" id="characterSearchInput" placeholder="Search characters..." oninput="filterPremiumCharacters()" style="flex: 1; min-width: 200px; padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
+                          <input type="text" id="characterSearchInput" placeholder="Search characters..." oninput="debouncedFilter('filterPremiumCharacters')()" style="flex: 1; min-width: 200px; padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem;">
                           <select id="characterCategoryFilter" onchange="filterPremiumCharacters()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(255, 46, 187, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; cursor: pointer;">
                             <option value="">All Categories</option>
                           </select>
@@ -9419,7 +9544,7 @@
                         <option value="revision_requested">Revision Requested</option>
                         <option value="completed">Completed</option>
                       </select>
-                      <input type="text" id="customOrdersSearch" placeholder="Search by email or name..." oninput="filterCustomOrders()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; min-width: 200px;">
+                      <input type="text" id="customOrdersSearch" placeholder="Search by email or name..." oninput="debouncedFilter('filterCustomOrders')()" style="padding: 10px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; min-width: 200px;">
                       <button onclick="loadCustomOrders()" style="padding: 10px 20px; background: rgba(157, 78, 221, 0.2); border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #9d4edd; cursor: pointer; font-size: 0.9rem;">
                         🔄 Refresh
                       </button>
@@ -10475,6 +10600,8 @@
   <script src="js/reporting.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/admin-reports.js"></script>
+  <script src="js/character-cache.js"></script>
+  <script src="js/admin-characters.js"></script>
   <script src="js/admin-onboarding.js"></script>
   <script src="js/admin-custom-characters.js"></script>
   <script src="js/admin-landing.js"></script>
@@ -11068,7 +11195,7 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal('${image.url}')" title="Click to view full size" loading="lazy">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -11309,7 +11436,7 @@
 
         outputItem.innerHTML = `
           ${isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-          <img src="${img.public_url}" alt="Edited image" onclick="showImageModal('${img.public_url}')">
+          <img src="${img.public_url}" alt="Edited image" onclick="showImageModal('${img.public_url}')" loading="lazy">
           <div class="output-item-overlay">
             <div class="output-item-info">
               ${typeLabel} · ${metadata.aspectRatio || 'Edited'}
@@ -15012,7 +15139,7 @@
       placeholder.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -15067,7 +15194,7 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -16035,6 +16162,11 @@
         currentUser = session.user;
         isUserLoggedIn = true;
 
+        // Preload characters in background (starts fetching while profile loads)
+        if (typeof preloadCharacters === 'function') {
+          preloadCharacters();
+        }
+
         // Update UI to logged in state (with null checks)
         console.log('🔐 Updating UI to logged in state...');
         const userAvatar = document.getElementById('userAvatar');
@@ -16056,7 +16188,7 @@
           console.error('🔐 loadUserProfile failed:', err);
         }
 
-        // Reload marketplace with user's ownership data and admin status
+        // Reload marketplace with user's ownership data and admin status (will use preloaded cache)
         loadMarketplaceCharacters();
 
         // Hide landing page and show main app when logged in
@@ -16212,23 +16344,38 @@
     let currentCharacterModal = null;
     let allMarketplaceCharacters = []; // Will be loaded from API
 
-    // Load marketplace characters from API
-    async function loadMarketplaceCharacters() {
+    // Load marketplace characters from API (with client-side caching)
+    async function loadMarketplaceCharacters(forceRefresh = false) {
       try {
         const userId = currentUser?.id;
         const isAdmin = userId && await checkIfUserIsAdmin(userId);
 
-        // Admins get all characters (including inactive), others get only active
-        // Use authFetch to include JWT token - backend gets user from token, not query param
-        const endpoint = isAdmin
-          ? `${API_BASE_URL}/api/characters/all`
-          : `${API_BASE_URL}/api/characters`;
+        // Check client cache first (unless force refresh)
+        let rawCharacters = null;
+        if (!forceRefresh && typeof getCachedCharactersClient === 'function') {
+          rawCharacters = getCachedCharactersClient('marketplace');
+        }
 
-        const response = await authFetch(endpoint);
-        if (!response.ok) throw new Error('Failed to fetch characters');
+        // Fetch from API if no cache
+        if (!rawCharacters) {
+          // Marketplace always uses the public endpoint (shows only listed characters)
+          // Admins can manage all characters in the Admin > Characters section
+          const endpoint = `${API_BASE_URL}/api/characters`;
 
-        const data = await response.json();
-        allMarketplaceCharacters = data.characters.map(char => ({
+          const response = await authFetch(endpoint);
+          if (!response.ok) throw new Error('Failed to fetch characters');
+
+          const data = await response.json();
+          rawCharacters = data.characters;
+
+          // Update cache
+          if (typeof setCachedCharactersClient === 'function') {
+            setCachedCharactersClient('marketplace', rawCharacters);
+          }
+        }
+
+        // Process characters for display
+        allMarketplaceCharacters = rawCharacters.map(char => ({
           id: char.id,
           name: char.name,
           category: char.category,
@@ -16265,7 +16412,7 @@
 
         // Debug: log characters with lora_url
         const charsWithLora = allMarketplaceCharacters.filter(c => c.lora_url);
-        console.log('🛍️ Marketplace loaded with', allMarketplaceCharacters.length, 'characters from API');
+        console.log('🛍️ Marketplace loaded with', allMarketplaceCharacters.length, 'characters');
         console.log('🎭 Characters with lora_url:', charsWithLora.map(c => `${c.name}: ${c.lora_url}`));
         console.log('👤 isUserAdmin:', isUserAdmin, '| ownedCharacters:', ownedCharacters);
       } catch (error) {
@@ -16356,7 +16503,7 @@
         card.innerHTML = `
           ${inactiveBadge}
           ${editButton}
-          <img src="${character.image}" alt="${character.name}" class="character-image">
+          <img src="${character.image}" alt="${character.name}" class="character-image" loading="lazy">
           <div class="character-info">
             <div class="character-name">${character.name}</div>
             <div class="character-category">${character.category}</div>
@@ -16413,7 +16560,7 @@
 
         card.innerHTML = `
           <div class="library-character-badge">✓ Owned</div>
-          <img src="${character.image}" alt="${character.name}" class="character-image">
+          <img src="${character.image}" alt="${character.name}" class="character-image" loading="lazy">
           <div class="character-info">
             <div class="character-name">${character.name}</div>
             <div class="character-category">${character.category}</div>
@@ -16711,7 +16858,7 @@
 
       container.innerHTML = characterGalleryImages.map((url, index) => `
         <div style="position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #333;">
-          <img src="${url}" alt="Gallery ${index + 1}" style="width: 100%; height: 100%; object-fit: cover;">
+          <img src="${url}" alt="Gallery ${index + 1}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
           <button type="button" onclick="removeCharacterGalleryImage(${index})" style="position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; background: #ff4444; border: none; color: white; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
         </div>
       `).join('');
@@ -18027,6 +18174,7 @@
         'reports': 'adminReportsSection',
         'policies': 'adminPoliciesSection',
         'content-filter': 'adminContentFilterSection',
+        'characters': 'adminCharactersSection',
         'user-services': 'adminUserServicesSection',
         'onboarding': 'adminOnboardingSection',
         'custom-orders': 'adminCustomOrdersSection',
@@ -18050,6 +18198,13 @@
         renderPoliciesAdminGrid();
       } else if (section === 'content-filter') {
         loadBlockedWordsAdmin();
+      } else if (section === 'characters') {
+        console.log('👤 Switching to characters section');
+        if (typeof loadCharactersManagement === 'function') {
+          loadCharactersManagement();
+        } else {
+          console.error('👤 loadCharactersManagement is not defined!');
+        }
       } else if (section === 'user-services') {
         loadUserServicesData();
       } else if (section === 'onboarding') {
