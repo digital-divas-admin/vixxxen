@@ -338,7 +338,7 @@ router.get('/users/:userId/characters', async (req, res) => {
 
     if (userCharsError) {
       console.error('Fetch user characters error:', userCharsError);
-      return res.status(500).json({ error: 'Failed to fetch owned characters' });
+      return res.status(500).json({ error: 'Failed to fetch owned characters', details: userCharsError.message });
     }
 
     if (!userChars || userChars.length === 0) {
@@ -354,7 +354,7 @@ router.get('/users/:userId/characters', async (req, res) => {
 
     if (charsError) {
       console.error('Fetch character details error:', charsError);
-      return res.status(500).json({ error: 'Failed to fetch character details' });
+      return res.status(500).json({ error: 'Failed to fetch character details', details: charsError.message });
     }
 
     // Combine the data
@@ -422,13 +422,18 @@ router.post('/grant-character', async (req, res) => {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
-    // Check if already granted
-    const { data: existing } = await supabase
+    // Check if already granted (use maybeSingle to avoid error when no row exists)
+    const { data: existing, error: checkError } = await supabase
       .from('user_characters')
       .select('id')
       .eq('user_id', userId)
       .eq('character_id', characterId)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Check existing grant error:', checkError);
+      return res.status(500).json({ error: 'Failed to check existing access' });
+    }
 
     if (existing) {
       return res.status(400).json({ error: 'User already has access to this character' });
@@ -447,7 +452,7 @@ router.post('/grant-character', async (req, res) => {
 
     if (error) {
       console.error('Grant character error:', error);
-      return res.status(500).json({ error: 'Failed to grant character access' });
+      return res.status(500).json({ error: 'Failed to grant character access', details: error.message });
     }
 
     console.log(`🎁 Admin ${req.user.email} granted character ${characterId} to user ${userId}`);
