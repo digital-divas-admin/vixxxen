@@ -11,9 +11,9 @@
   let allAdminCharacters = [];
   let editingCharacterId = null;
 
-  // Load all characters for admin
-  window.loadAdminCharacters = async function() {
-    console.log('👤 loadAdminCharacters called');
+  // Load all characters for admin - using unique name to avoid conflict with admin-onboarding.js
+  window.loadCharactersManagement = async function() {
+    console.log('👤 loadCharactersManagement called');
     const container = document.getElementById('adminCharactersList');
     console.log('👤 Container found:', !!container);
     if (!container) return;
@@ -27,13 +27,14 @@
 
       const data = await response.json();
       allAdminCharacters = data.characters || [];
+      console.log('👤 Loaded', allAdminCharacters.length, 'characters');
 
       renderCharactersList();
     } catch (error) {
       console.error('Error loading admin characters:', error);
       container.innerHTML = `
         <div style="text-align: center; padding: 40px; color: #ff4444; grid-column: 1 / -1;">
-          Failed to load characters. <button onclick="loadAdminCharacters()" style="color: #4ade80; background: none; border: none; cursor: pointer; text-decoration: underline;">Retry</button>
+          Failed to load characters. <button onclick="loadCharactersManagement()" style="color: #4ade80; background: none; border: none; cursor: pointer; text-decoration: underline;">Retry</button>
         </div>
       `;
     }
@@ -205,7 +206,7 @@
       }
 
       closeAdminCharModal();
-      await loadAdminCharacters();
+      await loadCharactersManagement();
 
       // Show success message
       const action = editingCharacterId ? 'updated' : 'created';
@@ -237,7 +238,7 @@
         throw new Error(error.error || 'Failed to delete character');
       }
 
-      await loadAdminCharacters();
+      await loadCharactersManagement();
       alert('Character deleted successfully!');
 
     } catch (error) {

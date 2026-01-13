@@ -18171,18 +18171,10 @@
         loadBlockedWordsAdmin();
       } else if (section === 'characters') {
         console.log('👤 Switching to characters section');
-        console.log('👤 loadAdminCharacters type:', typeof loadAdminCharacters);
-        console.log('👤 loadAdminCharacters value:', loadAdminCharacters);
-        if (typeof loadAdminCharacters === 'function') {
-          console.log('👤 About to call loadAdminCharacters...');
-          try {
-            loadAdminCharacters();
-            console.log('👤 loadAdminCharacters call completed');
-          } catch (err) {
-            console.error('👤 Error calling loadAdminCharacters:', err);
-          }
+        if (typeof loadCharactersManagement === 'function') {
+          loadCharactersManagement();
         } else {
-          console.error('👤 loadAdminCharacters is not defined!');
+          console.error('👤 loadCharactersManagement is not defined!');
         }
       } else if (section === 'user-services') {
         loadUserServicesData();
