@@ -39,8 +39,8 @@
     const container = document.getElementById('adminCharactersList');
     if (!container) return;
 
-    const searchTerm = document.getElementById('characterSearchInput')?.value?.toLowerCase() || '';
-    const filterValue = document.getElementById('characterListFilter')?.value || 'all';
+    const searchTerm = document.getElementById('adminCharSearchInput')?.value?.toLowerCase() || '';
+    const filterValue = document.getElementById('adminCharListFilter')?.value || 'all';
 
     let filtered = allAdminCharacters;
 
@@ -97,10 +97,10 @@
 
           <!-- Actions -->
           <div style="display: flex; gap: 8px; margin-top: 12px;">
-            <button onclick="editCharacter('${char.id}')" style="flex: 1; padding: 8px; background: rgba(157, 78, 221, 0.2); border: none; border-radius: 6px; color: #9d4edd; cursor: pointer; font-size: 0.85rem;">
+            <button onclick="editAdminCharacter('${char.id}')" style="flex: 1; padding: 8px; background: rgba(157, 78, 221, 0.2); border: none; border-radius: 6px; color: #9d4edd; cursor: pointer; font-size: 0.85rem;">
               Edit
             </button>
-            <button onclick="deleteCharacter('${char.id}', '${char.name.replace(/'/g, "\\'")}')" style="padding: 8px 12px; background: rgba(255, 68, 68, 0.1); border: none; border-radius: 6px; color: #ff4444; cursor: pointer; font-size: 0.85rem;">
+            <button onclick="deleteAdminCharacter('${char.id}', '${char.name.replace(/'/g, "\\'")}')" style="padding: 8px 12px; background: rgba(255, 68, 68, 0.1); border: none; border-radius: 6px; color: #ff4444; cursor: pointer; font-size: 0.85rem;">
               Delete
             </button>
           </div>
@@ -117,64 +117,64 @@
   // Show add character modal
   window.showAddCharacterModal = function() {
     editingCharacterId = null;
-    document.getElementById('characterModalTitle').textContent = 'Add New Character';
-    document.getElementById('characterSubmitBtn').textContent = 'Create Character';
-    document.getElementById('characterForm').reset();
-    document.getElementById('charIsListed').checked = true;
-    document.getElementById('charIsActive').checked = true;
-    document.getElementById('characterModal').style.display = 'flex';
+    document.getElementById('adminCharModalTitle').textContent = 'Add New Character';
+    document.getElementById('adminCharSubmitBtn').textContent = 'Create Character';
+    document.getElementById('adminCharForm').reset();
+    document.getElementById('adminCharIsListed').checked = true;
+    document.getElementById('adminCharIsActive').checked = true;
+    document.getElementById('adminCharModal').style.display = 'flex';
   };
 
   // Edit character
-  window.editCharacter = function(charId) {
+  window.editAdminCharacter = function(charId) {
     const char = allAdminCharacters.find(c => c.id === charId);
     if (!char) return;
 
     editingCharacterId = charId;
-    document.getElementById('characterModalTitle').textContent = 'Edit Character';
-    document.getElementById('characterSubmitBtn').textContent = 'Save Changes';
+    document.getElementById('adminCharModalTitle').textContent = 'Edit Character';
+    document.getElementById('adminCharSubmitBtn').textContent = 'Save Changes';
 
     // Populate form
-    document.getElementById('characterId').value = char.id;
-    document.getElementById('charName').value = char.name || '';
-    document.getElementById('charCategory').value = char.category || '';
-    document.getElementById('charDescription').value = char.description || '';
-    document.getElementById('charImageUrl').value = char.image_url || '';
-    document.getElementById('charLoraUrl').value = char.lora_url || '';
-    document.getElementById('charTriggerWord').value = char.trigger_word || '';
-    document.getElementById('charPrice').value = char.price || 0;
-    document.getElementById('charIsListed').checked = char.is_listed !== false;
-    document.getElementById('charIsActive').checked = char.is_active !== false;
+    document.getElementById('adminCharId').value = char.id;
+    document.getElementById('adminCharName').value = char.name || '';
+    document.getElementById('adminCharCategory').value = char.category || '';
+    document.getElementById('adminCharDescription').value = char.description || '';
+    document.getElementById('adminCharImageUrl').value = char.image_url || '';
+    document.getElementById('adminCharLoraUrl').value = char.lora_url || '';
+    document.getElementById('adminCharTriggerWord').value = char.trigger_word || '';
+    document.getElementById('adminCharPrice').value = char.price || 0;
+    document.getElementById('adminCharIsListed').checked = char.is_listed !== false;
+    document.getElementById('adminCharIsActive').checked = char.is_active !== false;
 
-    document.getElementById('characterModal').style.display = 'flex';
+    document.getElementById('adminCharModal').style.display = 'flex';
   };
 
   // Close character modal
-  window.closeCharacterModal = function() {
-    document.getElementById('characterModal').style.display = 'none';
+  window.closeAdminCharModal = function() {
+    document.getElementById('adminCharModal').style.display = 'none';
     editingCharacterId = null;
   };
 
   // Save character (create or update)
-  window.saveCharacter = async function(event) {
+  window.saveAdminCharacter = async function(event) {
     event.preventDefault();
 
-    const submitBtn = document.getElementById('characterSubmitBtn');
+    const submitBtn = document.getElementById('adminCharSubmitBtn');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Saving...';
     submitBtn.disabled = true;
 
     try {
       const characterData = {
-        name: document.getElementById('charName').value.trim(),
-        category: document.getElementById('charCategory').value.trim(),
-        description: document.getElementById('charDescription').value.trim(),
-        image_url: document.getElementById('charImageUrl').value.trim() || null,
-        lora_url: document.getElementById('charLoraUrl').value.trim() || null,
-        trigger_word: document.getElementById('charTriggerWord').value.trim() || null,
-        price: parseFloat(document.getElementById('charPrice').value) || 0,
-        is_listed: document.getElementById('charIsListed').checked,
-        is_active: document.getElementById('charIsActive').checked
+        name: document.getElementById('adminCharName').value.trim(),
+        category: document.getElementById('adminCharCategory').value.trim(),
+        description: document.getElementById('adminCharDescription').value.trim(),
+        image_url: document.getElementById('adminCharImageUrl').value.trim() || null,
+        lora_url: document.getElementById('adminCharLoraUrl').value.trim() || null,
+        trigger_word: document.getElementById('adminCharTriggerWord').value.trim() || null,
+        price: parseFloat(document.getElementById('adminCharPrice').value) || 0,
+        is_listed: document.getElementById('adminCharIsListed').checked,
+        is_active: document.getElementById('adminCharIsActive').checked
       };
 
       let response;
@@ -199,7 +199,7 @@
         throw new Error(error.error || 'Failed to save character');
       }
 
-      closeCharacterModal();
+      closeAdminCharModal();
       await loadAdminCharacters();
 
       // Show success message
@@ -217,7 +217,7 @@
   };
 
   // Delete character
-  window.deleteCharacter = async function(charId, charName) {
+  window.deleteAdminCharacter = async function(charId, charName) {
     if (!confirm(`Are you sure you want to delete "${charName}"? This cannot be undone.`)) {
       return;
     }
@@ -243,9 +243,9 @@
 
   // Close modal when clicking outside
   document.addEventListener('click', function(e) {
-    const modal = document.getElementById('characterModal');
+    const modal = document.getElementById('adminCharModal');
     if (e.target === modal) {
-      closeCharacterModal();
+      closeAdminCharModal();
     }
   });
 
