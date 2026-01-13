@@ -1419,8 +1419,20 @@ function showWizardError(message) {
 // Switch to regular login modal
 function switchToLogin() {
   hideOnboardingWizard();
-  // Directly show the login modal element instead of calling showLoginModal()
-  // which goes through openLoginModal() that redirects back to the wizard
+
+  // The login modal is inside .container which is hidden when landing page is shown.
+  // We need to show the container and hide the landing page to make the login modal visible.
+  const container = document.querySelector('.container');
+  const landingPage = document.getElementById('landingPage');
+
+  if (container) {
+    container.style.display = 'flex';
+  }
+  if (landingPage) {
+    landingPage.style.display = 'none';
+  }
+
+  // Now show the login modal
   const loginModal = document.getElementById('loginModal');
   if (loginModal) {
     loginModal.classList.add('active');
