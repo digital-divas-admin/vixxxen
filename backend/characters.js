@@ -34,11 +34,13 @@ router.get('/', optionalAuth, async (req, res) => {
     }
 
     // Get all active AND listed characters (public marketplace)
+    // Exclude characters explicitly marked as unlisted (is_listed = false)
+    // Characters with is_listed = true or NULL are shown
     const { data: characters, error } = await supabase
       .from('marketplace_characters')
       .select('*')
       .eq('is_active', true)
-      .eq('is_listed', true)
+      .neq('is_listed', false)
       .order('sort_order', { ascending: true });
 
     if (error) {
