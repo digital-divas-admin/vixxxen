@@ -33,11 +33,12 @@ router.get('/', optionalAuth, async (req, res) => {
       ownedCharacterIds = owned?.map(o => o.character_id) || [];
     }
 
-    // Get all active characters
+    // Get all active AND listed characters (public marketplace)
     const { data: characters, error } = await supabase
       .from('marketplace_characters')
       .select('*')
       .eq('is_active', true)
+      .eq('is_listed', true)
       .order('sort_order', { ascending: true });
 
     if (error) {

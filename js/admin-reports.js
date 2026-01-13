@@ -561,7 +561,8 @@ function populateCharacterSelect() {
   allCharacters.forEach(char => {
     const option = document.createElement('option');
     option.value = char.id;
-    option.textContent = `${char.name} (${char.category})`;
+    const unlistedTag = char.is_listed === false ? ' [PRIVATE]' : '';
+    option.textContent = `${char.name} (${char.category})${unlistedTag}`;
     select.appendChild(option);
   });
 }

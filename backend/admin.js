@@ -388,9 +388,10 @@ router.get('/characters', async (req, res) => {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
+    // Get all active characters (including unlisted ones for admin granting)
     const { data: characters, error } = await supabase
       .from('marketplace_characters')
-      .select('id, name, category, image_url, lora_url, price')
+      .select('id, name, category, image_url, lora_url, price, is_listed')
       .eq('is_active', true)
       .order('name');
 
