@@ -40,13 +40,16 @@ router.get('/', optionalAuth, async (req, res) => {
       .from('marketplace_characters')
       .select('*')
       .eq('is_active', true)
-      .neq('is_listed', false)
+      .not('is_listed', 'eq', false)
       .order('sort_order', { ascending: true });
 
     if (error) {
       console.error('Error fetching characters:', error);
       return res.status(500).json({ error: 'Failed to fetch characters' });
     }
+
+    // Debug: log characters and their is_listed values
+    console.log('📦 Marketplace characters:', characters?.map(c => ({ name: c.name, is_listed: c.is_listed })));
 
     // Add ownership status
     const processedCharacters = characters.map(char => ({
