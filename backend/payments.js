@@ -16,60 +16,60 @@ const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY;
 const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET;
 const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
 
-// Pricing configuration
+// Pricing configuration (TEST PRICES - CHANGE BACK FOR PRODUCTION)
 const TIERS = {
   starter: {
     name: 'Starter Plan',
     description: 'Access to all AI models and basic features',
-    price: 20.00,
+    price: 1.00,
     credits: 1000,
     duration_days: 30
   },
   creator: {
     name: 'Creator Plan',
     description: 'Priority processing and more credits',
-    price: 50.00,
+    price: 1.50,
     credits: 3000,
     duration_days: 30
   },
   pro: {
     name: 'Pro Plan',
     description: 'Full access with API and premium support',
-    price: 95.00,
+    price: 2.00,
     credits: 6500,
     duration_days: 30
   },
   supernova: {
     name: 'Supernova Membership',
     description: 'Access to Supernova community channels and resources',
-    price: 25.00,
+    price: 1.00,
     duration_days: 30
   },
   mentorship: {
     name: 'Mentorship Program',
     description: 'Full access including private mentorship channels and 1-on-1 guidance',
-    price: 100.00,
+    price: 2.00,
     duration_days: 30
   },
   // Credit packages (one-time purchases)
   credits_500: {
     name: '500 Credits',
     description: 'One-time credit top-up',
-    price: 12.00,
+    price: 1.00,
     credits: 500,
     is_credit_package: true
   },
   credits_1000: {
     name: '1,000 Credits',
     description: 'One-time credit top-up',
-    price: 22.00,
+    price: 1.50,
     credits: 1000,
     is_credit_package: true
   },
   credits_2500: {
     name: '2,500 Credits',
     description: 'One-time credit top-up',
-    price: 50.00,
+    price: 2.00,
     credits: 2500,
     is_credit_package: true
   }
