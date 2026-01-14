@@ -197,6 +197,7 @@ router.post('/generate', async (req, res) => {
     }
 
     // Return the generated images
+    // Note: Credits are handled by the frontend via Supabase RPC functions
     res.json({
       success: true,
       model: 'seedream-4.5',
