@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (paymentStatus === 'success') {
     setTimeout(() => showPaymentSuccess(tier), 500);
-  } else if (paymentStatus === 'failed') {
+  } else if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
     setTimeout(() => showPaymentFailure(), 500);
   }
 });

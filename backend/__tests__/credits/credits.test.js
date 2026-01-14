@@ -281,20 +281,20 @@ describe('GET /api/resources/credits/balance', () => {
 // ============================================
 // Credit Addition Tests (Payment Webhook)
 // ============================================
-describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
+describe('POST /api/payments/webhook/nowpayments (Credit Addition)', () => {
 
   beforeEach(() => {
     // Set environment variables
-    process.env.PLISIO_API_KEY = 'test-api-key';
-    process.env.PLISIO_SECRET_KEY = 'test-secret-key';
+    process.env.NOWPAYMENTS_API_KEY = 'test-api-key';
+    process.env.NOWPAYMENTS_IPN_SECRET = 'test-ipn-secret';
 
     paymentsRouter = require('../../payments');
     app.use('/api/payments', paymentsRouter);
   });
 
   afterEach(() => {
-    delete process.env.PLISIO_API_KEY;
-    delete process.env.PLISIO_SECRET_KEY;
+    delete process.env.NOWPAYMENTS_API_KEY;
+    delete process.env.NOWPAYMENTS_IPN_SECRET;
   });
 
   test('adds 500 credits for credits_500 package purchase', async () => {
@@ -356,12 +356,13 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
     });
 
     const response = await request(app)
-      .post('/api/payments/webhook/plisio')
+      .post('/api/payments/webhook/nowpayments')
       .send({
-        txn_id: 'txn-123',
-        status: 'completed',
-        order_number: 'credits_500-user-123-1234567890',
-        currency: 'BTC',
+        invoice_id: 'inv-123',
+        payment_id: 'pay-123',
+        payment_status: 'finished',
+        order_id: 'credits_500-user-123-1234567890',
+        pay_currency: 'btc',
       });
 
     expect(response.status).toBe(200);
@@ -410,11 +411,12 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
     });
 
     await request(app)
-      .post('/api/payments/webhook/plisio')
+      .post('/api/payments/webhook/nowpayments')
       .send({
-        txn_id: 'txn-456',
-        status: 'completed',
-        order_number: 'credits_1000-user-123-1234567890',
+        invoice_id: 'inv-456',
+        payment_id: 'pay-456',
+        payment_status: 'finished',
+        order_id: 'credits_1000-user-123-1234567890',
       });
 
     // 0 existing + 1000 new = 1000
@@ -462,11 +464,12 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
     });
 
     await request(app)
-      .post('/api/payments/webhook/plisio')
+      .post('/api/payments/webhook/nowpayments')
       .send({
-        txn_id: 'txn-789',
-        status: 'completed',
-        order_number: 'credits_2500-user-123-1234567890',
+        invoice_id: 'inv-789',
+        payment_id: 'pay-789',
+        payment_status: 'finished',
+        order_id: 'credits_2500-user-123-1234567890',
       });
 
     // 1000 existing + 2500 new = 3500
@@ -543,11 +546,12 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
     });
 
     await request(app)
-      .post('/api/payments/webhook/plisio')
+      .post('/api/payments/webhook/nowpayments')
       .send({
-        txn_id: 'txn-starter',
-        status: 'completed',
-        order_number: 'starter-user-123-1234567890',
+        invoice_id: 'inv-starter',
+        payment_id: 'pay-starter',
+        payment_status: 'finished',
+        order_id: 'starter-user-123-1234567890',
       });
 
     // Starter plan gives 1000 credits
@@ -597,11 +601,12 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
     });
 
     await request(app)
-      .post('/api/payments/webhook/plisio')
+      .post('/api/payments/webhook/nowpayments')
       .send({
-        txn_id: 'txn-null',
-        status: 'completed',
-        order_number: 'credits_500-user-null-1234567890',
+        invoice_id: 'inv-null',
+        payment_id: 'pay-null',
+        payment_status: 'finished',
+        order_id: 'credits_500-user-null-1234567890',
       });
 
     // null + 500 should be 500 (not NaN)
@@ -641,19 +646,20 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
     });
 
     await request(app)
-      .post('/api/payments/webhook/plisio')
+      .post('/api/payments/webhook/nowpayments')
       .send({
-        txn_id: 'txn-pending',
-        status: 'pending',
-        order_number: 'credits_500-user-123-1234567890',
+        invoice_id: 'inv-pending',
+        payment_id: 'pay-pending',
+        payment_status: 'waiting',
+        order_id: 'credits_500-user-123-1234567890',
       });
 
     // Profile update for credits should NOT be called for pending
     expect(profileUpdateCalled).toBe(false);
   });
 
-  test('does not add credits for failed/expired/cancelled status', async () => {
-    const failStatuses = ['expired', 'cancelled', 'error'];
+  test('does not add credits for failed/expired status', async () => {
+    const failStatuses = ['expired', 'failed'];
 
     for (const status of failStatuses) {
       let profileCreditUpdateCalled = false;
@@ -698,11 +704,12 @@ describe('POST /api/payments/webhook/plisio (Credit Addition)', () => {
       });
 
       await request(app)
-        .post('/api/payments/webhook/plisio')
+        .post('/api/payments/webhook/nowpayments')
         .send({
-          txn_id: `txn-${status}`,
-          status: status,
-          order_number: 'credits_500-user-123-1234567890',
+          invoice_id: `inv-${status}`,
+          payment_id: `pay-${status}`,
+          payment_status: status,
+          order_id: 'credits_500-user-123-1234567890',
         });
 
       expect(profileCreditUpdateCalled).toBe(false);

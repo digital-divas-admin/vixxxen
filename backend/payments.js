@@ -12,8 +12,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const PLISIO_API_KEY = process.env.PLISIO_API_KEY;
-const PLISIO_SECRET_KEY = process.env.PLISIO_SECRET_KEY;
+const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY;
+const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET;
+const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
 
 // Pricing configuration
 const TIERS = {
@@ -74,15 +75,53 @@ const TIERS = {
   }
 };
 
-// Create a Plisio invoice
+// Verify NOWPayments IPN signature using HMAC-SHA512
+function verifyIpnSignature(payload, signature) {
+  if (!NOWPAYMENTS_IPN_SECRET) {
+    console.warn('NOWPAYMENTS_IPN_SECRET not set, skipping signature verification');
+    return true;
+  }
+
+  // Sort payload keys alphabetically and create JSON string
+  const sortedPayload = Object.keys(payload)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = payload[key];
+      return acc;
+    }, {});
+
+  const payloadString = JSON.stringify(sortedPayload);
+  const hmac = crypto.createHmac('sha512', NOWPAYMENTS_IPN_SECRET);
+  hmac.update(payloadString);
+  const expectedSignature = hmac.digest('hex');
+
+  return signature === expectedSignature;
+}
+
+// Map NOWPayments status to our internal status
+function mapNowPaymentsStatus(nowPaymentsStatus) {
+  const statusMap = {
+    'waiting': 'pending',
+    'confirming': 'pending',
+    'confirmed': 'pending',
+    'sending': 'pending',
+    'partially_paid': 'partial',
+    'finished': 'completed',
+    'failed': 'failed',
+    'refunded': 'refunded',
+    'expired': 'expired'
+  };
+  return statusMap[nowPaymentsStatus] || 'pending';
+}
+
+// Create a NOWPayments invoice
 router.post('/create-charge', requireAuth, async (req, res) => {
   try {
     const { tier } = req.body;
-    // Use verified user ID from auth middleware
     const userId = req.userId;
 
-    if (!PLISIO_API_KEY) {
-      console.error('PLISIO_API_KEY is not set');
+    if (!NOWPAYMENTS_API_KEY) {
+      console.error('NOWPAYMENTS_API_KEY is not set');
       return res.status(500).json({ error: 'Payment provider not configured' });
     }
 
@@ -93,41 +132,50 @@ router.post('/create-charge', requireAuth, async (req, res) => {
 
     const tierConfig = TIERS[tier];
 
-    // Generate unique order number
-    const orderNumber = `${tier}-${userId.substring(0, 8)}-${Date.now()}`;
+    // Generate unique order ID
+    const orderId = `${tier}-${userId.substring(0, 8)}-${Date.now()}`;
 
-    // Build Plisio API URL with query parameters
-    // IMPORTANT: json=true is required for Node.js webhooks to receive JSON data
-    const params = new URLSearchParams({
-      source_currency: 'USD',
-      source_amount: tierConfig.price.toString(),
-      order_number: orderNumber,
-      email: '', // Optional - user can enter on Plisio page
-      order_name: tierConfig.name,
-      callback_url: `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/plisio?json=true`,
-      success_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=success&tier=${tier}`,
-      fail_callback_url: `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}?payment=failed`,
-      api_key: PLISIO_API_KEY
+    // Build success and cancel URLs
+    const successUrl = `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}/billing.html?payment=success&tier=${tier}`;
+    const cancelUrl = `${process.env.FRONTEND_URL || 'https://vixxxen.ai'}/billing.html?payment=cancelled`;
+    const ipnCallbackUrl = `${process.env.BACKEND_URL || 'https://vixxxen.ai'}/api/payments/webhook/nowpayments`;
+
+    // Create invoice via NOWPayments API
+    const invoicePayload = {
+      price_amount: tierConfig.price,
+      price_currency: 'usd',
+      order_id: orderId,
+      order_description: tierConfig.name,
+      ipn_callback_url: ipnCallbackUrl,
+      success_url: successUrl,
+      cancel_url: cancelUrl
+    };
+
+    console.log('Creating NOWPayments invoice:', invoicePayload);
+
+    const response = await fetch(`${NOWPAYMENTS_API_URL}/invoice`, {
+      method: 'POST',
+      headers: {
+        'x-api-key': NOWPAYMENTS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(invoicePayload)
     });
 
-    // Note: Removed 'currency' parameter - Plisio will show all available cryptocurrencies for user to choose
-
-    const response = await fetch(`https://plisio.net/api/v1/invoices/new?${params.toString()}`);
     const data = await response.json();
 
-    console.log('Plisio API response:', JSON.stringify(data, null, 2));
+    console.log('NOWPayments API response:', JSON.stringify(data, null, 2));
 
-    if (data.status !== 'success') {
-      console.error('Plisio error response:', JSON.stringify(data, null, 2));
-      const errorMessage = data.data?.message || data.message || 'Failed to create invoice';
+    if (!response.ok) {
+      console.error('NOWPayments error response:', JSON.stringify(data, null, 2));
       return res.status(500).json({
-        error: errorMessage,
+        error: data.message || 'Failed to create invoice',
         details: data
       });
     }
 
-    if (!data.data || !data.data.txn_id || !data.data.invoice_url) {
-      console.error('Invalid Plisio response structure:', JSON.stringify(data, null, 2));
+    if (!data.id || !data.invoice_url) {
+      console.error('Invalid NOWPayments response structure:', JSON.stringify(data, null, 2));
       return res.status(500).json({
         error: 'Invalid response from payment provider',
         details: 'Missing required fields in response'
@@ -139,15 +187,15 @@ router.post('/create-charge', requireAuth, async (req, res) => {
       .from('payments')
       .insert({
         user_id: userId,
-        provider: 'plisio',
-        provider_charge_id: data.data.txn_id,
+        provider: 'nowpayments',
+        provider_charge_id: data.id.toString(),
         amount: tierConfig.price,
         currency: 'USD',
         status: 'pending',
         tier: tier,
         metadata: {
-          order_number: orderNumber,
-          invoice_url: data.data.invoice_url
+          order_id: orderId,
+          invoice_url: data.invoice_url
         }
       });
 
@@ -157,9 +205,9 @@ router.post('/create-charge', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      invoice_id: data.data.txn_id,
-      invoice_url: data.data.invoice_url,
-      order_number: orderNumber
+      invoice_id: data.id,
+      invoice_url: data.invoice_url,
+      order_id: orderId
     });
 
   } catch (error) {
@@ -173,58 +221,54 @@ router.post('/create-charge', requireAuth, async (req, res) => {
   }
 });
 
-// Plisio webhook handler
-router.post('/webhook/plisio', async (req, res) => {
+// NOWPayments IPN webhook handler
+router.post('/webhook/nowpayments', async (req, res) => {
   try {
     const data = req.body;
-    console.log('Plisio webhook received:', data);
+    const signature = req.headers['x-nowpayments-sig'];
 
-    // Verify webhook signature if secret key is set
-    if (PLISIO_SECRET_KEY && data.verify_hash) {
-      // Plisio verification: stringify ordered object without verify_hash
-      const ordered = { ...data };
-      delete ordered.verify_hash;
+    console.log('NOWPayments webhook received:', JSON.stringify(data, null, 2));
 
-      // Stringify the ordered object
-      const string = JSON.stringify(ordered);
-
-      // Create HMAC hash
-      const hmac = crypto.createHmac('sha1', PLISIO_SECRET_KEY);
-      hmac.update(string);
-      const expectedHash = hmac.digest('hex');
-
-      if (data.verify_hash !== expectedHash) {
-        console.error('Invalid webhook signature');
-        console.error('Expected:', expectedHash);
-        console.error('Received:', data.verify_hash);
-        // Don't reject - log for debugging but continue processing
+    // Verify IPN signature
+    if (signature) {
+      const isValid = verifyIpnSignature(data, signature);
+      if (!isValid) {
+        console.error('Invalid IPN signature');
+        console.error('Received signature:', signature);
+        // Log but continue processing for debugging purposes
       } else {
-        console.log('Webhook signature verified successfully');
+        console.log('IPN signature verified successfully');
       }
+    } else {
+      console.warn('No IPN signature provided in webhook');
     }
 
-    const txnId = data.txn_id;
-    const status = data.status;
-    const orderNumber = data.order_number;
+    const paymentId = data.payment_id;
+    const invoiceId = data.invoice_id;
+    const paymentStatus = data.payment_status;
+    const orderId = data.order_id;
 
-    // Parse user_id and tier from order_number (format: tier-userId-timestamp)
-    const orderParts = orderNumber ? orderNumber.split('-') : [];
+    // Parse tier from order_id (format: tier-userId-timestamp)
+    const orderParts = orderId ? orderId.split('-') : [];
     const tier = orderParts[0];
 
-    // Get the payment record to find user_id
+    // Get the payment record using invoice_id (which we store as provider_charge_id)
     const { data: payment } = await supabase
       .from('payments')
       .select('user_id, tier')
-      .eq('provider_charge_id', txnId)
+      .eq('provider_charge_id', invoiceId?.toString())
       .single();
 
     const userId = payment?.user_id;
     const paymentTier = payment?.tier || tier;
 
-    console.log(`Plisio webhook: status=${status}, txn_id=${txnId}, user=${userId}, tier=${paymentTier}`);
+    console.log(`NOWPayments webhook: status=${paymentStatus}, invoice_id=${invoiceId}, payment_id=${paymentId}, user=${userId}, tier=${paymentTier}`);
 
-    // Plisio statuses: new, pending, completed, expired, error, mismatch, cancelled
-    switch (status) {
+    // Map NOWPayments status to our internal status
+    const internalStatus = mapNowPaymentsStatus(paymentStatus);
+
+    // Handle different payment statuses
+    switch (internalStatus) {
       case 'completed':
         // Payment confirmed - activate membership or add credits
         console.log(`Payment completed for user ${userId}, tier: ${paymentTier}`);
@@ -234,10 +278,17 @@ router.post('/webhook/plisio', async (req, res) => {
           .from('payments')
           .update({
             status: 'completed',
-            crypto_currency: data.currency || 'unknown',
+            crypto_currency: data.pay_currency || 'unknown',
+            metadata: {
+              payment_id: paymentId,
+              pay_amount: data.pay_amount,
+              actually_paid: data.actually_paid,
+              outcome_amount: data.outcome_amount,
+              outcome_currency: data.outcome_currency
+            },
             updated_at: new Date().toISOString()
           })
-          .eq('provider_charge_id', txnId);
+          .eq('provider_charge_id', invoiceId?.toString());
 
         const tierConfig = TIERS[paymentTier];
 
@@ -278,8 +329,8 @@ router.post('/webhook/plisio', async (req, res) => {
                   userProfile.display_name || userProfile.full_name,
                   tierConfig.price,
                   'USD',
-                  paymentTier, // credit package name
-                  txnId
+                  paymentTier,
+                  invoiceId
                 );
               }
             } catch (emailError) {
@@ -396,7 +447,7 @@ router.post('/webhook/plisio', async (req, res) => {
                   tierConfig.price,
                   'USD',
                   paymentTier,
-                  txnId
+                  invoiceId
                 );
               }
             } catch (emailError) {
@@ -413,48 +464,50 @@ router.post('/webhook/plisio', async (req, res) => {
           .from('payments')
           .update({
             status: 'pending',
+            crypto_currency: data.pay_currency || null,
             updated_at: new Date().toISOString()
           })
-          .eq('provider_charge_id', txnId);
+          .eq('provider_charge_id', invoiceId?.toString());
         console.log(`Payment pending for user ${userId}`);
         break;
 
-      case 'expired':
-      case 'cancelled':
-      case 'error':
-        // Payment failed
-        await supabase
-          .from('payments')
-          .update({
-            status: 'failed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('provider_charge_id', txnId);
-        console.log(`Payment ${status} for user ${userId}`);
-        break;
-
-      case 'mismatch':
-        // Underpayment - mark as partial
+      case 'partial':
+        // Partial payment received
         await supabase
           .from('payments')
           .update({
             status: 'partial',
             metadata: {
-              actual_amount: data.amount,
-              expected_amount: data.source_amount
+              payment_id: paymentId,
+              pay_amount: data.pay_amount,
+              actually_paid: data.actually_paid
             },
             updated_at: new Date().toISOString()
           })
-          .eq('provider_charge_id', txnId);
-        console.log(`Payment mismatch for user ${userId}`);
+          .eq('provider_charge_id', invoiceId?.toString());
+        console.log(`Partial payment received for user ${userId}`);
+        break;
+
+      case 'failed':
+      case 'expired':
+      case 'refunded':
+        // Payment failed, expired, or refunded
+        await supabase
+          .from('payments')
+          .update({
+            status: internalStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('provider_charge_id', invoiceId?.toString());
+        console.log(`Payment ${internalStatus} for user ${userId}`);
         break;
 
       default:
-        console.log(`Unhandled Plisio status: ${status}`);
+        console.log(`Unhandled NOWPayments status: ${paymentStatus}`);
     }
 
-    // Plisio expects JSON response
-    res.json({ status: 'ok' });
+    // NOWPayments expects 200 OK response
+    res.status(200).json({ status: 'ok' });
 
   } catch (error) {
     console.error('Webhook error:', error);
@@ -462,10 +515,76 @@ router.post('/webhook/plisio', async (req, res) => {
   }
 });
 
+// Get payment status from NOWPayments
+router.get('/status/:paymentId', requireAuth, async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    if (!NOWPAYMENTS_API_KEY) {
+      return res.status(500).json({ error: 'Payment provider not configured' });
+    }
+
+    const response = await fetch(`${NOWPAYMENTS_API_URL}/payment/${paymentId}`, {
+      headers: {
+        'x-api-key': NOWPAYMENTS_API_KEY
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data.message || 'Failed to get payment status'
+      });
+    }
+
+    res.json({
+      payment_id: data.payment_id,
+      status: mapNowPaymentsStatus(data.payment_status),
+      original_status: data.payment_status,
+      pay_currency: data.pay_currency,
+      pay_amount: data.pay_amount,
+      actually_paid: data.actually_paid
+    });
+
+  } catch (error) {
+    console.error('Get payment status error:', error);
+    res.status(500).json({ error: 'Failed to get payment status' });
+  }
+});
+
+// Get available cryptocurrencies from NOWPayments
+router.get('/currencies', async (req, res) => {
+  try {
+    if (!NOWPAYMENTS_API_KEY) {
+      return res.status(500).json({ error: 'Payment provider not configured' });
+    }
+
+    const response = await fetch(`${NOWPAYMENTS_API_URL}/currencies`, {
+      headers: {
+        'x-api-key': NOWPAYMENTS_API_KEY
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data.message || 'Failed to get currencies'
+      });
+    }
+
+    res.json({ currencies: data.currencies });
+
+  } catch (error) {
+    console.error('Get currencies error:', error);
+    res.status(500).json({ error: 'Failed to get currencies' });
+  }
+});
+
 // Get user's subscription status
 router.get('/subscription', requireAuth, async (req, res) => {
   try {
-    // Use verified user ID from auth middleware
     const userId = req.userId;
 
     const { data: subscription, error } = await supabase
@@ -505,7 +624,6 @@ router.get('/subscription', requireAuth, async (req, res) => {
 // Get user's payment history
 router.get('/history', requireAuth, async (req, res) => {
   try {
-    // Use verified user ID from auth middleware
     const userId = req.userId;
 
     const { data: payments, error } = await supabase
@@ -582,7 +700,7 @@ router.post('/membership/acknowledge-rules', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'Failed to save acknowledgment' });
     }
 
-    console.log(`✅ User ${userId} acknowledged community rules`);
+    console.log(`User ${userId} acknowledged community rules`);
     res.json({ success: true, acknowledged_at: new Date().toISOString() });
 
   } catch (error) {
