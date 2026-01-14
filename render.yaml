@@ -27,9 +27,9 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: PLISIO_API_KEY
+      - key: NOWPAYMENTS_API_KEY
         sync: false
-      - key: PLISIO_SECRET_KEY
+      - key: NOWPAYMENTS_IPN_SECRET
         sync: false
       - key: BACKEND_URL
         sync: false
