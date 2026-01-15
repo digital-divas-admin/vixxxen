@@ -889,24 +889,77 @@ function openImagePickerForField(button, fieldName) {
   const input = container.querySelector(`[data-field="${fieldName}"]`);
   if (!input) return;
 
-  openImagePicker((url) => {
+  const itemId = container.dataset.id;
+  const isCharacter = container.classList.contains('admin-character-item');
+
+  openImagePicker(async (url) => {
     input.value = url;
     // Update preview if exists
     const preview = container.querySelector('.admin-character-preview img, .admin-showcase-image-wrapper img');
     if (preview) preview.src = url;
+
+    // Auto-save the item
+    if (itemId && itemId !== 'new') {
+      try {
+        if (isCharacter) {
+          // Save character
+          let metrics = container.querySelector('[data-field="metrics"]')?.value || '[]';
+          try { metrics = JSON.parse(metrics); } catch { metrics = []; }
+
+          const data = {
+            name: container.querySelector('[data-field="name"]')?.value,
+            handle: container.querySelector('[data-field="handle"]')?.value,
+            image_url: url,
+            metrics: metrics,
+            cta_text: container.querySelector('[data-field="cta_text"]')?.value,
+            cta_link: container.querySelector('[data-field="cta_link"]')?.value
+          };
+
+          await authFetch(`${API_BASE_URL}/api/landing/admin/characters/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+        showAdminToast('Image updated!');
+      } catch (error) {
+        console.error('Failed to save image:', error);
+        showAdminToast('Failed to save image', 'error');
+      }
+    }
   });
 }
 
-function openImagePickerForShowcase(itemId) {
+async function openImagePickerForShowcase(itemId) {
   const container = document.querySelector(`.admin-showcase-item[data-id="${itemId}"]`);
   if (!container) return;
 
   const input = container.querySelector('[data-field="image_url"]');
   const preview = container.querySelector('.admin-showcase-image-wrapper img');
 
-  openImagePicker((url) => {
+  openImagePicker(async (url) => {
     if (input) input.value = url;
     if (preview) preview.src = url;
+
+    // Auto-save the showcase item
+    try {
+      const data = {
+        image_url: url,
+        caption: container.querySelector('[data-field="caption"]')?.value,
+        size: container.querySelector('[data-field="size"]')?.value
+      };
+
+      await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      showAdminToast('Image updated!');
+    } catch (error) {
+      console.error('Failed to save showcase image:', error);
+      showAdminToast('Failed to save image', 'error');
+    }
   });
 }
 
