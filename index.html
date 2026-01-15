@@ -11149,6 +11149,12 @@
         }
 
         console.log('📁 Image metadata saved to database');
+
+        // Track save for value moment analysis
+        if (window.VxAnalytics && window.VxAnalytics.engagement) {
+          window.VxAnalytics.engagement.saved('image', { model: metadata.model });
+        }
+
         return publicUrl;
 
       } catch (err) {
@@ -11220,6 +11226,12 @@
         }
 
         console.log('🎬 Video metadata saved to database');
+
+        // Track save for value moment analysis
+        if (window.VxAnalytics && window.VxAnalytics.engagement) {
+          window.VxAnalytics.engagement.saved('video', { model: metadata.model });
+        }
+
         return publicUrl;
 
       } catch (err) {
@@ -13018,6 +13030,11 @@
 
         console.log(`Generating video with ${modelName}:`, { endpoint, payload: { ...payload, image: videoStartImage ? '[data...]' : null, startImage: videoStartImage ? '[data...]' : null } });
 
+        // Track generation started
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.started(modelName, { content_type: 'video' });
+        }
+
         // Add timeout to fetch request (5 minutes for video generation)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
@@ -13076,6 +13093,11 @@
         // Log generation for 2257 compliance
         logGeneration('video', modelName, prompt, isNsfwAtStart, 1, data.videoUrl);
 
+        // Track generation completed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.completed(modelName, { content_type: 'video' });
+        }
+
       } catch (error) {
         console.error('Video generation failed:', error);
 
@@ -13093,6 +13115,11 @@
         // Mark placeholder as failed
         updateVideoPlaceholderWithError(placeholder, errorMessage);
         showVideoError(errorMessage);
+
+        // Track generation failed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.failed(capturedVideoModel, errorMessage, { content_type: 'video' });
+        }
       } finally {
         isGeneratingVideo = false;
         btn.classList.remove('generating');
@@ -13200,6 +13227,10 @@
           link.download = `vixxxen-video-${timestamp}.mp4`;
           link.click();
           URL.revokeObjectURL(link.href);
+          // Track download for value moment analysis
+          if (window.VxAnalytics && window.VxAnalytics.engagement) {
+            window.VxAnalytics.engagement.downloaded('video');
+          }
         })
         .catch(err => {
           console.error('Download failed:', err);
@@ -15077,6 +15108,11 @@
 
         console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId });
 
+        // Track generation started
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.started('qwen', { content_type: 'image', num_outputs: numOutputs });
+        }
+
         // Reverse placeholders array so first generation fills the top placeholder
         const qwenPlaceholders = [...placeholders].reverse();
 
@@ -15232,9 +15268,19 @@
         logGeneration('image', 'qwen', qwenPrompt, isNsfwAtStart, numOutputs);
         console.log(`✅ [Batch ${batchId}] Qwen generation complete`);
 
+        // Track generation completed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.completed('qwen', { content_type: 'image', num_outputs: numOutputs });
+        }
+
       } catch (error) {
         console.error(`❌ [Batch ${batchId}] Qwen generation error:`, error);
         showError(error.message || 'Generation failed');
+
+        // Track generation failed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.failed('qwen', error.message || 'Generation failed', { content_type: 'image' });
+        }
 
         // Refund credits on failure
         await refundCredits(totalCost, `Qwen generation failed: ${error.message || 'Unknown error'}`);
@@ -15404,6 +15450,11 @@
 
         console.log('Generating with:', { endpoint, payload });
 
+        // Track generation started
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.started(capturedModel, { content_type: 'image', num_outputs: numOutputs });
+        }
+
         // Add timeout to fetch request (2 minutes for image generation)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
@@ -15426,6 +15477,11 @@
 
         // Log generation for 2257 compliance
         logGeneration('image', capturedModel, prompt, isNsfwAtStart, data.images?.length || 1);
+
+        // Track generation completed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.completed(capturedModel, { content_type: 'image', num_images: data.images?.length || 1 });
+        }
 
         // Replace placeholders with actual images
         let imageIndex = 0;
@@ -15490,6 +15546,11 @@
           updatePlaceholderWithError(placeholder, errorMessage);
         });
         showError(errorMessage);
+
+        // Track generation failed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.failed(capturedModel, errorMessage, { content_type: 'image' });
+        }
       } finally {
         // Decrement batch counter and update button state
         activeGenerationBatches--;
@@ -15658,6 +15719,10 @@
           link.download = `vixxxen-${timestamp}.png`;
           link.click();
           URL.revokeObjectURL(link.href);
+          // Track download for value moment analysis
+          if (window.VxAnalytics && window.VxAnalytics.engagement) {
+            window.VxAnalytics.engagement.downloaded('image');
+          }
         })
         .catch(err => {
           console.error('Download failed:', err);

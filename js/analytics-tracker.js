@@ -595,25 +595,62 @@
   const generation = {
     started: (model, data = {}) => {
       track('generation_started', 'generation', { model, ...data });
+      // Also track first attempt milestone
+      generation.firstAttempted(model, data);
     },
     completed: (model, data = {}) => {
       track('generation_completed', 'generation', { model, ...data });
+      // Also track first success milestone
+      generation.firstSuccess(model, data);
     },
     failed: (model, error, data = {}) => {
       track('generation_failed', 'generation', { model, error, ...data });
+      // Track first failure if this is user's first generation attempt
+      generation.firstFailed(model, error, data);
     },
     // Track first generation milestone
     firstAttempted: (model, data = {}) => {
       // Only track if this is actually the first
       if (localStorage.getItem('vx_first_gen_tracked')) return;
       localStorage.setItem('vx_first_gen_tracked', 'true');
+      localStorage.setItem('vx_first_gen_timestamp', Date.now().toString());
       track('first_generation_attempted', 'generation', { model, ...data }, true);
+      // Update funnel
+      updateFunnel('signup_to_value', 'first_generation_attempted', {
+        stepCompleted: 'first_generation_attempted',
+        funnelData: { model }
+      });
     },
     firstSuccess: (model, data = {}) => {
       // Only track if this is actually the first success
       if (localStorage.getItem('vx_first_gen_success_tracked')) return;
       localStorage.setItem('vx_first_gen_success_tracked', 'true');
-      track('first_generation_success', 'generation', { model, ...data }, true);
+
+      // Calculate time from first attempt to first success
+      const firstAttemptTime = localStorage.getItem('vx_first_gen_timestamp');
+      let timeToSuccess = null;
+      if (firstAttemptTime) {
+        timeToSuccess = Math.round((Date.now() - parseInt(firstAttemptTime)) / 1000);
+      }
+
+      track('first_generation_success', 'generation', {
+        model,
+        time_to_success_seconds: timeToSuccess,
+        ...data
+      }, true);
+
+      // Update funnel
+      updateFunnel('signup_to_value', 'first_generation_success', {
+        stepCompleted: 'first_generation_success',
+        funnelData: { model, time_to_success_seconds: timeToSuccess }
+      });
+    },
+    firstFailed: (model, error, data = {}) => {
+      // Only track if this is the first failure AND user hasn't had a success yet
+      if (localStorage.getItem('vx_first_gen_failure_tracked')) return;
+      if (localStorage.getItem('vx_first_gen_success_tracked')) return; // Already succeeded, don't track failure
+      localStorage.setItem('vx_first_gen_failure_tracked', 'true');
+      track('first_generation_failure', 'generation', { model, error, ...data }, true);
     },
     // Check if user has generated before
     hasGeneratedBefore: () => {
@@ -621,6 +658,12 @@
     },
     hasSuccessfulGeneration: () => {
       return !!localStorage.getItem('vx_first_gen_success_tracked');
+    },
+    // Get time since first generation attempt (for funnel analysis)
+    getTimeSinceFirstAttempt: () => {
+      const timestamp = localStorage.getItem('vx_first_gen_timestamp');
+      if (!timestamp) return null;
+      return Math.round((Date.now() - parseInt(timestamp)) / 1000);
     }
   };
 
@@ -754,6 +797,84 @@
     }
   };
 
+  /**
+   * Track engagement events (value moments, feature discovery, etc.)
+   */
+  const engagement = {
+    // Track when user downloads/saves their first image (key value moment)
+    valueMomentReached: (action, contentType, data = {}) => {
+      // Only track first value moment
+      if (localStorage.getItem('vx_value_moment_tracked')) return;
+      localStorage.setItem('vx_value_moment_tracked', 'true');
+
+      // Calculate time since first generation
+      const firstGenTimestamp = localStorage.getItem('vx_first_gen_timestamp');
+      let timeSinceFirstGen = null;
+      if (firstGenTimestamp) {
+        timeSinceFirstGen = Math.round((Date.now() - parseInt(firstGenTimestamp)) / 1000);
+      }
+
+      track('value_moment_reached', 'engagement', {
+        action, // 'download', 'save', 'share'
+        content_type: contentType, // 'image', 'video'
+        time_since_first_gen_seconds: timeSinceFirstGen,
+        ...data
+      }, true);
+
+      // Update funnel
+      updateFunnel('signup_to_value', 'value_moment_reached', {
+        stepCompleted: 'value_moment_reached',
+        funnelData: { action, content_type: contentType, time_since_first_gen_seconds: timeSinceFirstGen }
+      });
+    },
+    // Check if value moment has been reached
+    hasReachedValueMoment: () => {
+      return !!localStorage.getItem('vx_value_moment_tracked');
+    },
+    // Track feature discovery (first use of a feature)
+    featureDiscovered: (featureName, data = {}) => {
+      const key = `vx_feature_${featureName}_discovered`;
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, 'true');
+      track('feature_discovered', 'engagement', { feature: featureName, ...data });
+    },
+    // Track content download (all downloads, not just first)
+    downloaded: (contentType, data = {}) => {
+      track('content_downloaded', 'engagement', { content_type: contentType, ...data });
+      // Also track value moment if this is the first
+      engagement.valueMomentReached('download', contentType, data);
+    },
+    // Track content saved to cloud storage
+    saved: (contentType, data = {}) => {
+      track('content_saved', 'engagement', { content_type: contentType, ...data });
+      // Also track value moment if this is the first
+      engagement.valueMomentReached('save', contentType, data);
+    },
+    // Track content shared
+    shared: (contentType, platform, data = {}) => {
+      track('content_shared', 'engagement', { content_type: contentType, platform, ...data });
+      // Also track value moment if this is the first
+      engagement.valueMomentReached('share', contentType, data);
+    },
+    // Track return visit (user came back)
+    returnVisit: (daysSinceLast, data = {}) => {
+      track('return_visit', 'engagement', { days_since_last: daysSinceLast, ...data });
+      // Update funnel
+      updateFunnel('signup_to_value', 'return_visit', {
+        stepCompleted: 'return_visit',
+        funnelData: { days_since_last: daysSinceLast }
+      });
+    },
+    // Track scroll depth on key pages
+    scrollDepth: (page, percentage, data = {}) => {
+      track('scroll_depth', 'engagement', { page, percentage, ...data });
+    },
+    // Track time spent on a section/page
+    timeOnSection: (section, durationSeconds, data = {}) => {
+      track('time_on_section', 'engagement', { section, duration_seconds: durationSeconds, ...data });
+    }
+  };
+
   // ===========================================
   // LIFECYCLE
   // ===========================================
@@ -814,6 +935,7 @@
     chat,
     monetization,
     session,
+    engagement,
 
     // Utilities
     getSessionId,
