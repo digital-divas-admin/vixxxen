@@ -34,6 +34,7 @@ const onboardingRouter = require('./onboarding');
 const customCharactersRouter = require('./custom-characters');
 const landingRouter = require('./landing');
 const trialRouter = require('./trial');
+const analyticsEventsRouter = require('./analytics-events');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
@@ -246,6 +247,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/onboarding', onboardingRouter);
 app.use('/api/custom-characters', customCharactersRouter);
 app.use('/api/landing', landingRouter);
+app.use('/api/analytics', analyticsEventsRouter);
 
 // Trial endpoint - public (no auth) but rate limited for image generation
 // Uses generationLimiterPostOnly to rate limit POST /generate but allow GET /status freely

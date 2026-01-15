@@ -435,6 +435,11 @@ function showOnboardingWizard(startAtStep = null) {
     educationBillingCycle = 'monthly';
     selectedStarterCharacter = null;
     purchasedPremiumCharacter = null;
+
+    // Track onboarding started (only for fresh starts)
+    if (window.VxAnalytics) {
+      VxAnalytics.onboarding.started({ resumed: false });
+    }
   }
 
   // Render current step
@@ -603,6 +608,11 @@ function renderCurrentStep() {
 
   const step = onboardingConfig[currentStepIndex];
   renderProgressDots();
+
+  // Track step viewed
+  if (window.VxAnalytics) {
+    VxAnalytics.onboarding.stepViewed(step.step_key, { step_index: currentStepIndex });
+  }
 
   switch (step.step_key) {
     case 'create_account':
@@ -1441,6 +1451,17 @@ function switchToLogin() {
 
 // Go to next step
 function nextStep() {
+  // Track step completed before moving on
+  if (onboardingConfig && currentStepIndex >= 0 && currentStepIndex < onboardingConfig.length) {
+    const completedStep = onboardingConfig[currentStepIndex];
+    if (window.VxAnalytics) {
+      VxAnalytics.onboarding.stepCompleted(completedStep.step_key, {
+        step_index: currentStepIndex,
+        selections: wizardSelections
+      });
+    }
+  }
+
   if (onboardingConfig && currentStepIndex < onboardingConfig.length - 1) {
     currentStepIndex++;
     saveWizardState();
@@ -1462,6 +1483,12 @@ function prevStep() {
 // Skip current step
 async function skipStep() {
   const step = onboardingConfig[currentStepIndex];
+
+  // Track step skipped
+  if (window.VxAnalytics) {
+    VxAnalytics.onboarding.stepSkipped(step.step_key, { step_index: currentStepIndex });
+  }
+
   await saveStepProgress(step.step_key, true);
   nextStep();
 }
@@ -1561,6 +1588,16 @@ async function saveStepProgress(stepKey, skipped, selection = null) {
 // Complete the onboarding wizard
 async function completeOnboarding() {
   try {
+    // Track onboarding completed
+    if (window.VxAnalytics) {
+      VxAnalytics.onboarding.completed({
+        selections: wizardSelections,
+        selected_plan: wizardSelections.content_plan,
+        selected_tier: wizardSelections.education_tier,
+        selected_character: selectedStarterCharacter?.id || purchasedPremiumCharacter?.id
+      });
+    }
+
     // Mark onboarding as complete
     if (currentUser) {
       await authFetch(`${API_BASE_URL}/api/onboarding/progress`, {
