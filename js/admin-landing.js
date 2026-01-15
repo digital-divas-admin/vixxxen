@@ -1080,6 +1080,7 @@ async function saveShowcaseSection() {
   ]);
 
   const showcaseItems = document.querySelectorAll('#showcaseListAdmin .admin-showcase-item');
+  console.log('Saving showcase items:', showcaseItems.length);
 
   for (const item of showcaseItems) {
     const id = item.dataset.id;
@@ -1089,12 +1090,16 @@ async function saveShowcaseSection() {
       size: item.querySelector('[data-field="size"]')?.value
     };
 
+    console.log('Saving showcase item:', id, data);
+
     if (id && id !== 'new') {
-      await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${id}`, {
+      const response = await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+      const result = await response.json();
+      console.log('Save response:', response.status, result);
     }
   }
 
