@@ -80,6 +80,25 @@ function renderAdminLandingDashboard() {
     <div id="adminLandingTabContent">
       ${renderHeroSection()}
     </div>
+
+    <!-- Image Picker Modal (always available) -->
+    <div id="imagePickerModal" class="admin-modal" style="display: none;">
+      <div class="admin-modal-content">
+        <div class="admin-modal-header">
+          <h3>Select an Image</h3>
+          <button class="admin-btn-icon" onclick="closeImagePicker()">&times;</button>
+        </div>
+        <div class="admin-modal-body">
+          <div class="admin-image-upload-zone admin-image-upload-zone--small" id="modalUploadZone">
+            <input type="file" id="modalFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display: none;">
+            <div class="upload-zone-content" onclick="document.getElementById('modalFileInput').click()">
+              <p>Upload New Image</p>
+            </div>
+          </div>
+          <div id="modalImageGrid" class="admin-image-library-grid admin-image-library-grid--picker"></div>
+        </div>
+      </div>
+    </div>
   `;
 
   // Add tab styles if not present
@@ -572,25 +591,6 @@ function renderImageLibrarySection() {
         </div>
       </div>
     </div>
-
-    <!-- Image Picker Modal -->
-    <div id="imagePickerModal" class="admin-modal" style="display: none;">
-      <div class="admin-modal-content">
-        <div class="admin-modal-header">
-          <h3>Select an Image</h3>
-          <button class="admin-btn-icon" onclick="closeImagePicker()">&times;</button>
-        </div>
-        <div class="admin-modal-body">
-          <div class="admin-image-upload-zone admin-image-upload-zone--small" id="modalUploadZone">
-            <input type="file" id="modalFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display: none;">
-            <div class="upload-zone-content" onclick="document.getElementById('modalFileInput').click()">
-              <p>Upload New Image</p>
-            </div>
-          </div>
-          <div id="modalImageGrid" class="admin-image-library-grid admin-image-library-grid--picker"></div>
-        </div>
-      </div>
-    </div>
   `;
 }
 
@@ -898,17 +898,11 @@ function openImagePickerForField(button, fieldName) {
 }
 
 function openImagePickerForShowcase(itemId) {
-  console.log('openImagePickerForShowcase called with itemId:', itemId);
   const container = document.querySelector(`.admin-showcase-item[data-id="${itemId}"]`);
-  console.log('Container found:', container);
-  if (!container) {
-    console.log('No container found, returning early');
-    return;
-  }
+  if (!container) return;
 
   const input = container.querySelector('[data-field="image_url"]');
   const preview = container.querySelector('.admin-showcase-image-wrapper img');
-  console.log('Opening image picker...');
 
   openImagePicker((url) => {
     if (input) input.value = url;
