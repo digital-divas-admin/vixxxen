@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
+const { logger, maskUserId } = require('./services/logger');
 
 // Configure multer for memory storage
 const upload = multer({
@@ -87,7 +88,7 @@ router.get('/', optionalAuth, async (req, res) => {
     const { data: resources, error } = await query;
 
     if (error) {
-      console.error('Error fetching resources:', error);
+      logger.error('Error fetching resources', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch resources' });
     }
 
@@ -169,7 +170,7 @@ router.get('/', optionalAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Resources API error:', error);
+    logger.error('Resources API error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -178,16 +179,13 @@ router.get('/', optionalAuth, async (req, res) => {
 // IMPORTANT: This route must be defined BEFORE /:id to avoid being caught by the wildcard
 // Changed from /:userId to use authenticated user - prevents IDOR vulnerability
 router.get('/bootstrap', requireAuth, async (req, res) => {
-  console.log('📊 Bootstrap endpoint hit, userId:', req.userId);
   try {
     if (!supabase) {
-      console.log('📊 Bootstrap: Supabase not configured');
       return res.status(500).json({ error: 'Supabase not configured' });
     }
 
     // Use verified user ID from auth middleware (not URL param)
     const userId = req.userId;
-    console.log('📊 Bootstrap: Fetching data for user:', userId);
 
     // Run all queries in parallel for maximum speed
     const [profileResult, charactersResult, membershipResult, subscriptionResult] = await Promise.all([
@@ -218,11 +216,10 @@ router.get('/bootstrap', requireAuth, async (req, res) => {
         .eq('user_id', userId)
         .single()
     ]);
-    console.log('📊 Bootstrap: All queries completed');
 
     // Handle profile (required)
     if (profileResult.error) {
-      console.error('Bootstrap: Profile fetch error:', profileResult.error);
+      logger.error('Bootstrap: Profile fetch error', { error: profileResult.error.message, requestId: req.id });
       return res.status(404).json({ error: 'User profile not found' });
     }
 
@@ -256,7 +253,6 @@ router.get('/bootstrap', requireAuth, async (req, res) => {
       subscriptionActive = new Date(subscription.expires_at) > new Date();
     }
 
-    console.log('📊 Bootstrap: Sending response for user:', profile.email);
     res.json({
       profile: {
         id: profile.id,
@@ -280,7 +276,7 @@ router.get('/bootstrap', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Bootstrap error:', error);
+    logger.error('Bootstrap error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to load user data' });
   }
 });
@@ -348,7 +344,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     res.json({ resource });
 
   } catch (error) {
-    console.error('Resource fetch error:', error);
+    logger.error('Resource fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -388,7 +384,7 @@ router.post('/upload', requireAdmin, upload.single('thumbnail'), async (req, res
       });
 
     if (error) {
-      console.error('Upload error:', error);
+      logger.error('Upload error', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to upload image' });
     }
 
@@ -404,7 +400,7 @@ router.post('/upload', requireAdmin, upload.single('thumbnail'), async (req, res
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -473,14 +469,14 @@ router.post('/', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating resource:', error);
+      logger.error('Error creating resource', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create resource' });
     }
 
     res.status(201).json({ resource });
 
   } catch (error) {
-    console.error('Create resource error:', error);
+    logger.error('Create resource error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -532,7 +528,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating resource:', error);
+      logger.error('Error updating resource', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update resource' });
     }
 
@@ -543,7 +539,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     res.json({ resource });
 
   } catch (error) {
-    console.error('Update resource error:', error);
+    logger.error('Update resource error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -564,14 +560,14 @@ router.delete('/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting resource:', error);
+      logger.error('Error deleting resource', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete resource' });
     }
 
     res.json({ success: true, message: 'Resource deleted' });
 
   } catch (error) {
-    console.error('Delete resource error:', error);
+    logger.error('Delete resource error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -600,14 +596,14 @@ router.get('/purchases/list', requireAuth, async (req, res) => {
       .order('purchased_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching purchases:', error);
+      logger.error('Error fetching purchases', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch purchases' });
     }
 
     res.json({ purchases });
 
   } catch (error) {
-    console.error('Purchases fetch error:', error);
+    logger.error('Purchases fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -643,7 +639,7 @@ router.get('/credits/balance', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Credits fetch error:', error);
+    logger.error('Credits fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -748,7 +744,7 @@ router.post('/purchase', requireAuth, async (req, res) => {
         .single();
 
       if (purchaseError) {
-        console.error('Purchase error:', purchaseError);
+        logger.error('Purchase error', { error: purchaseError.message, requestId: req.id });
         return res.status(500).json({ error: 'Failed to complete purchase' });
       }
 
@@ -790,7 +786,7 @@ router.post('/purchase', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Purchase initiation error:', error);
+    logger.error('Purchase initiation error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -871,7 +867,7 @@ router.post('/purchase/confirm', requireAuth, async (req, res) => {
       .single();
 
     if (purchaseError) {
-      console.error('Purchase confirmation error:', purchaseError);
+      logger.error('Purchase confirmation error', { error: purchaseError.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to confirm purchase' });
     }
 
@@ -899,7 +895,7 @@ router.post('/purchase/confirm', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Purchase confirmation error:', error);
+    logger.error('Purchase confirmation error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -926,7 +922,7 @@ router.get('/earnings', requireAuth, async (req, res) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Earnings fetch error:', error);
+      logger.error('Earnings fetch error', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch earnings' });
     }
 
@@ -945,7 +941,7 @@ router.get('/earnings', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Earnings fetch error:', error);
+    logger.error('Earnings fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

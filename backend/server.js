@@ -5,6 +5,8 @@ const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { v4: uuidv4 } = require('uuid');
+const { logger, logError } = require('./services/logger');
 const seedreamRouter = require('./seedream');
 const nanoBananaRouter = require('./nanoBanana');
 const klingRouter = require('./kling');
@@ -54,6 +56,13 @@ initializeChat(io);
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64-encoded images
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Request ID middleware - adds unique ID to each request for log correlation
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || uuidv4();
+  res.setHeader('x-request-id', req.id);
+  next();
+});
 
 // Trust first proxy (required for rate limiting behind Render/reverse proxies)
 // This allows express-rate-limit to correctly identify client IPs from X-Forwarded-For header
@@ -160,7 +169,7 @@ app.get('/api/gpu-status', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('GPU status check error:', error);
+    logger.error('GPU status check error', { error: error.message, requestId: req.id });
     res.json({
       mode: 'unknown',
       dedicated: {
@@ -200,7 +209,7 @@ app.get('/api/inpaint/proxy-image', async (req, res) => {
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
-    console.log(`🖼️ Proxying image: ${url.substring(0, 100)}...`);
+    logger.debug('Proxying image', { url: url.substring(0, 100), requestId: req.id });
     const response = await fetch(url);
     if (!response.ok) {
       return res.status(response.status).json({ error: 'Failed to fetch image' });
@@ -212,7 +221,7 @@ app.get('/api/inpaint/proxy-image', async (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(Buffer.from(buffer));
   } catch (error) {
-    console.error('❌ Image proxy failed:', error.message);
+    logger.error('Image proxy failed', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Proxy failed', message: error.message });
   }
 });
@@ -259,7 +268,7 @@ app.get('*', (req, res, next) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  logError(err, { requestId: req.id, path: req.path, method: req.method });
   res.status(500).json({
     error: err.message || 'Internal server error',
     details: process.env.NODE_ENV === 'development' ? err.stack : undefined
@@ -273,46 +282,41 @@ app.use((req, res) => {
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`\n🚀 Vixxxen Backend running on http://localhost:${PORT}`);
-  console.log('\n📋 API Status:');
-  console.log(`   Seedream 4.5: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   Nano Banana Pro: ${process.env.GOOGLE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   Qwen Image Edit Plus: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   GPT-5 Vision (Caption): ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   Grok-4 Vision (Caption): ${process.env.XAI_API_KEY ? '✅ Configured' : '❌ Missing XAI_API_KEY'}`);
-  console.log(`   Kling 2.5 Turbo Pro: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   Wan 2.2: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   Veo 3.1 Fast: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   Bria Eraser: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   851 Labs BG Remover: ${process.env.REPLICATE_API_KEY ? '✅ Configured' : '❌ Missing API Key'}`);
-  console.log(`   ElevenLabs TTS: ${process.env.ELEVENLABS_API_KEY ? '✅ Configured' : '❌ Missing ELEVENLABS_API_KEY'}`);
-  console.log(`   Email (Resend): ${process.env.RESEND_API_KEY ? '✅ Configured' : '⚠️  Optional - Set RESEND_API_KEY'}`);
+  logger.info(`Vixxxen Backend started on port ${PORT}`);
 
-  // Debug: Show OpenRouter API Key status (for AI Chat)
-  if (process.env.OPENROUTER_API_KEY) {
-    console.log(`\n🔑 OpenRouter API Key loaded: ${process.env.OPENROUTER_API_KEY.substring(0, 10)}...`);
-  } else {
-    console.log('\n⚠️  WARNING: OPENROUTER_API_KEY not found in environment variables!');
-    console.log('   AI Chat will not work. Set OPENROUTER_API_KEY=your-key-here');
+  // Log API configuration status
+  const apiStatus = {
+    replicate: !!process.env.REPLICATE_API_KEY,
+    googleGenAI: !!process.env.GOOGLE_API_KEY,
+    xai: !!process.env.XAI_API_KEY,
+    openRouter: !!process.env.OPENROUTER_API_KEY,
+    elevenLabs: !!process.env.ELEVENLABS_API_KEY,
+    resend: !!process.env.RESEND_API_KEY
+  };
+
+  logger.info('API configuration status', apiStatus);
+
+  if (!process.env.OPENROUTER_API_KEY) {
+    logger.warn('OPENROUTER_API_KEY not configured - AI Chat will not work');
   }
 
-  console.log('\n💡 Available endpoints:');
-  console.log(`   GET  http://localhost:${PORT}/health`);
-  console.log(`   POST http://localhost:${PORT}/api/seedream/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/nano-banana/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/qwen-image-edit/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/deepseek/caption`);
-  console.log(`   POST http://localhost:${PORT}/api/kling/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/wan/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/veo/generate`);
-  console.log(`   POST http://localhost:${PORT}/api/eraser/erase`);
-  console.log('\n📝 Make sure to set REPLICATE_API_KEY, GOOGLE_API_KEY, and OPENROUTER_API_KEY in your .env file\n');
+  // Only show detailed startup info in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\nVixxxen Backend running on http://localhost:${PORT}`);
+    console.log('\nAPI Status:');
+    console.log(`   Seedream 4.5: ${apiStatus.replicate ? 'Configured' : 'Missing API Key'}`);
+    console.log(`   Nano Banana Pro: ${apiStatus.googleGenAI ? 'Configured' : 'Missing API Key'}`);
+    console.log(`   OpenRouter (Chat): ${apiStatus.openRouter ? 'Configured' : 'Missing API Key'}`);
+    console.log(`   ElevenLabs TTS: ${apiStatus.elevenLabs ? 'Configured' : 'Missing API Key'}`);
+    console.log(`   Email (Resend): ${apiStatus.resend ? 'Configured' : 'Optional'}`);
+    console.log('\nEndpoints: GET /health, POST /api/*/generate\n');
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  logger.info('SIGTERM signal received: closing HTTP server');
   server.close(() => {
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
   });
 });

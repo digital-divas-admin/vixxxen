@@ -3,6 +3,7 @@
  * Verifies Supabase JWT tokens and extracts user information
  */
 const { createClient } = require('@supabase/supabase-js');
+const { logger, maskUserId } = require('../services/logger');
 
 // Initialize Supabase client for auth verification
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -29,39 +30,33 @@ function extractToken(authHeader) {
  * Returns 401 if no valid token provided
  */
 async function requireAuth(req, res, next) {
-  console.log('🔐 requireAuth: Starting for', req.path);
   try {
     if (!supabase) {
-      console.error('Auth middleware: Supabase not configured');
+      logger.error('Auth middleware: Supabase not configured');
       return res.status(500).json({ error: 'Authentication service not configured' });
     }
 
     const token = extractToken(req.headers.authorization);
-    console.log('🔐 requireAuth: Token extracted:', token ? 'yes' : 'no');
 
     if (!token) {
-      console.log('🔐 requireAuth: No token, returning 401');
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     // Verify token with Supabase
-    console.log('🔐 requireAuth: Verifying token with Supabase...');
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    console.log('🔐 requireAuth: Supabase responded, user:', user?.email || 'none');
 
     if (error || !user) {
-      console.error('Auth verification failed:', error?.message || 'No user returned');
+      logger.debug('Auth verification failed', { error: error?.message, requestId: req.id });
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     // Attach verified user to request
     req.user = user;
     req.userId = user.id;
-    console.log('🔐 requireAuth: Auth successful, userId:', user.id);
 
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    logger.error('Auth middleware error', { error: error.message, requestId: req.id });
     return res.status(500).json({ error: 'Authentication failed' });
   }
 }
@@ -98,7 +93,7 @@ async function optionalAuth(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Optional auth middleware error:', error);
+    logger.debug('Optional auth middleware error', { error: error.message });
     // Continue without user on error
     req.user = null;
     req.userId = null;
@@ -147,7 +142,7 @@ async function requireAdmin(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('Admin auth middleware error:', error);
+    logger.error('Admin auth middleware error', { error: error.message, requestId: req.id });
     return res.status(500).json({ error: 'Authentication failed' });
   }
 }
@@ -166,7 +161,11 @@ function verifyOwnership(paramName = 'userId') {
     }
 
     if (requestedUserId && requestedUserId !== req.userId && !req.isAdmin) {
-      console.warn(`Access denied: User ${req.userId} tried to access data for user ${requestedUserId}`);
+      logger.warn('Access denied: user tried to access another user data', {
+        userId: maskUserId(req.userId),
+        requestedUserId: maskUserId(requestedUserId),
+        requestId: req.id
+      });
       return res.status(403).json({ error: 'Access denied' });
     }
 
