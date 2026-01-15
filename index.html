@@ -2782,6 +2782,39 @@
       font-weight: 500;
     }
 
+    /* First Generation Metrics Styles */
+    .first-gen-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .first-gen-metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .first-gen-metric {
+      text-align: center;
+      padding: 16px 12px;
+      background: rgba(157, 78, 221, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(157, 78, 221, 0.1);
+    }
+
+    .first-gen-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #9d4edd;
+    }
+
+    .first-gen-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
     /* Retention Table Styles */
     .retention-summary-item {
       display: flex;
@@ -9182,6 +9215,22 @@
                           <div class="funnel-loading">Loading funnel data...</div>
                         </div>
                       </div>
+
+                      <!-- Signup to Value Funnel -->
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Signup → Value Funnel</h3>
+                        <div class="funnel-container" id="signupToValueFunnel">
+                          <div class="funnel-loading">Loading funnel data...</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- First Generation Metrics -->
+                    <h3 class="analytics-section-title" style="margin-top: 32px;">First Generation Metrics</h3>
+                    <div class="analytics-full-width">
+                      <div class="analytics-chart-container" id="firstGenMetricsContainer">
+                        <div class="funnel-loading">Loading first generation data...</div>
+                      </div>
                     </div>
 
                     <!-- Daily Activity Chart -->
@@ -9221,6 +9270,14 @@
                       <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">User Retention</h3>
                       <div class="analytics-chart-container" id="retentionTableContainer">
                         <div class="funnel-loading">Loading retention data...</div>
+                      </div>
+                    </div>
+
+                    <!-- Device Breakdown Section -->
+                    <div style="margin-top: 32px;">
+                      <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">Device Breakdown</h3>
+                      <div class="analytics-chart-container" id="deviceBreakdownContainer">
+                        <div class="funnel-loading">Loading device data...</div>
                       </div>
                     </div>
 

@@ -48,10 +48,11 @@
 
     try {
       // Load all data in parallel
-      const [eventsData, onboardingFunnel, trialFunnel, dailyData, sessionsData, retentionData] = await Promise.all([
+      const [eventsData, onboardingFunnel, trialFunnel, signupToValueFunnel, dailyData, sessionsData, retentionData] = await Promise.all([
         fetchEventsSummary(days),
         fetchFunnelData('onboarding', days),
         fetchFunnelData('trial', days),
+        fetchFunnelData('signup_to_value', days),
         fetchDailyActivity(days),
         fetchSessionsData(days),
         fetchRetentionData(8)
@@ -63,6 +64,7 @@
       // Render funnels
       renderFunnel('onboardingFunnel', onboardingFunnel, 'onboarding');
       renderFunnel('trialFunnel', trialFunnel, 'trial');
+      renderFunnel('signupToValueFunnel', signupToValueFunnel, 'signup_to_value');
 
       // Render charts
       renderDailyActivityChart(dailyData);
@@ -72,6 +74,10 @@
       // Render Phase 5 features
       renderSessionStats(sessionsData);
       renderRetentionTable(retentionData);
+
+      // Render Phase 1/2 features (new)
+      renderFirstGenMetrics(eventsData);
+      renderDeviceBreakdown(eventsData);
 
     } catch (error) {
       console.error('Error loading user analytics:', error);
@@ -245,6 +251,13 @@
         { key: 'plan_selected', label: 'Plan' },
         { key: 'checkout_started', label: 'Checkout' },
         { key: 'completed', label: 'Paid' }
+      ];
+    } else if (funnelType === 'signup_to_value') {
+      return [
+        { key: 'first_generation_attempted', label: '1st Gen Attempt' },
+        { key: 'first_generation_success', label: '1st Gen Success' },
+        { key: 'value_moment_reached', label: 'Value Moment' },
+        { key: 'return_visit', label: 'Return Visit' }
       ];
     }
     return [];
@@ -576,6 +589,74 @@
     if (val >= 50) return 'retention-high';
     if (val >= 25) return 'retention-medium';
     return 'retention-low';
+  }
+
+  // ===========================================
+  // RENDER FIRST GENERATION METRICS
+  // ===========================================
+
+  function renderFirstGenMetrics(eventsData) {
+    const container = document.getElementById('firstGenMetricsContainer');
+    if (!container) return;
+
+    const topEvents = eventsData?.top_events || [];
+
+    // Find first gen events
+    const firstAttempted = topEvents.find(e => e.event === 'first_generation_attempted')?.count || 0;
+    const firstSuccess = topEvents.find(e => e.event === 'first_generation_success')?.count || 0;
+    const firstFailure = topEvents.find(e => e.event === 'first_generation_failure')?.count || 0;
+    const valueMoment = topEvents.find(e => e.event === 'value_moment_reached')?.count || 0;
+
+    const successRate = firstAttempted > 0 ? Math.round((firstSuccess / firstAttempted) * 100) : 0;
+    const valueRate = firstSuccess > 0 ? Math.round((valueMoment / firstSuccess) * 100) : 0;
+
+    const html = `
+      <div class="first-gen-metrics-grid">
+        <div class="first-gen-metric">
+          <div class="first-gen-value">${formatNumber(firstAttempted)}</div>
+          <div class="first-gen-label">First Attempts</div>
+        </div>
+        <div class="first-gen-metric">
+          <div class="first-gen-value">${formatNumber(firstSuccess)}</div>
+          <div class="first-gen-label">First Success</div>
+        </div>
+        <div class="first-gen-metric">
+          <div class="first-gen-value">${successRate}%</div>
+          <div class="first-gen-label">Success Rate</div>
+        </div>
+        <div class="first-gen-metric">
+          <div class="first-gen-value">${formatNumber(valueMoment)}</div>
+          <div class="first-gen-label">Value Moments</div>
+        </div>
+        <div class="first-gen-metric">
+          <div class="first-gen-value">${valueRate}%</div>
+          <div class="first-gen-label">Value Rate</div>
+        </div>
+      </div>
+      ${firstFailure > 0 ? `<div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);">${firstFailure} users failed on first attempt</div>` : ''}
+    `;
+
+    container.innerHTML = html;
+  }
+
+  // ===========================================
+  // RENDER DEVICE BREAKDOWN
+  // ===========================================
+
+  function renderDeviceBreakdown(eventsData) {
+    const container = document.getElementById('deviceBreakdownContainer');
+    if (!container) return;
+
+    // Device breakdown from events_by_category won't have this data
+    // We'd need a separate endpoint for device breakdown
+    // For now, show placeholder
+    const html = `
+      <div class="device-breakdown-note" style="color: var(--text-secondary); font-size: 0.875rem; padding: 16px; text-align: center;">
+        Device data is being collected. Check back after more events are tracked.
+      </div>
+    `;
+
+    container.innerHTML = html;
   }
 
 })(window);
