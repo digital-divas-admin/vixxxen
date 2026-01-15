@@ -2712,6 +2712,141 @@
       border-radius: 12px;
     }
 
+    /* Session Stats Styles */
+    .session-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .session-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .session-stat-item {
+      text-align: center;
+      padding: 12px;
+      background: rgba(157, 78, 221, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(157, 78, 221, 0.1);
+    }
+
+    .session-stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #9d4edd;
+    }
+
+    .session-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .duration-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .duration-bar-label {
+      width: 60px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .duration-bar-container {
+      flex: 1;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .duration-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #9d4edd, #ff2ebb);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .duration-bar-count {
+      width: 40px;
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* Retention Table Styles */
+    .retention-summary-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(157, 78, 221, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(157, 78, 221, 0.1);
+    }
+
+    .retention-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .retention-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #9d4edd;
+    }
+
+    .retention-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .retention-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .retention-table th {
+      text-align: left;
+      padding: 12px 8px;
+      border-bottom: 2px solid rgba(157, 78, 221, 0.2);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .retention-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .retention-table tr:hover td {
+      background: rgba(157, 78, 221, 0.05);
+    }
+
+    .retention-high {
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    .retention-medium {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+
+    .retention-low {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
     /* GPU Usage Heatmap Styles */
     .analytics-section-title {
       font-size: 1.2rem;
@@ -9070,6 +9205,22 @@
                         <div class="top-events-list" id="topEventsList">
                           <div class="funnel-loading">Loading events...</div>
                         </div>
+                      </div>
+                    </div>
+
+                    <!-- Session Stats Section -->
+                    <div style="margin-top: 32px;">
+                      <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">Session Analytics</h3>
+                      <div class="analytics-chart-container" id="sessionStatsContainer">
+                        <div class="funnel-loading">Loading session data...</div>
+                      </div>
+                    </div>
+
+                    <!-- Retention Cohorts Section -->
+                    <div style="margin-top: 32px;">
+                      <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">User Retention</h3>
+                      <div class="analytics-chart-container" id="retentionTableContainer">
+                        <div class="funnel-loading">Loading retention data...</div>
                       </div>
                     </div>
 

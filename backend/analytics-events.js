@@ -486,6 +486,144 @@ router.get('/admin/events/summary', requireAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/analytics/session/start
+ * Start a new session
+ */
+router.post('/session/start', optionalAuth, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(200).json({ tracked: false, reason: 'database_not_configured' });
+    }
+
+    const { session_id, anonymous_id, page_url, referrer } = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({ error: 'session_id is required' });
+    }
+
+    // Check if session already exists
+    const { data: existing } = await supabase
+      .from('user_sessions')
+      .select('id')
+      .eq('session_id', session_id)
+      .single();
+
+    if (existing) {
+      return res.json({ tracked: true, existing: true });
+    }
+
+    const sessionRecord = {
+      user_id: req.userId || null,
+      anonymous_id: anonymous_id || null,
+      session_id,
+      started_at: new Date().toISOString(),
+      first_page: page_url,
+      last_page: page_url,
+      referrer,
+      user_agent: req.headers['user-agent'],
+      ip_hash: hashIp(getClientIp(req))
+    };
+
+    const { error } = await supabase
+      .from('user_sessions')
+      .insert(sessionRecord);
+
+    if (error) {
+      logger.error('Failed to start session', { error: error.message, requestId: req.id });
+      return res.status(200).json({ tracked: false, reason: 'database_error' });
+    }
+
+    res.json({ tracked: true });
+  } catch (error) {
+    logger.error('Session start error', { error: error.message, requestId: req.id });
+    res.status(200).json({ tracked: false, reason: 'server_error' });
+  }
+});
+
+/**
+ * POST /api/analytics/session/heartbeat
+ * Update session activity (called periodically)
+ */
+router.post('/session/heartbeat', optionalAuth, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(200).json({ updated: false });
+    }
+
+    const { session_id, page_url, events_count } = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({ error: 'session_id is required' });
+    }
+
+    const now = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('user_sessions')
+      .update({
+        ended_at: now,
+        last_page: page_url || undefined,
+        events_count: events_count || undefined,
+        page_views: supabase.raw('page_views + 1')
+      })
+      .eq('session_id', session_id);
+
+    if (error) {
+      logger.debug('Session heartbeat error', { error: error.message });
+    }
+
+    res.json({ updated: !error });
+  } catch (error) {
+    res.status(200).json({ updated: false });
+  }
+});
+
+/**
+ * POST /api/analytics/session/end
+ * End a session
+ */
+router.post('/session/end', optionalAuth, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(200).json({ ended: false });
+    }
+
+    const { session_id } = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({ error: 'session_id is required' });
+    }
+
+    // Get session start time to calculate duration
+    const { data: session } = await supabase
+      .from('user_sessions')
+      .select('started_at')
+      .eq('session_id', session_id)
+      .single();
+
+    if (!session) {
+      return res.json({ ended: false, reason: 'session_not_found' });
+    }
+
+    const endedAt = new Date();
+    const startedAt = new Date(session.started_at);
+    const durationSeconds = Math.floor((endedAt - startedAt) / 1000);
+
+    const { error } = await supabase
+      .from('user_sessions')
+      .update({
+        ended_at: endedAt.toISOString(),
+        duration_seconds: durationSeconds
+      })
+      .eq('session_id', session_id);
+
+    res.json({ ended: !error, duration_seconds: durationSeconds });
+  } catch (error) {
+    res.status(200).json({ ended: false });
+  }
+});
+
+/**
  * GET /api/analytics/admin/daily
  * Get daily activity stats (admin only)
  */
@@ -534,6 +672,512 @@ router.get('/admin/daily', requireAdmin, async (req, res) => {
 
   } catch (error) {
     logger.error('Daily stats error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/analytics/admin/sessions
+ * Get session statistics (admin only)
+ */
+router.get('/admin/sessions', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { days = 30 } = req.query;
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+
+    // Get session data
+    const { data: sessions, error } = await supabase
+      .from('user_sessions')
+      .select('duration_seconds, page_views, started_at, user_id')
+      .gte('started_at', startDate.toISOString());
+
+    if (error) {
+      logger.error('Error fetching sessions', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to fetch sessions' });
+    }
+
+    // Calculate stats
+    const totalSessions = sessions.length;
+    const completedSessions = sessions.filter(s => s.duration_seconds != null);
+    const durations = completedSessions.map(s => s.duration_seconds).filter(d => d > 0);
+
+    const avgDuration = durations.length > 0
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : 0;
+
+    const medianDuration = durations.length > 0
+      ? durations.sort((a, b) => a - b)[Math.floor(durations.length / 2)]
+      : 0;
+
+    const totalPageViews = sessions.reduce((sum, s) => sum + (s.page_views || 1), 0);
+    const avgPageViews = totalSessions > 0
+      ? (totalPageViews / totalSessions).toFixed(1)
+      : 0;
+
+    // Unique users
+    const uniqueUsers = new Set(sessions.filter(s => s.user_id).map(s => s.user_id)).size;
+
+    // Duration distribution
+    const durationBuckets = {
+      '0-30s': 0,
+      '30s-2m': 0,
+      '2m-5m': 0,
+      '5m-15m': 0,
+      '15m-30m': 0,
+      '30m+': 0
+    };
+
+    durations.forEach(d => {
+      if (d <= 30) durationBuckets['0-30s']++;
+      else if (d <= 120) durationBuckets['30s-2m']++;
+      else if (d <= 300) durationBuckets['2m-5m']++;
+      else if (d <= 900) durationBuckets['5m-15m']++;
+      else if (d <= 1800) durationBuckets['15m-30m']++;
+      else durationBuckets['30m+']++;
+    });
+
+    res.json({
+      period_days: parseInt(days),
+      total_sessions: totalSessions,
+      unique_users: uniqueUsers,
+      avg_duration_seconds: avgDuration,
+      median_duration_seconds: medianDuration,
+      avg_page_views: parseFloat(avgPageViews),
+      total_page_views: totalPageViews,
+      duration_distribution: durationBuckets
+    });
+
+  } catch (error) {
+    logger.error('Sessions stats error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/analytics/admin/retention
+ * Get retention cohort analysis (admin only)
+ */
+router.get('/admin/retention', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { weeks = 8 } = req.query;
+
+    // Get users grouped by signup week
+    const { data: users, error: userError } = await supabase
+      .from('profiles')
+      .select('id, created_at')
+      .gte('created_at', new Date(Date.now() - parseInt(weeks) * 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: true });
+
+    if (userError) {
+      logger.error('Error fetching users for retention', { error: userError.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to fetch retention data' });
+    }
+
+    // Get all events for these users
+    const userIds = users.map(u => u.id);
+    const { data: events, error: eventError } = await supabase
+      .from('analytics_events')
+      .select('user_id, created_at')
+      .in('user_id', userIds);
+
+    if (eventError) {
+      logger.error('Error fetching events for retention', { error: eventError.message, requestId: req.id });
+    }
+
+    // Build user activity map
+    const userActivity = {};
+    (events || []).forEach(e => {
+      if (!userActivity[e.user_id]) {
+        userActivity[e.user_id] = new Set();
+      }
+      userActivity[e.user_id].add(e.created_at.split('T')[0]);
+    });
+
+    // Group users by signup week and calculate retention
+    const cohorts = [];
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+
+    for (let w = 0; w < parseInt(weeks); w++) {
+      const weekStart = new Date(Date.now() - (w + 1) * weekMs);
+      const weekEnd = new Date(Date.now() - w * weekMs);
+
+      const cohortUsers = users.filter(u => {
+        const signupDate = new Date(u.created_at);
+        return signupDate >= weekStart && signupDate < weekEnd;
+      });
+
+      if (cohortUsers.length === 0) continue;
+
+      const retention = {
+        week_start: weekStart.toISOString().split('T')[0],
+        total_users: cohortUsers.length,
+        day_1: 0,
+        day_7: 0,
+        day_14: 0,
+        day_30: 0
+      };
+
+      cohortUsers.forEach(u => {
+        const signupDate = new Date(u.created_at);
+        const activity = userActivity[u.id] || new Set();
+
+        // Check each retention period
+        [1, 7, 14, 30].forEach(day => {
+          const checkDate = new Date(signupDate.getTime() + day * 24 * 60 * 60 * 1000);
+          const checkDateStr = checkDate.toISOString().split('T')[0];
+
+          // Check if user was active on or after that day
+          for (const activityDate of activity) {
+            if (activityDate >= checkDateStr) {
+              retention[`day_${day}`]++;
+              break;
+            }
+          }
+        });
+      });
+
+      // Convert to percentages
+      retention.day_1_pct = ((retention.day_1 / retention.total_users) * 100).toFixed(1);
+      retention.day_7_pct = ((retention.day_7 / retention.total_users) * 100).toFixed(1);
+      retention.day_14_pct = ((retention.day_14 / retention.total_users) * 100).toFixed(1);
+      retention.day_30_pct = ((retention.day_30 / retention.total_users) * 100).toFixed(1);
+
+      cohorts.push(retention);
+    }
+
+    // Calculate overall averages
+    const totals = cohorts.reduce((acc, c) => ({
+      users: acc.users + c.total_users,
+      day_1: acc.day_1 + c.day_1,
+      day_7: acc.day_7 + c.day_7,
+      day_14: acc.day_14 + c.day_14,
+      day_30: acc.day_30 + c.day_30
+    }), { users: 0, day_1: 0, day_7: 0, day_14: 0, day_30: 0 });
+
+    res.json({
+      period_weeks: parseInt(weeks),
+      cohorts: cohorts.reverse(),
+      overall: {
+        total_users: totals.users,
+        day_1_retention: totals.users > 0 ? ((totals.day_1 / totals.users) * 100).toFixed(1) : 0,
+        day_7_retention: totals.users > 0 ? ((totals.day_7 / totals.users) * 100).toFixed(1) : 0,
+        day_14_retention: totals.users > 0 ? ((totals.day_14 / totals.users) * 100).toFixed(1) : 0,
+        day_30_retention: totals.users > 0 ? ((totals.day_30 / totals.users) * 100).toFixed(1) : 0
+      }
+    });
+
+  } catch (error) {
+    logger.error('Retention analysis error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/analytics/admin/alerts
+ * Get all configured alerts (admin only)
+ */
+router.get('/admin/alerts', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { data: alerts, error } = await supabase
+      .from('analytics_alerts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logger.error('Error fetching alerts', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+
+    // Get recent triggered alerts
+    const { data: recentTriggers } = await supabase
+      .from('analytics_alert_history')
+      .select('*, analytics_alerts(name)')
+      .order('triggered_at', { ascending: false })
+      .limit(20);
+
+    res.json({
+      alerts: alerts || [],
+      recent_triggers: recentTriggers || []
+    });
+
+  } catch (error) {
+    logger.error('Alerts fetch error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/analytics/admin/alerts
+ * Create a new alert (admin only)
+ */
+router.post('/admin/alerts', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { name, description, metric_type, condition, threshold, check_interval = 'daily' } = req.body;
+
+    if (!name || !metric_type || !condition || threshold === undefined) {
+      return res.status(400).json({ error: 'name, metric_type, condition, and threshold are required' });
+    }
+
+    const validMetrics = ['conversion_rate', 'daily_signups', 'daily_events', 'avg_session_duration', 'onboarding_completion', 'trial_conversion'];
+    if (!validMetrics.includes(metric_type)) {
+      return res.status(400).json({ error: `Invalid metric_type. Must be one of: ${validMetrics.join(', ')}` });
+    }
+
+    const validConditions = ['below', 'above', 'equals'];
+    if (!validConditions.includes(condition)) {
+      return res.status(400).json({ error: `Invalid condition. Must be one of: ${validConditions.join(', ')}` });
+    }
+
+    const { data, error } = await supabase
+      .from('analytics_alerts')
+      .insert({
+        name,
+        description,
+        metric_type,
+        condition,
+        threshold,
+        check_interval,
+        created_by: req.userId
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error creating alert', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to create alert' });
+    }
+
+    res.json({ alert: data });
+
+  } catch (error) {
+    logger.error('Alert creation error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * PUT /api/analytics/admin/alerts/:id
+ * Update an alert (admin only)
+ */
+router.put('/admin/alerts/:id', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { id } = req.params;
+    const { name, description, metric_type, condition, threshold, check_interval, is_active } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (metric_type !== undefined) updates.metric_type = metric_type;
+    if (condition !== undefined) updates.condition = condition;
+    if (threshold !== undefined) updates.threshold = threshold;
+    if (check_interval !== undefined) updates.check_interval = check_interval;
+    if (is_active !== undefined) updates.is_active = is_active;
+    updates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('analytics_alerts')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error updating alert', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to update alert' });
+    }
+
+    res.json({ alert: data });
+
+  } catch (error) {
+    logger.error('Alert update error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/analytics/admin/alerts/:id
+ * Delete an alert (admin only)
+ */
+router.delete('/admin/alerts/:id', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('analytics_alerts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error deleting alert', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to delete alert' });
+    }
+
+    res.json({ deleted: true });
+
+  } catch (error) {
+    logger.error('Alert deletion error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/analytics/admin/alerts/:id/acknowledge
+ * Acknowledge a triggered alert (admin only)
+ */
+router.post('/admin/alerts/:id/acknowledge', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('analytics_alert_history')
+      .update({
+        acknowledged: true,
+        acknowledged_by: req.userId,
+        acknowledged_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error acknowledging alert', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to acknowledge alert' });
+    }
+
+    res.json({ acknowledged: true });
+
+  } catch (error) {
+    logger.error('Alert acknowledge error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/analytics/admin/report/generate
+ * Generate an analytics report (admin only)
+ */
+router.get('/admin/report/generate', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const { type = 'daily_summary', days = 7 } = req.query;
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    const endDate = new Date();
+
+    // Gather all report data
+    const reportData = {
+      generated_at: new Date().toISOString(),
+      period: {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0],
+        days: parseInt(days)
+      }
+    };
+
+    // Get events summary
+    const { data: events } = await supabase
+      .from('analytics_events')
+      .select('event_category, event_name, user_id')
+      .gte('created_at', startDate.toISOString());
+
+    const eventsByCategory = {};
+    const uniqueUsers = new Set();
+    (events || []).forEach(e => {
+      eventsByCategory[e.event_category] = (eventsByCategory[e.event_category] || 0) + 1;
+      if (e.user_id) uniqueUsers.add(e.user_id);
+    });
+
+    reportData.events = {
+      total: (events || []).length,
+      unique_users: uniqueUsers.size,
+      by_category: eventsByCategory
+    };
+
+    // Get funnel data
+    const { data: funnels } = await supabase
+      .from('funnel_progress')
+      .select('funnel_name, completed_at, abandoned_at')
+      .gte('started_at', startDate.toISOString());
+
+    const funnelStats = {};
+    (funnels || []).forEach(f => {
+      if (!funnelStats[f.funnel_name]) {
+        funnelStats[f.funnel_name] = { started: 0, completed: 0, abandoned: 0 };
+      }
+      funnelStats[f.funnel_name].started++;
+      if (f.completed_at) funnelStats[f.funnel_name].completed++;
+      if (f.abandoned_at) funnelStats[f.funnel_name].abandoned++;
+    });
+
+    Object.keys(funnelStats).forEach(name => {
+      const stats = funnelStats[name];
+      stats.completion_rate = stats.started > 0
+        ? ((stats.completed / stats.started) * 100).toFixed(1)
+        : 0;
+    });
+
+    reportData.funnels = funnelStats;
+
+    // Get new users
+    const { data: newUsers } = await supabase
+      .from('profiles')
+      .select('id')
+      .gte('created_at', startDate.toISOString());
+
+    reportData.new_users = (newUsers || []).length;
+
+    // Get session stats if available
+    const { data: sessions } = await supabase
+      .from('user_sessions')
+      .select('duration_seconds')
+      .gte('started_at', startDate.toISOString());
+
+    if (sessions && sessions.length > 0) {
+      const durations = sessions.map(s => s.duration_seconds).filter(d => d && d > 0);
+      reportData.sessions = {
+        total: sessions.length,
+        avg_duration_seconds: durations.length > 0
+          ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+          : 0
+      };
+    }
+
+    res.json(reportData);
+
+  } catch (error) {
+    logger.error('Report generation error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -10,8 +10,12 @@
     endpoint: '/api/analytics/event',
     batchEndpoint: '/api/analytics/events',
     funnelEndpoint: '/api/analytics/funnel/update',
+    sessionStartEndpoint: '/api/analytics/session/start',
+    sessionHeartbeatEndpoint: '/api/analytics/session/heartbeat',
+    sessionEndEndpoint: '/api/analytics/session/end',
     batchSize: 10,
     flushInterval: 5000, // 5 seconds
+    heartbeatInterval: 30000, // 30 seconds
     debug: false
   };
 
@@ -20,6 +24,8 @@
   let anonymousId = null;
   let eventQueue = [];
   let flushTimer = null;
+  let heartbeatTimer = null;
+  let eventsInSession = 0;
 
   /**
    * Generate a UUID v4
@@ -161,6 +167,111 @@
   }
 
   /**
+   * Start session tracking
+   */
+  async function startSessionTracking() {
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      await fetch(CONFIG.sessionStartEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          session_id: getSessionId(),
+          anonymous_id: getAnonymousId(),
+          page_url: window.location.href,
+          referrer: document.referrer
+        })
+      });
+
+      if (CONFIG.debug) {
+        console.log('[Analytics] Session started');
+      }
+
+      // Start heartbeat timer
+      startHeartbeat();
+    } catch (error) {
+      if (CONFIG.debug) {
+        console.error('[Analytics] Failed to start session:', error);
+      }
+    }
+  }
+
+  /**
+   * Send session heartbeat
+   */
+  async function sendHeartbeat() {
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      await fetch(CONFIG.sessionHeartbeatEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          session_id: getSessionId(),
+          page_url: window.location.href,
+          events_count: eventsInSession
+        })
+      });
+
+      if (CONFIG.debug) {
+        console.log('[Analytics] Heartbeat sent');
+      }
+    } catch (error) {
+      // Silently fail heartbeats
+    }
+  }
+
+  /**
+   * Start the heartbeat timer
+   */
+  function startHeartbeat() {
+    if (heartbeatTimer) return;
+    heartbeatTimer = setInterval(sendHeartbeat, CONFIG.heartbeatInterval);
+  }
+
+  /**
+   * Stop the heartbeat timer
+   */
+  function stopHeartbeat() {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  }
+
+  /**
+   * End session tracking
+   */
+  async function endSessionTracking() {
+    stopHeartbeat();
+
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      // Use sendBeacon for reliability on page unload
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify({ session_id: getSessionId() })], { type: 'application/json' });
+        navigator.sendBeacon(CONFIG.sessionEndEndpoint, blob);
+      } else {
+        await fetch(CONFIG.sessionEndEndpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ session_id: getSessionId() })
+        });
+      }
+    } catch (error) {
+      // Silently fail on session end
+    }
+  }
+
+  /**
    * Track an event
    * @param {string} eventName - Name of the event
    * @param {string} eventCategory - Category (onboarding, trial, generation, etc.)
@@ -182,6 +293,9 @@
     if (CONFIG.debug) {
       console.log('[Analytics] Track:', eventName, eventCategory, eventData);
     }
+
+    // Increment session event counter
+    eventsInSession++;
 
     if (immediate) {
       sendEvents([event]);
@@ -445,17 +559,21 @@
     if (isNewSession) {
       sessionStorage.setItem('vx_session_started', 'true');
       session.started();
+      // Start server-side session tracking
+      startSessionTracking();
     }
 
-    // Flush on page unload
+    // Flush and end session on page unload
     window.addEventListener('beforeunload', () => {
       flush();
+      endSessionTracking();
     });
 
     // Flush on visibility change (when user switches tabs)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         flush();
+        sendHeartbeat(); // Send final heartbeat when tab hidden
       }
     });
 
