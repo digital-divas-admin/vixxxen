@@ -1080,7 +1080,6 @@ async function saveShowcaseSection() {
   ]);
 
   const showcaseItems = document.querySelectorAll('#showcaseListAdmin .admin-showcase-item');
-  console.log('Saving showcase items:', showcaseItems.length);
 
   for (const item of showcaseItems) {
     const id = item.dataset.id;
@@ -1090,16 +1089,12 @@ async function saveShowcaseSection() {
       size: item.querySelector('[data-field="size"]')?.value
     };
 
-    console.log('Saving showcase item:', id, data);
-
     if (id && id !== 'new') {
-      const response = await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${id}`, {
+      await authFetch(`${API_BASE_URL}/api/landing/admin/showcase/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      const result = await response.json();
-      console.log('Save response:', response.status, result);
     }
   }
 
@@ -1204,9 +1199,8 @@ async function saveContentUpdates(updates) {
         });
       }
     }
-
-    showAdminToast('Content saved successfully!');
-    loadAdminLandingContent();
+    // Note: Don't call loadAdminLandingContent() here - let the calling function do it
+    // after all saves are complete, otherwise the DOM gets re-rendered mid-save
   } catch (error) {
     console.error('Error saving content:', error);
     showAdminToast('Failed to save content', 'error');
