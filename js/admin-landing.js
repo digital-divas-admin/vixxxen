@@ -1584,6 +1584,7 @@ function addAdminLandingStyles() {
       border-radius: 8px;
       opacity: 0;
       transition: opacity 0.2s;
+      pointer-events: none;
     }
     .admin-showcase-image-wrapper:hover .admin-showcase-image-overlay {
       opacity: 1;
