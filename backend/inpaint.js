@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
 const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // RunPod Configuration (shared with qwen.js)
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -477,6 +478,12 @@ router.post('/inpaint-sfw', async (req, res) => {
       requestId: req.id
     });
 
+    // Track analytics
+    analytics.generation.started('inpaint-sfw', {
+      lora_count: loras.length,
+      denoise
+    }, req);
+
     // Strip data URL prefix if present
     let base64Image = image;
     if (image.startsWith('data:')) {
@@ -509,6 +516,7 @@ router.post('/inpaint-sfw', async (req, res) => {
 
     if (result.success) {
       logGeneration('inpaint-sfw', 'completed', { requestId: req.id });
+      analytics.generation.completed('inpaint-sfw', {}, req);
       return res.json({
         success: true,
         mode: 'sfw',
@@ -518,6 +526,7 @@ router.post('/inpaint-sfw', async (req, res) => {
       });
     } else {
       logger.error('SFW inpaint failed', { error: result.error, requestId: req.id });
+      analytics.generation.failed('inpaint-sfw', result.error, {}, req);
       return res.status(500).json({
         error: 'Inpaint failed',
         message: result.error,
@@ -527,6 +536,7 @@ router.post('/inpaint-sfw', async (req, res) => {
 
   } catch (error) {
     logger.error('SFW inpaint failed', { error: error.message, requestId: req.id });
+    analytics.generation.failed('inpaint-sfw', error.message, {}, req);
     res.status(500).json({
       error: 'Inpaint failed',
       message: error.message
@@ -558,6 +568,12 @@ router.post('/inpaint-nsfw', async (req, res) => {
       denoise,
       requestId: req.id
     });
+
+    // Track analytics
+    analytics.generation.started('inpaint-nsfw', {
+      lora_count: loras.length,
+      denoise
+    }, req);
 
     // Strip data URL prefix if present
     let base64Image = image;
@@ -591,6 +607,7 @@ router.post('/inpaint-nsfw', async (req, res) => {
 
     if (result.success) {
       logGeneration('inpaint-nsfw', 'completed', { requestId: req.id });
+      analytics.generation.completed('inpaint-nsfw', {}, req);
       return res.json({
         success: true,
         mode: 'nsfw',
@@ -600,6 +617,7 @@ router.post('/inpaint-nsfw', async (req, res) => {
       });
     } else {
       logger.error('NSFW inpaint failed', { error: result.error, requestId: req.id });
+      analytics.generation.failed('inpaint-nsfw', result.error, {}, req);
       return res.status(500).json({
         error: 'Inpaint failed',
         message: result.error,
@@ -609,6 +627,7 @@ router.post('/inpaint-nsfw', async (req, res) => {
 
   } catch (error) {
     logger.error('NSFW inpaint failed', { error: error.message, requestId: req.id });
+    analytics.generation.failed('inpaint-nsfw', error.message, {}, req);
     res.status(500).json({
       error: 'Inpaint failed',
       message: error.message

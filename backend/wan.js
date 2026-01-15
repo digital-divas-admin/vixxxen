@@ -1,6 +1,7 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -58,10 +59,21 @@ router.post('/generate', async (req, res) => {
       requestId: req.id
     });
 
+    // Track analytics
+    analytics.generation.started('wan', {
+      resolution,
+      num_frames: numFrames,
+      frames_per_second: framesPerSecond,
+      has_image: !!image
+    }, req);
+
     // Run the model
     const output = await replicate.run(WAN_MODEL, { input });
 
     logGeneration('wan', 'completed', { requestId: req.id });
+
+    // Track analytics
+    analytics.generation.completed('wan', { resolution }, req);
 
     // Return the video URL
     res.json({
@@ -84,6 +96,9 @@ router.post('/generate', async (req, res) => {
 
   } catch (error) {
     logger.error('Wan video generation failed', { error: error.message, requestId: req.id });
+
+    // Track analytics
+    analytics.generation.failed('wan', error.message, {}, req);
 
     // Handle specific error cases
     if (error.message?.includes('Invalid input')) {

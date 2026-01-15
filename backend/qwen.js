@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
 const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // RunPod Configuration
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -182,6 +183,13 @@ router.post('/generate', async (req, res) => {
       requestId: req.id
     });
 
+    // Track analytics
+    analytics.generation.started('qwen', {
+      lora_count: loras?.length || 0,
+      width: width || 1152,
+      height: height || 1536
+    }, req);
+
     // Build the workflow
     const workflow = getWorkflowTemplate({
       prompt,
@@ -224,6 +232,7 @@ router.post('/generate', async (req, res) => {
 
   } catch (error) {
     logger.error('Qwen generate error', { error: error.message, requestId: req.id });
+    analytics.generation.failed('qwen', error.message, {}, req);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
