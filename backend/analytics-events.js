@@ -43,7 +43,11 @@ const VALID_EVENTS = {
     'generation_completed',
     'generation_failed',
     'generation_saved',
-    'generation_shared'
+    'generation_shared',
+    // First-time generation milestones
+    'first_generation_attempted',
+    'first_generation_success',
+    'first_generation_failure'
   ],
   character: [
     'character_creation_started',
@@ -71,7 +75,11 @@ const VALID_EVENTS = {
     'checkout_abandoned',
     'subscription_upgraded',
     'subscription_cancelled',
-    'credits_purchased'
+    'credits_purchased',
+    // Paywall tracking
+    'paywall_viewed',
+    'paywall_dismissed',
+    'paywall_clicked_upgrade'
   ],
   session: [
     'session_started',
@@ -82,7 +90,16 @@ const VALID_EVENTS = {
     'feature_used',
     'button_clicked',
     'modal_opened',
-    'modal_closed'
+    'modal_closed',
+    // Value moment tracking
+    'value_moment_reached',
+    'feature_discovered',
+    'content_downloaded',
+    'content_saved',
+    'content_shared',
+    'return_visit',
+    'scroll_depth',
+    'time_on_section'
   ]
 };
 

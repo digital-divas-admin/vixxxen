@@ -809,6 +809,278 @@ router.delete('/admin/showcase/:id', requireAdmin, async (req, res) => {
 });
 
 // ===========================================
+// IMAGE LIBRARY ADMIN ENDPOINTS
+// ===========================================
+
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// POST /api/landing/admin/images/upload - Upload image to landing-images bucket
+router.post('/admin/images/upload', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    const { file_data, filename, alt_text, tags, usage_context } = req.body;
+
+    // Validate required fields
+    if (!file_data || !filename) {
+      return res.status(400).json({ error: 'file_data and filename are required' });
+    }
+
+    // Parse base64 data
+    const matches = file_data.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: 'Invalid file_data format. Expected base64 data URL.' });
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    // Validate mime type
+    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+      return res.status(400).json({
+        error: `Invalid file type. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`
+      });
+    }
+
+    // Decode and check file size
+    const buffer = Buffer.from(base64Data, 'base64');
+    if (buffer.length > MAX_FILE_SIZE) {
+      return res.status(400).json({
+        error: `File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      });
+    }
+
+    // Generate unique filename
+    const extension = mimeType.split('/')[1].replace('jpeg', 'jpg');
+    const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+    const storagePath = `${uniqueId}.${extension}`;
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('landing-images')
+      .upload(storagePath, buffer, {
+        contentType: mimeType,
+        upsert: false
+      });
+
+    if (uploadError) {
+      logger.error('Error uploading image to storage', { error: uploadError.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to upload image to storage' });
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('landing-images')
+      .getPublicUrl(storagePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    // Save metadata to database
+    const { data: imageRecord, error: dbError } = await supabase
+      .from('landing_images')
+      .insert({
+        filename: storagePath,
+        original_filename: filename,
+        storage_path: storagePath,
+        public_url: publicUrl,
+        mime_type: mimeType,
+        file_size: buffer.length,
+        alt_text: alt_text || null,
+        tags: tags || [],
+        usage_context: usage_context || 'general',
+        uploaded_by: req.user?.id || null
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      logger.error('Error saving image metadata', { error: dbError.message, requestId: req.id });
+      // Try to clean up uploaded file
+      await supabase.storage.from('landing-images').remove([storagePath]);
+      return res.status(500).json({ error: 'Failed to save image metadata' });
+    }
+
+    logger.info('Landing image uploaded', {
+      imageId: imageRecord.id,
+      filename: storagePath,
+      size: buffer.length,
+      requestId: req.id
+    });
+
+    res.json({
+      image: imageRecord,
+      url: publicUrl
+    });
+
+  } catch (error) {
+    logger.error('Image upload error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/landing/admin/images - List all images in library
+router.get('/admin/images', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    const { context, tag, limit = 50, offset = 0 } = req.query;
+
+    let query = supabase
+      .from('landing_images')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    // Filter by usage context if provided
+    if (context) {
+      query = query.eq('usage_context', context);
+    }
+
+    // Filter by tag if provided
+    if (tag) {
+      query = query.contains('tags', [tag]);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      logger.error('Error fetching images', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to fetch images' });
+    }
+
+    res.json({
+      images: data,
+      total: count,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+  } catch (error) {
+    logger.error('Images list error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/landing/admin/images/:id - Get single image details
+router.get('/admin/images/:id', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('landing_images')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      logger.error('Error fetching image', { error: error.message, requestId: req.id });
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    res.json({ image: data });
+
+  } catch (error) {
+    logger.error('Image fetch error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/landing/admin/images/:id - Update image metadata
+router.put('/admin/images/:id', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    const { id } = req.params;
+    const { alt_text, tags, usage_context } = req.body;
+
+    const updateData = {};
+    if (alt_text !== undefined) updateData.alt_text = alt_text;
+    if (tags !== undefined) updateData.tags = tags;
+    if (usage_context !== undefined) updateData.usage_context = usage_context;
+
+    const { data, error } = await supabase
+      .from('landing_images')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error updating image', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to update image' });
+    }
+
+    res.json({ image: data });
+
+  } catch (error) {
+    logger.error('Image update error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/landing/admin/images/:id - Delete image from library and storage
+router.delete('/admin/images/:id', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    const { id } = req.params;
+
+    // Get image metadata first
+    const { data: imageData, error: fetchError } = await supabase
+      .from('landing_images')
+      .select('storage_path')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !imageData) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('landing-images')
+      .remove([imageData.storage_path]);
+
+    if (storageError) {
+      logger.error('Error deleting from storage', { error: storageError.message, requestId: req.id });
+      // Continue anyway to delete database record
+    }
+
+    // Delete from database
+    const { error: dbError } = await supabase
+      .from('landing_images')
+      .delete()
+      .eq('id', id);
+
+    if (dbError) {
+      logger.error('Error deleting image record', { error: dbError.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to delete image record' });
+    }
+
+    logger.info('Landing image deleted', { imageId: id, requestId: req.id });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    logger.error('Image delete error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ===========================================
 // BULK REORDER ENDPOINTS
 // ===========================================
 
