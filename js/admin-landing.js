@@ -133,6 +133,8 @@ function showAdminLandingTab(tab) {
     case 'images':
       contentContainer.innerHTML = renderImageLibrarySection();
       loadImageLibrary();
+      // Initialize upload handlers after DOM is ready
+      setTimeout(initImageUploadHandlers, 50);
       break;
   }
 }
