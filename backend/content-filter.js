@@ -4,17 +4,9 @@
  */
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { requireAdmin } = require('./middleware/auth');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
+const { logger } = require('./services/logger');
 
 // ===========================================
 // BLOCKED WORDS CACHE
@@ -40,7 +32,7 @@ async function getBlockedWords(mode = 'safe') {
 
   // Fetch from database
   if (!supabase) {
-    console.error('Content filter: Supabase not configured');
+    logger.error('Content filter: Supabase not configured');
     return [];
   }
 
@@ -52,7 +44,7 @@ async function getBlockedWords(mode = 'safe') {
     .or(`applies_to.eq.${mode},applies_to.eq.both`);
 
   if (error) {
-    console.error('Error fetching blocked words:', error);
+    logger.error('Error fetching blocked words', { error: error.message });
     // Return cached data if available, even if stale
     return cache || [];
   }
@@ -64,7 +56,7 @@ async function getBlockedWords(mode = 'safe') {
     safeModeCache = data || [];
   }
   cacheTimestamp = now;
-  console.log(`📝 Blocked words cache updated for ${mode} mode: ${data?.length || 0} words`);
+  logger.debug('Blocked words cache updated', { mode, count: data?.length || 0 });
 
   return data || [];
 }
@@ -76,7 +68,7 @@ function clearCache() {
   safeModeCache = null;
   nsfwModeCache = null;
   cacheTimestamp = 0;
-  console.log('📝 Blocked words cache cleared');
+  logger.debug('Blocked words cache cleared');
 }
 
 /**
@@ -126,7 +118,7 @@ router.get('/blocked-words', async (req, res) => {
       cached: Date.now() - cacheTimestamp < 1000 // Was this from cache?
     });
   } catch (error) {
-    console.error('Error getting blocked words:', error);
+    logger.error('Error getting blocked words', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch blocked words' });
   }
 });
@@ -155,7 +147,7 @@ router.post('/validate', async (req, res) => {
       mode: validMode
     });
   } catch (error) {
-    console.error('Error validating prompt:', error);
+    logger.error('Error validating prompt', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Validation failed' });
   }
 });
@@ -196,7 +188,7 @@ router.get('/admin/words', requireAdmin, async (req, res) => {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching blocked words:', error);
+      logger.error('Error fetching blocked words', { error: error.message });
       return res.status(500).json({ error: 'Failed to fetch blocked words' });
     }
 
@@ -205,7 +197,7 @@ router.get('/admin/words', requireAdmin, async (req, res) => {
       count: data.length
     });
   } catch (error) {
-    console.error('Error in admin words endpoint:', error);
+    logger.error('Error in admin words endpoint', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -254,7 +246,7 @@ router.post('/admin/words', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error adding blocked word:', error);
+      logger.error('Error adding blocked word', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to add word' });
     }
 
@@ -266,7 +258,7 @@ router.post('/admin/words', requireAdmin, async (req, res) => {
       word: data
     });
   } catch (error) {
-    console.error('Error adding blocked word:', error);
+    logger.error('Error adding blocked word', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -304,7 +296,7 @@ router.put('/admin/words/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating blocked word:', error);
+      logger.error('Error updating blocked word', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update word' });
     }
 
@@ -320,7 +312,7 @@ router.put('/admin/words/:id', requireAdmin, async (req, res) => {
       word: data
     });
   } catch (error) {
-    console.error('Error updating blocked word:', error);
+    logger.error('Error updating blocked word', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -343,7 +335,7 @@ router.delete('/admin/words/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting blocked word:', error);
+      logger.error('Error deleting blocked word', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete word' });
     }
 
@@ -354,7 +346,7 @@ router.delete('/admin/words/:id', requireAdmin, async (req, res) => {
       message: 'Word deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting blocked word:', error);
+    logger.error('Error deleting blocked word', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -422,7 +414,7 @@ router.post('/admin/words/bulk', requireAdmin, async (req, res) => {
       .select();
 
     if (error) {
-      console.error('Error bulk adding words:', error);
+      logger.error('Error bulk adding words', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to add words', details: error.message });
     }
 
@@ -436,7 +428,7 @@ router.post('/admin/words/bulk', requireAdmin, async (req, res) => {
       duplicates: words.length - (data?.length || 0)
     });
   } catch (error) {
-    console.error('Error bulk adding words:', error);
+    logger.error('Error bulk adding words', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });

@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const FormData = require('form-data');
 const fetch = require('node-fetch');
+const { logger, logGeneration } = require('./services/logger');
 
 // Configure multer for file uploads
 const upload = multer({
@@ -26,7 +27,11 @@ router.post('/tts', async (req, res) => {
       return res.status(500).json({ error: 'ElevenLabs API key not configured' });
     }
 
-    console.log(`🔊 Generating audio for ${text.length} characters with voice ${voiceId}`);
+    logGeneration('elevenlabs-tts', 'started', {
+      textLength: text.length,
+      voiceId,
+      requestId: req.id
+    });
 
     const response = await fetch(`${ELEVENLABS_BASE_URL}/text-to-speech/${voiceId}`, {
       method: 'POST',
@@ -49,7 +54,7 @@ router.post('/tts', async (req, res) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('ElevenLabs TTS error:', errorData);
+      logger.error('ElevenLabs TTS error', { error: errorData, requestId: req.id });
       throw new Error(errorData.detail?.message || errorData.error || 'TTS generation failed');
     }
 
@@ -60,7 +65,10 @@ router.post('/tts', async (req, res) => {
     const base64Audio = audioBuffer.toString('base64');
     const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
-    console.log(`🔊 Audio generated successfully (${audioBuffer.length} bytes)`);
+    logGeneration('elevenlabs-tts', 'completed', {
+      audioSize: audioBuffer.length,
+      requestId: req.id
+    });
 
     res.json({
       audioUrl,
@@ -69,7 +77,7 @@ router.post('/tts', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('TTS Error:', error);
+    logger.error('TTS Error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: error.message || 'Failed to generate audio' });
   }
 });
@@ -92,7 +100,7 @@ router.post('/clone', upload.single('audio'), async (req, res) => {
       return res.status(500).json({ error: 'ElevenLabs API key not configured' });
     }
 
-    console.log(`🎤 Creating voice clone: ${name}`);
+    logGeneration('elevenlabs-clone', 'started', { name, requestId: req.id });
 
     // Create form data for the API
     const formData = new FormData();
@@ -114,12 +122,16 @@ router.post('/clone', upload.single('audio'), async (req, res) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('ElevenLabs clone error:', errorData);
+      logger.error('ElevenLabs clone error', { error: errorData, requestId: req.id });
       throw new Error(errorData.detail?.message || errorData.error || 'Voice cloning failed');
     }
 
     const data = await response.json();
-    console.log(`🎤 Voice clone created: ${data.voice_id}`);
+
+    logGeneration('elevenlabs-clone', 'completed', {
+      voiceId: data.voice_id,
+      requestId: req.id
+    });
 
     res.json({
       voiceId: data.voice_id,
@@ -127,7 +139,7 @@ router.post('/clone', upload.single('audio'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Voice Clone Error:', error);
+    logger.error('Voice Clone Error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: error.message || 'Failed to clone voice' });
   }
 });
@@ -162,7 +174,7 @@ router.get('/voices', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get Voices Error:', error);
+    logger.error('Get Voices Error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: error.message || 'Failed to fetch voices' });
   }
 });

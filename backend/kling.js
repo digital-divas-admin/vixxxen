@@ -1,5 +1,7 @@
 const express = require('express');
 const Replicate = require('replicate');
+const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -56,12 +58,20 @@ router.post('/generate', async (req, res) => {
       });
     }
 
-    console.log(`\n🎬 Generating video with Kling 2.5 Turbo Pro...`);
-    console.log(`   Prompt: ${prompt}`);
-    console.log(`   Aspect Ratio: ${aspectRatio}`);
-    console.log(`   Duration: ${duration}s`);
-    console.log(`   Has start image: ${!!startImage}`);
-    console.log(`   Model: ${KLING_MODEL}`);
+    logGeneration('kling', 'started', {
+      aspectRatio,
+      duration,
+      hasStartImage: !!startImage,
+      requestId: req.id
+    });
+
+    // Track generation started
+    analytics.generation.started('kling', {
+      type: 'video',
+      aspect_ratio: aspectRatio,
+      duration,
+      has_start_image: !!startImage
+    }, req);
 
     // Build input for Kling model
     const input = {
@@ -81,13 +91,13 @@ router.post('/generate', async (req, res) => {
       input.negative_prompt = negativePrompt;
     }
 
-    console.log(`   Sending request to Replicate...`);
-
     // Run the model
     const output = await replicate.run(KLING_MODEL, { input });
 
-    console.log(`   ✅ Video generated successfully!`);
-    console.log(`   Video URL: ${output}`);
+    logGeneration('kling', 'completed', { requestId: req.id });
+
+    // Track generation completed
+    analytics.generation.completed('kling', { type: 'video', duration }, req);
 
     // Return the video URL
     res.json({
@@ -105,7 +115,10 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Kling video generation error:', error);
+    logger.error('Kling video generation error', { error: error.message, requestId: req.id });
+
+    // Track generation failed
+    analytics.generation.failed('kling', error.message, { type: 'video' }, req);
 
     // Handle specific error types
     if (error.message?.includes('API key')) {

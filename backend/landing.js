@@ -1,16 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { requireAdmin } = require('./middleware/auth');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
+const { logger } = require('./services/logger');
 
 // ===========================================
 // PUBLIC ENDPOINTS (no auth required)
@@ -54,7 +46,7 @@ router.get('/', async (req, res) => {
     ].filter(Boolean);
 
     if (errors.length > 0) {
-      console.error('Error fetching landing page data:', errors);
+      logger.error('Error fetching landing page data', { errors, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch landing page data' });
     }
 
@@ -82,7 +74,7 @@ router.get('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Landing page fetch error:', error);
+    logger.error('Landing page fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -101,13 +93,13 @@ router.get('/sections', async (req, res) => {
       .order('display_order');
 
     if (error) {
-      console.error('Error fetching sections:', error);
+      logger.error('Error fetching sections', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch sections' });
     }
 
     res.json({ sections: data });
   } catch (error) {
-    console.error('Sections fetch error:', error);
+    logger.error('Sections fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -152,7 +144,7 @@ router.get('/admin/all', requireAdmin, async (req, res) => {
     ].filter(Boolean);
 
     if (errors.length > 0) {
-      console.error('Error fetching admin landing data:', errors);
+      logger.error('Error fetching admin landing data', { errors, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch landing page data' });
     }
 
@@ -167,7 +159,7 @@ router.get('/admin/all', requireAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Admin landing fetch error:', error);
+    logger.error('Admin landing fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -195,13 +187,13 @@ router.put('/admin/sections/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating section:', error);
+      logger.error('Error updating section', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update section' });
     }
 
     res.json({ section: data });
   } catch (error) {
-    console.error('Section update error:', error);
+    logger.error('Section update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -226,7 +218,7 @@ router.put('/admin/sections/reorder', requireAdmin, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Section reorder error:', error);
+    logger.error('Section reorder error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -255,13 +247,13 @@ router.put('/admin/content/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating content:', error);
+      logger.error('Error updating content', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update content' });
     }
 
     res.json({ content: data });
   } catch (error) {
-    console.error('Content update error:', error);
+    logger.error('Content update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -289,13 +281,13 @@ router.post('/admin/content', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating content:', error);
+      logger.error('Error creating content', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create content' });
     }
 
     res.json({ content: data });
   } catch (error) {
-    console.error('Content create error:', error);
+    logger.error('Content create error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -315,13 +307,13 @@ router.delete('/admin/content/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting content:', error);
+      logger.error('Error deleting content', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete content' });
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Content delete error:', error);
+    logger.error('Content delete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -346,13 +338,13 @@ router.post('/admin/stats', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating stat:', error);
+      logger.error('Error creating stat', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create stat' });
     }
 
     res.json({ stat: data });
   } catch (error) {
-    console.error('Stat create error:', error);
+    logger.error('Stat create error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -382,13 +374,13 @@ router.put('/admin/stats/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating stat:', error);
+      logger.error('Error updating stat', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update stat' });
     }
 
     res.json({ stat: data });
   } catch (error) {
-    console.error('Stat update error:', error);
+    logger.error('Stat update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -408,13 +400,13 @@ router.delete('/admin/stats/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting stat:', error);
+      logger.error('Error deleting stat', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete stat' });
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Stat delete error:', error);
+    logger.error('Stat delete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -447,13 +439,13 @@ router.post('/admin/characters', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating character:', error);
+      logger.error('Error creating character', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create character' });
     }
 
     res.json({ character: data });
   } catch (error) {
-    console.error('Character create error:', error);
+    logger.error('Character create error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -486,13 +478,13 @@ router.put('/admin/characters/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating character:', error);
+      logger.error('Error updating character', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update character' });
     }
 
     res.json({ character: data });
   } catch (error) {
-    console.error('Character update error:', error);
+    logger.error('Character update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -512,13 +504,13 @@ router.delete('/admin/characters/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting character:', error);
+      logger.error('Error deleting character', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete character' });
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Character delete error:', error);
+    logger.error('Character delete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -549,13 +541,13 @@ router.post('/admin/pipeline', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating pipeline step:', error);
+      logger.error('Error creating pipeline step', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create pipeline step' });
     }
 
     res.json({ step: data });
   } catch (error) {
-    console.error('Pipeline create error:', error);
+    logger.error('Pipeline create error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -586,13 +578,13 @@ router.put('/admin/pipeline/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating pipeline step:', error);
+      logger.error('Error updating pipeline step', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update pipeline step' });
     }
 
     res.json({ step: data });
   } catch (error) {
-    console.error('Pipeline update error:', error);
+    logger.error('Pipeline update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -612,13 +604,13 @@ router.delete('/admin/pipeline/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting pipeline step:', error);
+      logger.error('Error deleting pipeline step', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete pipeline step' });
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Pipeline delete error:', error);
+    logger.error('Pipeline delete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -643,13 +635,13 @@ router.post('/admin/capabilities', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating capability:', error);
+      logger.error('Error creating capability', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create capability' });
     }
 
     res.json({ capability: data });
   } catch (error) {
-    console.error('Capability create error:', error);
+    logger.error('Capability create error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -679,13 +671,13 @@ router.put('/admin/capabilities/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating capability:', error);
+      logger.error('Error updating capability', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update capability' });
     }
 
     res.json({ capability: data });
   } catch (error) {
-    console.error('Capability update error:', error);
+    logger.error('Capability update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -705,13 +697,13 @@ router.delete('/admin/capabilities/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting capability:', error);
+      logger.error('Error deleting capability', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete capability' });
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Capability delete error:', error);
+    logger.error('Capability delete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -742,13 +734,13 @@ router.post('/admin/showcase', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating showcase item:', error);
+      logger.error('Error creating showcase item', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create showcase item' });
     }
 
     res.json({ showcase: data });
   } catch (error) {
-    console.error('Showcase create error:', error);
+    logger.error('Showcase create error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -779,13 +771,13 @@ router.put('/admin/showcase/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating showcase item:', error);
+      logger.error('Error updating showcase item', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update showcase item' });
     }
 
     res.json({ showcase: data });
   } catch (error) {
-    console.error('Showcase update error:', error);
+    logger.error('Showcase update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -805,13 +797,13 @@ router.delete('/admin/showcase/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting showcase item:', error);
+      logger.error('Error deleting showcase item', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete showcase item' });
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Showcase delete error:', error);
+    logger.error('Showcase delete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -854,7 +846,7 @@ router.put('/admin/reorder/:table', requireAdmin, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Reorder error:', error);
+    logger.error('Reorder error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

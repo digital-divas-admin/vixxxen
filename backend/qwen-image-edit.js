@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Replicate = require('replicate');
+const { logger, logGeneration } = require('./services/logger');
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY,
@@ -20,14 +21,6 @@ router.post('/generate', async (req, res) => {
       outputQuality = 95,
       disableSafetyChecker = false
     } = req.body;
-
-    console.log('Received Qwen Image Edit request:', {
-      imageCount: images?.length || 0,
-      prompt: prompt?.substring(0, 100),
-      aspectRatio,
-      outputFormat,
-      goFast
-    });
 
     // Validate inputs
     if (!images || !Array.isArray(images) || images.length === 0) {
@@ -51,6 +44,14 @@ router.post('/generate', async (req, res) => {
       });
     }
 
+    logGeneration('qwen-image-edit', 'started', {
+      imageCount: images.length,
+      aspectRatio,
+      outputFormat,
+      goFast,
+      requestId: req.id
+    });
+
     // Build input for Qwen Image Edit model
     const input = {
       image: images,
@@ -67,14 +68,9 @@ router.post('/generate', async (req, res) => {
       input.seed = parseInt(seed);
     }
 
-    console.log('Calling Qwen Image Edit model with input:', {
-      ...input,
-      image: `[${input.image.length} images]`
-    });
-
     const output = await replicate.run(QWEN_IMAGE_EDIT_MODEL, { input });
 
-    console.log('Qwen Image Edit generation completed');
+    logGeneration('qwen-image-edit', 'completed', { requestId: req.id });
 
     // Output is an array of image URLs
     res.json({
@@ -92,7 +88,7 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Qwen Image Edit error:', error);
+    logger.error('Qwen Image Edit error', { error: error.message, requestId: req.id });
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to edit images'

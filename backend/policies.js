@@ -1,16 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { requireAdmin } = require('./middleware/auth');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
+const { logger } = require('./services/logger');
 
 // GET /api/policies - Get all active policies
 router.get('/', async (req, res) => {
@@ -26,14 +18,14 @@ router.get('/', async (req, res) => {
       .order('type');
 
     if (error) {
-      console.error('Error fetching policies:', error);
+      logger.error('Error fetching policies', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch policies' });
     }
 
     res.json({ policies });
 
   } catch (error) {
-    console.error('Policies fetch error:', error);
+    logger.error('Policies fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -55,14 +47,14 @@ router.get('/:type', async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error fetching policy:', error);
+      logger.error('Error fetching policy', { error: error.message, requestId: req.id });
       return res.status(404).json({ error: 'Policy not found' });
     }
 
     res.json({ policy });
 
   } catch (error) {
-    console.error('Policy fetch error:', error);
+    logger.error('Policy fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -82,14 +74,14 @@ router.get('/admin/all', requireAdmin, async (req, res) => {
       .order('type');
 
     if (error) {
-      console.error('Error fetching all policies:', error);
+      logger.error('Error fetching all policies', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch policies' });
     }
 
     res.json({ policies });
 
   } catch (error) {
-    console.error('Policies fetch error:', error);
+    logger.error('Policies fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -104,7 +96,7 @@ router.put('/:type', requireAdmin, async (req, res) => {
     const { type } = req.params;
     // User is verified admin via requireAdmin middleware
 
-    console.log(`📝 Policy update request for type: ${type}`);
+    logger.info('Policy update request', { type, requestId: req.id });
 
     const { title, content, is_active } = req.body;
 
@@ -137,7 +129,7 @@ router.put('/:type', requireAdmin, async (req, res) => {
 
       policy = result.data;
       error = result.error;
-      console.log(`📝 Updated existing policy: ${type}`);
+      logger.info('Updated existing policy', { type, requestId: req.id });
     } else {
       // Create new policy
       const insertData = {
@@ -157,18 +149,18 @@ router.put('/:type', requireAdmin, async (req, res) => {
 
       policy = result.data;
       error = result.error;
-      console.log(`📝 Created new policy: ${type}`);
+      logger.info('Created new policy', { type, requestId: req.id });
     }
 
     if (error) {
-      console.error('Error saving policy:', error);
+      logger.error('Error saving policy', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to save policy', details: error.message });
     }
 
     res.json({ policy });
 
   } catch (error) {
-    console.error('Save policy error:', error);
+    logger.error('Save policy error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });

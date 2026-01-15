@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('./middleware/auth');
 const { sendSubscriptionEmail, sendPaymentReceiptEmail, isEmailConfigured } = require('./email');
+const { logger, maskUserId, sanitizePaymentData, logPaymentEvent } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -78,7 +80,7 @@ const TIERS = {
 // Verify NOWPayments IPN signature using HMAC-SHA512
 function verifyIpnSignature(payload, signature) {
   if (!NOWPAYMENTS_IPN_SECRET) {
-    console.warn('NOWPAYMENTS_IPN_SECRET not set, skipping signature verification');
+    logger.warn('NOWPAYMENTS_IPN_SECRET not set, skipping signature verification');
     return true;
   }
 
@@ -121,12 +123,12 @@ router.post('/create-charge', requireAuth, async (req, res) => {
     const userId = req.userId;
 
     if (!NOWPAYMENTS_API_KEY) {
-      console.error('NOWPAYMENTS_API_KEY is not set');
+      logger.error('NOWPAYMENTS_API_KEY is not set');
       return res.status(500).json({ error: 'Payment provider not configured' });
     }
 
     if (!tier || !TIERS[tier]) {
-      console.error('Invalid tier requested:', tier);
+      logger.warn('Invalid tier requested', { tier, requestId: req.id });
       return res.status(400).json({ error: `Invalid tier: ${tier}` });
     }
 
@@ -151,7 +153,7 @@ router.post('/create-charge', requireAuth, async (req, res) => {
       cancel_url: cancelUrl
     };
 
-    console.log('Creating NOWPayments invoice:', invoicePayload);
+    logPaymentEvent('Creating invoice', { tier, userId: maskUserId(userId), requestId: req.id });
 
     const response = await fetch(`${NOWPAYMENTS_API_URL}/invoice`, {
       method: 'POST',
@@ -164,10 +166,12 @@ router.post('/create-charge', requireAuth, async (req, res) => {
 
     const data = await response.json();
 
-    console.log('NOWPayments API response:', JSON.stringify(data, null, 2));
-
     if (!response.ok) {
-      console.error('NOWPayments error response:', JSON.stringify(data, null, 2));
+      logger.error('NOWPayments invoice creation failed', {
+        statusCode: response.status,
+        error: data.message,
+        requestId: req.id
+      });
       return res.status(500).json({
         error: data.message || 'Failed to create invoice',
         details: data
@@ -175,12 +179,14 @@ router.post('/create-charge', requireAuth, async (req, res) => {
     }
 
     if (!data.id || !data.invoice_url) {
-      console.error('Invalid NOWPayments response structure:', JSON.stringify(data, null, 2));
+      logger.error('Invalid NOWPayments response structure', { requestId: req.id });
       return res.status(500).json({
         error: 'Invalid response from payment provider',
         details: 'Missing required fields in response'
       });
     }
+
+    logPaymentEvent('Invoice created', { tier, userId: maskUserId(userId), requestId: req.id });
 
     // Store pending payment in database
     const { error: dbError } = await supabase
@@ -200,7 +206,7 @@ router.post('/create-charge', requireAuth, async (req, res) => {
       });
 
     if (dbError) {
-      console.error('Database error:', dbError);
+      logger.error('Database error storing payment', { error: dbError.message, requestId: req.id });
     }
 
     res.json({
@@ -211,8 +217,7 @@ router.post('/create-charge', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create invoice error:', error);
-    console.error('Error stack:', error.stack);
+    logger.error('Create invoice error', { error: error.message, requestId: req.id });
     res.status(500).json({
       error: 'Failed to create payment',
       message: error.message,
@@ -227,20 +232,18 @@ router.post('/webhook/nowpayments', async (req, res) => {
     const data = req.body;
     const signature = req.headers['x-nowpayments-sig'];
 
-    console.log('NOWPayments webhook received:', JSON.stringify(data, null, 2));
+    logPaymentEvent('Webhook received', { status: data.payment_status, requestId: req.id });
 
     // Verify IPN signature
     if (signature) {
       const isValid = verifyIpnSignature(data, signature);
       if (!isValid) {
-        console.error('Invalid IPN signature');
-        console.error('Received signature:', signature);
-        // Log but continue processing for debugging purposes
+        logger.warn('Invalid IPN signature on webhook', { requestId: req.id });
       } else {
-        console.log('IPN signature verified successfully');
+        logger.debug('IPN signature verified', { requestId: req.id });
       }
     } else {
-      console.warn('No IPN signature provided in webhook');
+      logger.warn('No IPN signature provided in webhook', { requestId: req.id });
     }
 
     const paymentId = data.payment_id;
@@ -262,7 +265,12 @@ router.post('/webhook/nowpayments', async (req, res) => {
     const userId = payment?.user_id;
     const paymentTier = payment?.tier || tier;
 
-    console.log(`NOWPayments webhook: status=${paymentStatus}, invoice_id=${invoiceId}, payment_id=${paymentId}, user=${userId}, tier=${paymentTier}`);
+    logger.info('Processing webhook', {
+      status: paymentStatus,
+      tier: paymentTier,
+      userId: maskUserId(userId),
+      requestId: req.id
+    });
 
     // Map NOWPayments status to our internal status
     const internalStatus = mapNowPaymentsStatus(paymentStatus);
@@ -271,7 +279,7 @@ router.post('/webhook/nowpayments', async (req, res) => {
     switch (internalStatus) {
       case 'completed':
         // Payment confirmed - activate membership or add credits
-        console.log(`Payment completed for user ${userId}, tier: ${paymentTier}`);
+        logPaymentEvent('Payment completed', { tier: paymentTier, userId: maskUserId(userId) });
 
         // Update payment status
         await supabase
@@ -312,7 +320,13 @@ router.post('/webhook/nowpayments', async (req, res) => {
             .update({ credits: newCredits })
             .eq('id', userId);
 
-          console.log(`Added ${creditsToAdd} credits to user ${userId}. New total: ${newCredits}`);
+          logger.info('Credits added', { credits: creditsToAdd, userId: maskUserId(userId) });
+
+          // Track credits purchased
+          analytics.monetization.creditsPurchased(creditsToAdd, {
+            tier: paymentTier,
+            amount: tierConfig.price
+          }, { userId, headers: {} });
 
           // Send receipt email for credit purchase
           if (isEmailConfigured()) {
@@ -334,7 +348,7 @@ router.post('/webhook/nowpayments', async (req, res) => {
                 );
               }
             } catch (emailError) {
-              console.error('Failed to send credit purchase receipt:', emailError);
+              logger.error('Failed to send credit purchase receipt', { error: emailError.message });
             }
           }
         } else {
@@ -414,10 +428,15 @@ router.post('/webhook/nowpayments', async (req, res) => {
               .update({ credits: newCredits })
               .eq('id', userId);
 
-            console.log(`Added ${tierConfig.credits} subscription credits to user ${userId}`);
+            logger.info('Subscription credits added', { credits: tierConfig.credits, userId: maskUserId(userId) });
           }
 
-          console.log(`Membership activated for user ${userId}: ${paymentTier}`);
+          logger.info('Membership activated', { tier: paymentTier, userId: maskUserId(userId) });
+
+          // Track subscription completed
+          analytics.monetization.checkoutCompleted(paymentTier, tierConfig?.price || 0, 'crypto', {
+            credits: tierConfig?.credits || 0
+          }, { userId, headers: {} });
 
           // Send confirmation emails if email service is configured
           if (isEmailConfigured()) {
@@ -451,7 +470,7 @@ router.post('/webhook/nowpayments', async (req, res) => {
                 );
               }
             } catch (emailError) {
-              console.error('Failed to send confirmation emails:', emailError);
+              logger.error('Failed to send confirmation emails', { error: emailError.message });
               // Don't fail the webhook - emails are non-critical
             }
           }
@@ -468,7 +487,7 @@ router.post('/webhook/nowpayments', async (req, res) => {
             updated_at: new Date().toISOString()
           })
           .eq('provider_charge_id', invoiceId?.toString());
-        console.log(`Payment pending for user ${userId}`);
+        logger.info('Payment pending', { userId: maskUserId(userId) });
         break;
 
       case 'partial':
@@ -485,7 +504,7 @@ router.post('/webhook/nowpayments', async (req, res) => {
             updated_at: new Date().toISOString()
           })
           .eq('provider_charge_id', invoiceId?.toString());
-        console.log(`Partial payment received for user ${userId}`);
+        logger.info('Partial payment received', { userId: maskUserId(userId) });
         break;
 
       case 'failed':
@@ -499,18 +518,18 @@ router.post('/webhook/nowpayments', async (req, res) => {
             updated_at: new Date().toISOString()
           })
           .eq('provider_charge_id', invoiceId?.toString());
-        console.log(`Payment ${internalStatus} for user ${userId}`);
+        logger.info('Payment status changed', { status: internalStatus, userId: maskUserId(userId) });
         break;
 
       default:
-        console.log(`Unhandled NOWPayments status: ${paymentStatus}`);
+        logger.warn('Unhandled NOWPayments status', { status: paymentStatus });
     }
 
     // NOWPayments expects 200 OK response
     res.status(200).json({ status: 'ok' });
 
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Webhook processing failed' });
   }
 });
@@ -548,7 +567,7 @@ router.get('/status/:paymentId', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get payment status error:', error);
+    logger.error('Get payment status error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to get payment status' });
   }
 });
@@ -577,7 +596,7 @@ router.get('/currencies', async (req, res) => {
     res.json({ currencies: data.currencies });
 
   } catch (error) {
-    console.error('Get currencies error:', error);
+    logger.error('Get currencies error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to get currencies' });
   }
 });
@@ -616,7 +635,7 @@ router.get('/subscription', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get subscription error:', error);
+    logger.error('Get subscription error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to get subscription' });
   }
 });
@@ -637,7 +656,7 @@ router.get('/history', requireAuth, async (req, res) => {
     res.json({ payments });
 
   } catch (error) {
-    console.error('Get payment history error:', error);
+    logger.error('Get payment history error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to get payment history' });
   }
 });
@@ -657,7 +676,7 @@ router.get('/membership/rules-status', requireAuth, async (req, res) => {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Error checking rules status:', error);
+      logger.error('Error checking rules status', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to check rules status' });
     }
 
@@ -667,7 +686,7 @@ router.get('/membership/rules-status', requireAuth, async (req, res) => {
     res.json({ acknowledged });
 
   } catch (error) {
-    console.error('Rules status error:', error);
+    logger.error('Rules status error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to check rules status' });
   }
 });
@@ -686,7 +705,7 @@ router.post('/membership/acknowledge-rules', requireAuth, async (req, res) => {
       .single();
 
     if (fetchError) {
-      console.error('Error finding membership:', fetchError);
+      logger.error('Error finding membership', { error: fetchError.message, requestId: req.id });
       return res.status(404).json({ error: 'No active membership found' });
     }
 
@@ -696,15 +715,15 @@ router.post('/membership/acknowledge-rules', requireAuth, async (req, res) => {
       .eq('id', membership.id);
 
     if (updateError) {
-      console.error('Error acknowledging rules:', updateError);
+      logger.error('Error acknowledging rules', { error: updateError.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to save acknowledgment' });
     }
 
-    console.log(`User ${userId} acknowledged community rules`);
+    logger.info('User acknowledged community rules', { userId: maskUserId(userId) });
     res.json({ success: true, acknowledged_at: new Date().toISOString() });
 
   } catch (error) {
-    console.error('Acknowledge rules error:', error);
+    logger.error('Acknowledge rules error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to acknowledge rules' });
   }
 });

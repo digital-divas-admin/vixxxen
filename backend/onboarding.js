@@ -1,14 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { requireAuth, optionalAuth } = require('./middleware/auth');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
+const { logger } = require('./services/logger');
 
 // ===========================================
 // PUBLIC ENDPOINTS (no auth required)
@@ -31,7 +25,7 @@ router.get('/config', async (req, res) => {
 
     res.json({ steps });
   } catch (error) {
-    console.error('Error fetching onboarding config:', error);
+    logger.error('Error fetching onboarding config', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch onboarding config' });
   }
 });
@@ -53,7 +47,7 @@ router.get('/content-plans', async (req, res) => {
 
     res.json({ plans });
   } catch (error) {
-    console.error('Error fetching content plans:', error);
+    logger.error('Error fetching content plans', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch content plans' });
   }
 });
@@ -75,7 +69,7 @@ router.get('/education-tiers', async (req, res) => {
 
     res.json({ tiers });
   } catch (error) {
-    console.error('Error fetching education tiers:', error);
+    logger.error('Error fetching education tiers', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch education tiers' });
   }
 });
@@ -98,7 +92,7 @@ router.get('/starter-characters', async (req, res) => {
 
     res.json({ characters });
   } catch (error) {
-    console.error('Error fetching starter characters:', error);
+    logger.error('Error fetching starter characters', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch starter characters' });
   }
 });
@@ -128,7 +122,7 @@ router.get('/progress', requireAuth, async (req, res) => {
 
     res.json({ progress: progress || null });
   } catch (error) {
-    console.error('Error fetching onboarding progress:', error);
+    logger.error('Error fetching onboarding progress', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch onboarding progress' });
   }
 });
@@ -166,7 +160,7 @@ router.post('/progress', requireAuth, async (req, res) => {
 
     res.json({ progress });
   } catch (error) {
-    console.error('Error updating onboarding progress:', error);
+    logger.error('Error updating onboarding progress', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update onboarding progress' });
   }
 });
@@ -234,7 +228,7 @@ router.post('/complete-step', requireAuth, async (req, res) => {
 
     res.json({ progress: updatedProgress });
   } catch (error) {
-    console.error('Error completing step:', error);
+    logger.error('Error completing step', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to complete step' });
   }
 });
@@ -275,7 +269,7 @@ router.get('/user-subscriptions', requireAuth, async (req, res) => {
       education_subscription: educationSub || null
     });
   } catch (error) {
-    console.error('Error fetching user subscriptions:', error);
+    logger.error('Error fetching user subscriptions', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch user subscriptions' });
   }
 });
@@ -399,7 +393,7 @@ router.get('/check-prompts', requireAuth, async (req, res) => {
 
     res.json({ prompt: null });
   } catch (error) {
-    console.error('Error checking prompts:', error);
+    logger.error('Error checking prompts', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to check prompts' });
   }
 });
@@ -445,7 +439,7 @@ router.post('/prompt-shown', requireAuth, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error recording prompt shown:', error);
+    logger.error('Error recording prompt shown', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to record prompt shown' });
   }
 });
@@ -471,7 +465,7 @@ router.post('/prompt-dismissed', requireAuth, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error recording prompt dismissed:', error);
+    logger.error('Error recording prompt dismissed', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to record prompt dismissed' });
   }
 });
@@ -497,7 +491,7 @@ router.post('/prompt-converted', requireAuth, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error recording prompt conversion:', error);
+    logger.error('Error recording prompt conversion', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to record prompt conversion' });
   }
 });
@@ -533,7 +527,7 @@ router.get('/admin/config', requireAuth, async (req, res) => {
 
     res.json({ steps });
   } catch (error) {
-    console.error('Error fetching admin config:', error);
+    logger.error('Error fetching admin config', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch admin config' });
   }
 });
@@ -566,7 +560,7 @@ router.put('/admin/config/:stepKey', requireAuth, async (req, res) => {
 
     res.json({ step });
   } catch (error) {
-    console.error('Error updating config step:', error);
+    logger.error('Error updating config step', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update config step' });
   }
 });
@@ -587,7 +581,7 @@ router.get('/admin/plans', requireAuth, async (req, res) => {
 
     res.json({ plans });
   } catch (error) {
-    console.error('Error fetching admin plans:', error);
+    logger.error('Error fetching admin plans', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch admin plans' });
   }
 });
@@ -618,7 +612,7 @@ router.put('/admin/plans/:slug', requireAuth, async (req, res) => {
 
     res.json({ plan });
   } catch (error) {
-    console.error('Error updating content plan:', error);
+    logger.error('Error updating content plan', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update content plan' });
   }
 });
@@ -670,7 +664,7 @@ router.post('/admin/plans', requireAuth, async (req, res) => {
 
     res.json({ plan });
   } catch (error) {
-    console.error('Error creating content plan:', error);
+    logger.error('Error creating content plan', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to create content plan' });
   }
 });
@@ -691,7 +685,7 @@ router.get('/admin/tiers', requireAuth, async (req, res) => {
 
     res.json({ tiers });
   } catch (error) {
-    console.error('Error fetching admin tiers:', error);
+    logger.error('Error fetching admin tiers', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch admin tiers' });
   }
 });
@@ -722,7 +716,7 @@ router.put('/admin/tiers/:slug', requireAuth, async (req, res) => {
 
     res.json({ tier });
   } catch (error) {
-    console.error('Error updating education tier:', error);
+    logger.error('Error updating education tier', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update education tier' });
   }
 });
@@ -775,7 +769,7 @@ router.post('/admin/tiers', requireAuth, async (req, res) => {
 
     res.json({ tier });
   } catch (error) {
-    console.error('Error creating education tier:', error);
+    logger.error('Error creating education tier', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to create education tier' });
   }
 });
@@ -797,7 +791,7 @@ router.get('/admin/all-characters', requireAuth, async (req, res) => {
 
     res.json({ characters });
   } catch (error) {
-    console.error('Error fetching all characters:', error);
+    logger.error('Error fetching all characters', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch characters' });
   }
 });
@@ -826,7 +820,7 @@ router.put('/admin/starter-character/:id', requireAuth, async (req, res) => {
 
     res.json({ character });
   } catch (error) {
-    console.error('Error updating starter character:', error);
+    logger.error('Error updating starter character', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update starter character' });
   }
 });
@@ -862,7 +856,7 @@ router.put('/admin/starter-order', requireAuth, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error updating starter order:', error);
+    logger.error('Error updating starter order', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update starter order' });
   }
 });
@@ -883,7 +877,7 @@ router.get('/admin/triggers', requireAuth, async (req, res) => {
 
     res.json({ triggers });
   } catch (error) {
-    console.error('Error fetching admin triggers:', error);
+    logger.error('Error fetching admin triggers', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch admin triggers' });
   }
 });
@@ -914,7 +908,7 @@ router.put('/admin/triggers/:triggerKey', requireAuth, async (req, res) => {
 
     res.json({ trigger });
   } catch (error) {
-    console.error('Error updating prompt trigger:', error);
+    logger.error('Error updating prompt trigger', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update prompt trigger' });
   }
 });
@@ -957,7 +951,7 @@ function evaluateTrigger(condition, context) {
 
     return true;
   } catch (error) {
-    console.error('Error evaluating trigger:', error);
+    logger.error('Error evaluating trigger', { error: error.message });
     return false;
   }
 }

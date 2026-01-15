@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
+const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // RunPod Configuration (shared with qwen.js)
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -276,14 +278,14 @@ function buildLoraConfig(userLoras = [], mode = 'sfw') {
 
       // Handle both string format ("lora.safetensors") and object format ({ name: "lora.safetensors", strength: 1 })
       if (typeof lora === 'string') {
-        console.log(`   → LoRA ${index + 1}: ${lora} (string format)`);
+        logger.debug('LoRA configured', { index: index + 1, lora, format: 'string' });
         defaults[loraKey] = {
           "on": true,
           "lora": lora,
           "strength": 1
         };
       } else {
-        console.log(`   → LoRA ${index + 1}: ${lora.name} (object format, strength: ${lora.strength ?? 1})`);
+        logger.debug('LoRA configured', { index: index + 1, lora: lora.name, format: 'object', strength: lora.strength ?? 1 });
         defaults[loraKey] = {
           "on": lora.enabled !== false,
           "lora": lora.name,
@@ -300,15 +302,10 @@ function buildLoraConfig(userLoras = [], mode = 'sfw') {
 // JOB POLLING (uses GPU router for endpoint-aware status checks)
 // ============================================================================
 async function pollJob(jobId) {
-  console.log(`🔄 Polling job: ${jobId}`);
+  logger.debug('Starting job polling', { jobId });
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     try {
-      // Only log every 5th attempt to reduce noise
-      if (attempt % 5 === 0 || attempt < 3) {
-        console.log(`   Polling attempt ${attempt + 1}/${MAX_POLL_ATTEMPTS}...`);
-      }
-
       // Use GPU router to get status (routes to correct endpoint)
       const statusResult = await getJobStatus({
         jobId,
@@ -317,7 +314,7 @@ async function pollJob(jobId) {
       });
 
       if (!statusResult.success) {
-        console.error(`   Poll failed: ${statusResult.error}`);
+        logger.debug('Poll failed', { attempt: attempt + 1, error: statusResult.error });
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
         continue;
       }
@@ -325,27 +322,20 @@ async function pollJob(jobId) {
       const data = statusResult.data;
       const status = data.status;
 
-      if (attempt % 5 === 0 || attempt < 3) {
-        console.log(`   Job status: ${status} (via ${statusResult.endpoint})`);
-      }
-
       if (status === 'COMPLETED') {
-        console.log(`✅ Job completed!`);
-        console.log(`   Output keys:`, data.output ? Object.keys(data.output) : 'none');
+        logger.debug('Job completed', { jobId, outputKeys: data.output ? Object.keys(data.output) : 'none' });
 
         // Extract image from output
         let imageUrl = null;
         if (data.output) {
           if (data.output.images && data.output.images.length > 0) {
             const firstImage = data.output.images[0];
-            console.log(`   First image type:`, typeof firstImage);
 
             // Handle different formats: string, {data: "..."}, {image: "..."}
             let base64Data;
             if (typeof firstImage === 'string') {
               base64Data = firstImage;
             } else if (firstImage && typeof firstImage === 'object' && firstImage.data) {
-              console.log(`   → Image is object with data property`);
               base64Data = firstImage.data;
             } else if (firstImage && typeof firstImage === 'object' && firstImage.image) {
               base64Data = firstImage.image;
@@ -369,15 +359,13 @@ async function pollJob(jobId) {
         }
 
         if (imageUrl) {
-          console.log(`   ✅ Extracted image (length: ${imageUrl.length})`);
           return { success: true, image: imageUrl, endpoint: statusResult.endpoint };
         } else {
-          console.error('❌ Job completed but no image in output:', JSON.stringify(data.output, null, 2).substring(0, 500));
+          logger.error('Job completed but no image in output', { jobId });
           return { success: false, error: 'No image in output', fullResponse: data };
         }
       } else if (status === 'FAILED') {
-        console.error(`❌ Job failed:`, data.error);
-        console.error(`   Full failed response:`, JSON.stringify(data, null, 2).substring(0, 1000));
+        logger.error('Job failed', { jobId, error: data.error });
         return { success: false, error: data.error || 'Job failed', fullResponse: data };
       } else if (status === 'CANCELLED') {
         return { success: false, error: 'Job was cancelled' };
@@ -387,7 +375,7 @@ async function pollJob(jobId) {
       await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
 
     } catch (err) {
-      console.error(`   Polling error (attempt ${attempt + 1}):`, err.message);
+      logger.debug('Polling error', { attempt: attempt + 1, error: err.message });
       await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
     }
   }
@@ -403,20 +391,11 @@ async function submitJob(workflow, mode, images = []) {
     throw new Error('RunPod not configured. Set RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID.');
   }
 
-  console.log(`📤 Submitting ${mode} inpaint job via GPU router...`);
-  console.log(`   Images to upload: ${images.length}`);
-
-  if (images.length > 0) {
-    console.log(`   Image names: ${images.map(i => i.name).join(', ')}`);
-  }
+  logger.debug('Submitting inpaint job', { mode, imageCount: images.length });
 
   // NSFW inpaint uses SDXL on serverless, SFW uses Qwen on dedicated
   // Force each to the correct endpoint based on model availability
   const forceEndpoint = mode === 'NSFW' ? 'serverless' : 'dedicated';
-
-  if (forceEndpoint) {
-    console.log(`   Forcing endpoint: ${forceEndpoint} (${mode === 'NSFW' ? 'SDXL' : 'Qwen'} model)`);
-  }
 
   // Route through GPU router (handles dedicated/serverless/hybrid)
   const result = await routeGenerationRequest({
@@ -431,7 +410,11 @@ async function submitJob(workflow, mode, images = []) {
     throw new Error(`Job submission failed: ${result.error}`);
   }
 
-  console.log(`📋 Job submitted: ${result.jobId} via ${result.endpoint}${result.usedFallback ? ' (fallback)' : ''}`);
+  logger.info('Inpaint job submitted', {
+    jobId: result.jobId,
+    endpoint: result.endpoint,
+    usedFallback: result.usedFallback || false
+  });
 
   return result.jobId;
 }
@@ -447,7 +430,7 @@ router.get('/proxy-image', async (req, res) => {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    console.log(`🖼️ Proxying image: ${url.substring(0, 100)}...`);
+    logger.debug('Proxying image', { url: url.substring(0, 100) });
 
     const response = await fetch(url);
 
@@ -465,7 +448,7 @@ router.get('/proxy-image', async (req, res) => {
     res.send(Buffer.from(buffer));
 
   } catch (error) {
-    console.error('❌ Image proxy failed:', error.message);
+    logger.error('Image proxy failed', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Proxy failed', message: error.message });
   }
 });
@@ -489,11 +472,17 @@ router.post('/inpaint-sfw', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    console.log(`🎨 Starting SFW inpaint...`);
-    console.log(`   Prompt: ${prompt}`);
-    console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
-    console.log(`   Denoise: ${denoise}`);
-    console.log(`   Image: ${Math.round(image.length / 1024)}KB, Mask: ${Math.round(mask.length / 1024)}KB`);
+    logGeneration('inpaint-sfw', 'started', {
+      loraCount: loras.length,
+      denoise,
+      requestId: req.id
+    });
+
+    // Track analytics
+    analytics.generation.started('inpaint-sfw', {
+      lora_count: loras.length,
+      denoise
+    }, req);
 
     // Strip data URL prefix if present
     let base64Image = image;
@@ -526,6 +515,8 @@ router.post('/inpaint-sfw', async (req, res) => {
     const result = await pollJob(jobId);
 
     if (result.success) {
+      logGeneration('inpaint-sfw', 'completed', { requestId: req.id });
+      analytics.generation.completed('inpaint-sfw', {}, req);
       return res.json({
         success: true,
         mode: 'sfw',
@@ -534,6 +525,8 @@ router.post('/inpaint-sfw', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } else {
+      logger.error('SFW inpaint failed', { error: result.error, requestId: req.id });
+      analytics.generation.failed('inpaint-sfw', result.error, {}, req);
       return res.status(500).json({
         error: 'Inpaint failed',
         message: result.error,
@@ -542,7 +535,8 @@ router.post('/inpaint-sfw', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ SFW inpaint failed:', error.message);
+    logger.error('SFW inpaint failed', { error: error.message, requestId: req.id });
+    analytics.generation.failed('inpaint-sfw', error.message, {}, req);
     res.status(500).json({
       error: 'Inpaint failed',
       message: error.message
@@ -569,11 +563,17 @@ router.post('/inpaint-nsfw', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    console.log(`🎨 Starting NSFW inpaint...`);
-    console.log(`   Prompt: ${prompt}`);
-    console.log(`   LoRAs: ${loras.length > 0 ? JSON.stringify(loras) : 'none'}`);
-    console.log(`   Denoise: ${denoise}`);
-    console.log(`   Image: ${Math.round(image.length / 1024)}KB, Mask: ${Math.round(mask.length / 1024)}KB`);
+    logGeneration('inpaint-nsfw', 'started', {
+      loraCount: loras.length,
+      denoise,
+      requestId: req.id
+    });
+
+    // Track analytics
+    analytics.generation.started('inpaint-nsfw', {
+      lora_count: loras.length,
+      denoise
+    }, req);
 
     // Strip data URL prefix if present
     let base64Image = image;
@@ -606,6 +606,8 @@ router.post('/inpaint-nsfw', async (req, res) => {
     const result = await pollJob(jobId);
 
     if (result.success) {
+      logGeneration('inpaint-nsfw', 'completed', { requestId: req.id });
+      analytics.generation.completed('inpaint-nsfw', {}, req);
       return res.json({
         success: true,
         mode: 'nsfw',
@@ -614,6 +616,8 @@ router.post('/inpaint-nsfw', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } else {
+      logger.error('NSFW inpaint failed', { error: result.error, requestId: req.id });
+      analytics.generation.failed('inpaint-nsfw', result.error, {}, req);
       return res.status(500).json({
         error: 'Inpaint failed',
         message: result.error,
@@ -622,7 +626,8 @@ router.post('/inpaint-nsfw', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ NSFW inpaint failed:', error.message);
+    logger.error('NSFW inpaint failed', { error: error.message, requestId: req.id });
+    analytics.generation.failed('inpaint-nsfw', error.message, {}, req);
     res.status(500).json({
       error: 'Inpaint failed',
       message: error.message

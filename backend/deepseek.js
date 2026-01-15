@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { OpenRouter } = require('@openrouter/sdk');
+const { logger, logGeneration } = require('./services/logger');
 
 const openrouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -26,14 +27,13 @@ router.post('/caption', async (req, res) => {
     }
 
     // Check if any message has an image
-    const lastMessage = messages[messages.length - 1];
     const hasImage = messages.some(msg => !!msg.image);
 
-    console.log(`Received Grok ${hasImage ? 'vision' : 'text-only'} request via OpenRouter:`, {
-      model: GROK_MODEL,
+    logGeneration('grok-caption', 'started', {
+      hasImage,
       messageCount: messages.length,
-      latestMessage: lastMessage.content?.substring(0, 100),
-      streaming: stream
+      streaming: stream,
+      requestId: req.id
     });
 
     // Set headers for streaming
@@ -91,13 +91,6 @@ router.post('/caption', async (req, res) => {
       }
     }
 
-    // Log request structure (without full image data)
-    console.log('OpenRouter Request:', {
-      model: GROK_MODEL,
-      messageCount: openrouterMessages.length,
-      streaming: stream
-    });
-
     let fullResponse = '';
 
     if (stream) {
@@ -118,7 +111,7 @@ router.post('/caption', async (req, res) => {
         }
       }
 
-      console.log('Grok streaming completed via OpenRouter');
+      logGeneration('grok-caption', 'completed', { streaming: true, requestId: req.id });
       res.write('data: [DONE]\n\n');
       res.end();
     } else {
@@ -131,7 +124,7 @@ router.post('/caption', async (req, res) => {
       });
 
       fullResponse = response.choices?.[0]?.message?.content || 'No response received';
-      console.log('Grok response completed via OpenRouter');
+      logGeneration('grok-caption', 'completed', { streaming: false, requestId: req.id });
 
       res.json({
         success: true,
@@ -144,7 +137,7 @@ router.post('/caption', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Caption/chat error:', error);
+    logger.error('Caption/chat error', { error: error.message, requestId: req.id });
 
     // Check if headers already sent (streaming failed mid-way)
     if (res.headersSent) {
