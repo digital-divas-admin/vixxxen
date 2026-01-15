@@ -7,6 +7,8 @@
 // Admin landing page state
 let adminLandingData = null;
 let currentEditingSection = null;
+let landingImageLibrary = [];
+let selectedImageCallback = null;
 
 // ===========================================
 // MAIN ADMIN FUNCTIONS
@@ -72,6 +74,7 @@ function renderAdminLandingDashboard() {
       <button class="admin-tab" onclick="showAdminLandingTab('education')" data-tab="education">Education</button>
       <button class="admin-tab" onclick="showAdminLandingTab('pricing')" data-tab="pricing">Pricing</button>
       <button class="admin-tab" onclick="showAdminLandingTab('finalcta')" data-tab="finalcta">Final CTA</button>
+      <button class="admin-tab admin-tab--highlight" onclick="showAdminLandingTab('images')" data-tab="images">Image Library</button>
     </div>
 
     <div id="adminLandingTabContent">
@@ -81,6 +84,9 @@ function renderAdminLandingDashboard() {
 
   // Add tab styles if not present
   addAdminLandingStyles();
+
+  // Initialize upload handlers after a short delay to ensure DOM is ready
+  setTimeout(initImageUploadHandlers, 100);
 }
 
 /**
@@ -123,6 +129,10 @@ function showAdminLandingTab(tab) {
       break;
     case 'finalcta':
       contentContainer.innerHTML = renderFinalCtaSection();
+      break;
+    case 'images':
+      contentContainer.innerHTML = renderImageLibrarySection();
+      loadImageLibrary();
       break;
   }
 }
@@ -238,8 +248,11 @@ function renderCharactersSection() {
                 </div>
               </div>
               <div class="admin-form-group">
-                <label>Image URL</label>
-                <input type="text" value="${escapeHtml(char.image_url)}" class="admin-input" data-field="image_url">
+                <label>Image</label>
+                <div class="admin-input-with-button">
+                  <input type="text" value="${escapeHtml(char.image_url)}" class="admin-input" data-field="image_url" placeholder="Image URL">
+                  <button type="button" class="admin-upload-btn" onclick="openImagePickerForField(this, 'image_url')" title="Choose from library">📁</button>
+                </div>
               </div>
               <div class="admin-form-group">
                 <label>Metrics (JSON array)</label>
@@ -332,7 +345,10 @@ function renderShowcaseSection() {
       <div id="showcaseListAdmin" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin: 20px 0;">
         ${showcase.map((item, index) => `
           <div class="admin-showcase-item" data-id="${item.id}">
-            <img src="${item.image_url}" alt="${escapeHtml(item.caption || 'Showcase')}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+            <div class="admin-showcase-image-wrapper" onclick="openImagePickerForShowcase('${item.id}')">
+              <img src="${item.image_url}" alt="${escapeHtml(item.caption || 'Showcase')}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+              <div class="admin-showcase-image-overlay">Click to change</div>
+            </div>
             <input type="text" value="${escapeHtml(item.image_url)}" class="admin-input" placeholder="Image URL" data-field="image_url" style="margin-top: 8px;">
             <input type="text" value="${escapeHtml(item.caption || '')}" class="admin-input" placeholder="Caption" data-field="caption">
             <select class="admin-input" data-field="size">
@@ -515,6 +531,381 @@ function renderFinalCtaSection() {
       <button class="admin-save-btn" onclick="saveFinalCtaSection()">Save Final CTA</button>
     </div>
   `;
+}
+
+// ===========================================
+// IMAGE LIBRARY SECTION
+// ===========================================
+
+function renderImageLibrarySection() {
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Image Library</h3>
+      <p style="color: #888; margin-bottom: 16px;">Upload and manage images for your landing page. Click an image to copy its URL.</p>
+
+      <div class="admin-image-upload-zone" id="imageUploadZone">
+        <input type="file" id="imageFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display: none;">
+        <div class="upload-zone-content" onclick="document.getElementById('imageFileInput').click()">
+          <div class="upload-icon">📁</div>
+          <p>Click to upload or drag & drop images here</p>
+          <span class="upload-hint">JPEG, PNG, WebP, GIF - Max 5MB each</span>
+        </div>
+      </div>
+
+      <div class="admin-image-filters" style="display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap;">
+        <select id="imageContextFilter" class="admin-input" style="width: auto;" onchange="filterImageLibrary()">
+          <option value="">All Images</option>
+          <option value="character">Characters</option>
+          <option value="showcase">Showcase</option>
+          <option value="hero">Hero</option>
+          <option value="general">General</option>
+        </select>
+        <span id="imageLibraryCount" style="color: #888; align-self: center;">0 images</span>
+      </div>
+
+      <div id="imageLibraryGrid" class="admin-image-library-grid">
+        <div style="text-align: center; padding: 40px; color: #888;">
+          <div class="loading-spinner"></div>
+          <p style="margin-top: 12px;">Loading images...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Picker Modal -->
+    <div id="imagePickerModal" class="admin-modal" style="display: none;">
+      <div class="admin-modal-content">
+        <div class="admin-modal-header">
+          <h3>Select an Image</h3>
+          <button class="admin-btn-icon" onclick="closeImagePicker()">&times;</button>
+        </div>
+        <div class="admin-modal-body">
+          <div class="admin-image-upload-zone admin-image-upload-zone--small" id="modalUploadZone">
+            <input type="file" id="modalFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display: none;">
+            <div class="upload-zone-content" onclick="document.getElementById('modalFileInput').click()">
+              <p>Upload New Image</p>
+            </div>
+          </div>
+          <div id="modalImageGrid" class="admin-image-library-grid admin-image-library-grid--picker"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function loadImageLibrary() {
+  try {
+    const contextFilter = document.getElementById('imageContextFilter')?.value || '';
+    const url = `${API_BASE_URL}/api/landing/admin/images${contextFilter ? `?context=${contextFilter}` : ''}`;
+
+    const response = await authFetch(url);
+    if (!response.ok) throw new Error('Failed to load images');
+
+    const data = await response.json();
+    landingImageLibrary = data.images || [];
+
+    renderImageLibraryGrid();
+
+    const countEl = document.getElementById('imageLibraryCount');
+    if (countEl) countEl.textContent = `${data.total || landingImageLibrary.length} images`;
+
+  } catch (error) {
+    console.error('Error loading image library:', error);
+    const grid = document.getElementById('imageLibraryGrid');
+    if (grid) {
+      grid.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #ff4444;">
+          <p>Failed to load images</p>
+          <button class="admin-add-btn" onclick="loadImageLibrary()" style="width: auto; margin-top: 12px;">Retry</button>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderImageLibraryGrid() {
+  const grid = document.getElementById('imageLibraryGrid');
+  if (!grid) return;
+
+  if (landingImageLibrary.length === 0) {
+    grid.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #888; grid-column: 1 / -1;">
+        <p>No images uploaded yet</p>
+        <p style="font-size: 0.9rem; margin-top: 8px;">Upload your first image above</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = landingImageLibrary.map(img => `
+    <div class="admin-image-card" data-id="${img.id}">
+      <img src="${img.public_url}" alt="${escapeHtml(img.alt_text || img.original_filename)}" loading="lazy">
+      <div class="admin-image-card-overlay">
+        <button class="admin-image-btn" onclick="copyImageUrl('${img.public_url}')" title="Copy URL">📋</button>
+        <button class="admin-image-btn" onclick="editImageMetadata('${img.id}')" title="Edit">✏️</button>
+        <button class="admin-image-btn admin-btn-danger" onclick="deleteLibraryImage('${img.id}')" title="Delete">🗑️</button>
+      </div>
+      <div class="admin-image-card-info">
+        <span class="admin-image-filename">${escapeHtml(img.original_filename)}</span>
+        <span class="admin-image-context">${img.usage_context || 'general'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterImageLibrary() {
+  loadImageLibrary();
+}
+
+async function uploadLandingImage(file, context = 'general') {
+  return new Promise((resolve, reject) => {
+    if (file.size > 5 * 1024 * 1024) {
+      reject(new Error('File too large (max 5MB)'));
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      reject(new Error('Invalid file type'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/landing/admin/images/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_data: e.target.result,
+            filename: file.name,
+            usage_context: context
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Upload failed');
+        }
+
+        const result = await response.json();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function initImageUploadHandlers() {
+  // Main upload zone
+  const uploadZone = document.getElementById('imageUploadZone');
+  const fileInput = document.getElementById('imageFileInput');
+
+  if (uploadZone && fileInput) {
+    // Drag & drop
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      await handleImageUploads(files);
+    });
+
+    // File input change
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      await handleImageUploads(files);
+      fileInput.value = '';
+    });
+  }
+
+  // Modal upload zone
+  const modalFileInput = document.getElementById('modalFileInput');
+  if (modalFileInput) {
+    modalFileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length > 0) {
+        await handleImageUploads(files, true);
+      }
+      modalFileInput.value = '';
+    });
+  }
+}
+
+async function handleImageUploads(files, isModal = false) {
+  if (files.length === 0) return;
+
+  const context = document.getElementById('imageContextFilter')?.value || 'general';
+
+  showAdminToast(`Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`);
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const file of files) {
+    try {
+      const result = await uploadLandingImage(file, context);
+      successCount++;
+
+      // If in picker mode and callback exists, use the first uploaded image
+      if (isModal && selectedImageCallback && successCount === 1) {
+        selectedImageCallback(result.url);
+        closeImagePicker();
+      }
+    } catch (error) {
+      console.error('Upload failed:', file.name, error);
+      failCount++;
+    }
+  }
+
+  if (successCount > 0) {
+    showAdminToast(`${successCount} image${successCount > 1 ? 's' : ''} uploaded!`);
+    loadImageLibrary();
+    if (isModal) loadPickerImages();
+  }
+
+  if (failCount > 0) {
+    showAdminToast(`${failCount} upload${failCount > 1 ? 's' : ''} failed`, 'error');
+  }
+}
+
+function copyImageUrl(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showAdminToast('URL copied to clipboard!');
+  }).catch(() => {
+    showAdminToast('Failed to copy URL', 'error');
+  });
+}
+
+async function editImageMetadata(imageId) {
+  const image = landingImageLibrary.find(img => img.id === imageId);
+  if (!image) return;
+
+  const altText = prompt('Alt text for this image:', image.alt_text || '');
+  if (altText === null) return;
+
+  const context = prompt('Usage context (character, showcase, hero, general):', image.usage_context || 'general');
+  if (context === null) return;
+
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/images/${imageId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alt_text: altText, usage_context: context })
+    });
+
+    showAdminToast('Image updated!');
+    loadImageLibrary();
+  } catch (error) {
+    showAdminToast('Failed to update image', 'error');
+  }
+}
+
+async function deleteLibraryImage(imageId) {
+  if (!confirm('Delete this image? This cannot be undone.')) return;
+
+  try {
+    await authFetch(`${API_BASE_URL}/api/landing/admin/images/${imageId}`, { method: 'DELETE' });
+    showAdminToast('Image deleted');
+    loadImageLibrary();
+  } catch (error) {
+    showAdminToast('Failed to delete image', 'error');
+  }
+}
+
+// ===========================================
+// IMAGE PICKER MODAL
+// ===========================================
+
+function openImagePicker(callback) {
+  selectedImageCallback = callback;
+  const modal = document.getElementById('imagePickerModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    loadPickerImages();
+  }
+}
+
+function closeImagePicker() {
+  const modal = document.getElementById('imagePickerModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  selectedImageCallback = null;
+}
+
+async function loadPickerImages() {
+  const grid = document.getElementById('modalImageGrid');
+  if (!grid) return;
+
+  grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Loading...</div>';
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/landing/admin/images?limit=100`);
+    if (!response.ok) throw new Error('Failed to load images');
+
+    const data = await response.json();
+    const images = data.images || [];
+
+    if (images.length === 0) {
+      grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">No images. Upload one above.</div>';
+      return;
+    }
+
+    grid.innerHTML = images.map(img => `
+      <div class="admin-image-card admin-image-card--selectable" onclick="selectPickerImage('${img.public_url}')">
+        <img src="${img.public_url}" alt="${escapeHtml(img.alt_text || img.original_filename)}" loading="lazy">
+      </div>
+    `).join('');
+
+  } catch (error) {
+    grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff4444;">Failed to load images</div>';
+  }
+}
+
+function selectPickerImage(url) {
+  if (selectedImageCallback) {
+    selectedImageCallback(url);
+    closeImagePicker();
+  }
+}
+
+function openImagePickerForField(button, fieldName) {
+  const container = button.closest('.admin-character-item') || button.closest('.admin-showcase-item');
+  if (!container) return;
+
+  const input = container.querySelector(`[data-field="${fieldName}"]`);
+  if (!input) return;
+
+  openImagePicker((url) => {
+    input.value = url;
+    // Update preview if exists
+    const preview = container.querySelector('.admin-character-preview img, .admin-showcase-image-wrapper img');
+    if (preview) preview.src = url;
+  });
+}
+
+function openImagePickerForShowcase(itemId) {
+  const container = document.querySelector(`.admin-showcase-item[data-id="${itemId}"]`);
+  if (!container) return;
+
+  const input = container.querySelector('[data-field="image_url"]');
+  const preview = container.querySelector('.admin-showcase-image-wrapper img');
+
+  openImagePicker((url) => {
+    if (input) input.value = url;
+    if (preview) preview.src = url;
+  });
 }
 
 // ===========================================
@@ -1175,6 +1566,200 @@ function addAdminLandingStyles() {
       border-radius: 8px;
       padding: 12px;
     }
+    .admin-showcase-image-wrapper {
+      position: relative;
+      cursor: pointer;
+    }
+    .admin-showcase-image-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .admin-showcase-image-wrapper:hover .admin-showcase-image-overlay {
+      opacity: 1;
+    }
+    .admin-input-with-button {
+      display: flex;
+      gap: 8px;
+    }
+    .admin-input-with-button .admin-input {
+      flex: 1;
+    }
+    .admin-upload-btn {
+      padding: 0 14px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+    }
+    .admin-upload-btn:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+    .admin-tab--highlight {
+      background: linear-gradient(135deg, #4ade80 0%, #22d3ee 100%) !important;
+      border-color: transparent !important;
+      color: #1a1a2e !important;
+      font-weight: 600;
+    }
+    .admin-image-upload-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-tertiary);
+    }
+    .admin-image-upload-zone:hover,
+    .admin-image-upload-zone.dragover {
+      border-color: var(--accent-primary);
+      background: rgba(255, 46, 187, 0.05);
+    }
+    .admin-image-upload-zone--small {
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .upload-zone-content .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    .upload-zone-content p {
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .upload-zone-content .upload-hint {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: block;
+    }
+    .admin-image-library-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    .admin-image-library-grid--picker {
+      max-height: 400px;
+      overflow-y: auto;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+    .admin-image-card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+      aspect-ratio: 1;
+    }
+    .admin-image-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .admin-image-card-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .admin-image-card:hover .admin-image-card-overlay {
+      opacity: 1;
+    }
+    .admin-image-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    .admin-image-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.1);
+    }
+    .admin-image-btn.admin-btn-danger:hover {
+      background: #ff4444;
+    }
+    .admin-image-card-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 8px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      font-size: 0.75rem;
+    }
+    .admin-image-filename {
+      display: block;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .admin-image-context {
+      color: rgba(255,255,255,0.6);
+      text-transform: capitalize;
+    }
+    .admin-image-card--selectable {
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .admin-image-card--selectable:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(255, 46, 187, 0.3);
+    }
+    .admin-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10001;
+      padding: 20px;
+    }
+    .admin-modal-content {
+      background: var(--bg-card);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .admin-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-modal-header h3 {
+      margin: 0;
+      color: var(--text-primary);
+    }
+    .admin-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
@@ -1202,3 +1787,12 @@ function addAdminLandingStyles() {
 // Export functions
 window.loadAdminLandingContent = loadAdminLandingContent;
 window.showAdminLandingTab = showAdminLandingTab;
+window.openImagePicker = openImagePicker;
+window.closeImagePicker = closeImagePicker;
+window.selectPickerImage = selectPickerImage;
+window.openImagePickerForField = openImagePickerForField;
+window.openImagePickerForShowcase = openImagePickerForShowcase;
+window.copyImageUrl = copyImageUrl;
+window.editImageMetadata = editImageMetadata;
+window.deleteLibraryImage = deleteLibraryImage;
+window.filterImageLibrary = filterImageLibrary;
