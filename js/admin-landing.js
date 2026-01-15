@@ -898,11 +898,17 @@ function openImagePickerForField(button, fieldName) {
 }
 
 function openImagePickerForShowcase(itemId) {
+  console.log('openImagePickerForShowcase called with itemId:', itemId);
   const container = document.querySelector(`.admin-showcase-item[data-id="${itemId}"]`);
-  if (!container) return;
+  console.log('Container found:', container);
+  if (!container) {
+    console.log('No container found, returning early');
+    return;
+  }
 
   const input = container.querySelector('[data-field="image_url"]');
   const preview = container.querySelector('.admin-showcase-image-wrapper img');
+  console.log('Opening image picker...');
 
   openImagePicker((url) => {
     if (input) input.value = url;
