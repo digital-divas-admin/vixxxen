@@ -1,6 +1,7 @@
 const express = require('express');
 const Replicate = require('replicate');
 const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -64,6 +65,14 @@ router.post('/generate', async (req, res) => {
       requestId: req.id
     });
 
+    // Track generation started
+    analytics.generation.started('kling', {
+      type: 'video',
+      aspect_ratio: aspectRatio,
+      duration,
+      has_start_image: !!startImage
+    }, req);
+
     // Build input for Kling model
     const input = {
       prompt,
@@ -87,6 +96,9 @@ router.post('/generate', async (req, res) => {
 
     logGeneration('kling', 'completed', { requestId: req.id });
 
+    // Track generation completed
+    analytics.generation.completed('kling', { type: 'video', duration }, req);
+
     // Return the video URL
     res.json({
       success: true,
@@ -104,6 +116,9 @@ router.post('/generate', async (req, res) => {
 
   } catch (error) {
     logger.error('Kling video generation error', { error: error.message, requestId: req.id });
+
+    // Track generation failed
+    analytics.generation.failed('kling', error.message, { type: 'video' }, req);
 
     // Handle specific error types
     if (error.message?.includes('API key')) {

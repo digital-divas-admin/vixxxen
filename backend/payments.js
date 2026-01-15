@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('./middleware/auth');
 const { sendSubscriptionEmail, sendPaymentReceiptEmail, isEmailConfigured } = require('./email');
 const { logger, maskUserId, sanitizePaymentData, logPaymentEvent } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -321,6 +322,12 @@ router.post('/webhook/nowpayments', async (req, res) => {
 
           logger.info('Credits added', { credits: creditsToAdd, userId: maskUserId(userId) });
 
+          // Track credits purchased
+          analytics.monetization.creditsPurchased(creditsToAdd, {
+            tier: paymentTier,
+            amount: tierConfig.price
+          }, { userId, headers: {} });
+
           // Send receipt email for credit purchase
           if (isEmailConfigured()) {
             try {
@@ -425,6 +432,11 @@ router.post('/webhook/nowpayments', async (req, res) => {
           }
 
           logger.info('Membership activated', { tier: paymentTier, userId: maskUserId(userId) });
+
+          // Track subscription completed
+          analytics.monetization.checkoutCompleted(paymentTier, tierConfig?.price || 0, 'crypto', {
+            credits: tierConfig?.credits || 0
+          }, { userId, headers: {} });
 
           // Send confirmation emails if email service is configured
           if (isEmailConfigured()) {

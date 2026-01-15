@@ -1,5 +1,6 @@
 const { supabase } = require('./services/supabase');
 const { logger, maskUserId } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // Store connected users
 const connectedUsers = new Map();
@@ -114,6 +115,11 @@ function initializeChat(io) {
           onlineUsers
         });
 
+        // Track chat channel joined
+        analytics.chat.joined(channelId, socket.userTier, {
+          is_admin: socket.isAdmin
+        }, { userId: socket.userId, headers: {} });
+
         // Notify others in channel
         socket.to(channelId).emit('user_joined', {
           user: {
@@ -181,6 +187,11 @@ function initializeChat(io) {
         };
 
         io.to(channelId).emit('new_message', messageData);
+
+        // Track chat message sent
+        analytics.chat.messageSent(channelId, {
+          tier: socket.userTier
+        }, { userId: socket.userId, headers: {} });
 
       } catch (err) {
         logger.error('Send message error', { error: err.message });

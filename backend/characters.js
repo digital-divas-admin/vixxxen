@@ -3,6 +3,7 @@ const router = express.Router();
 const { supabase } = require('./services/supabase');
 const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
 const { logger } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // ===========================================
 // SERVER-SIDE CHARACTER CACHE
@@ -324,6 +325,12 @@ router.post('/:id/purchase', requireAuth, async (req, res) => {
       .from('marketplace_characters')
       .update({ purchases: (character.purchases || 0) + 1 })
       .eq('id', id);
+
+    // Track character purchased
+    analytics.character.purchased(id, character.price, {
+      character_name: character.name,
+      category: character.category
+    }, req);
 
     res.json({ success: true });
 

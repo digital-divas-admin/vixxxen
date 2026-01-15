@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -54,6 +55,13 @@ router.post('/generate', async (req, res) => {
       referenceImages: referenceImages.length,
       requestId: req.id
     });
+
+    // Track generation started
+    analytics.generation.started('nano-banana', {
+      num_outputs: numOutputs,
+      aspect_ratio: aspectRatio,
+      reference_images: referenceImages.length
+    }, req);
 
     // Generate images sequentially
     const images = [];
@@ -214,6 +222,12 @@ router.post('/generate', async (req, res) => {
 
     logGeneration('nano-banana', 'completed', { imagesGenerated: images.length, requestId: req.id });
 
+    // Track generation completed
+    analytics.generation.completed('nano-banana', {
+      images_generated: images.length,
+      warnings_count: warnings.length
+    }, req);
+
     // Return the generated images
     res.json({
       success: true,
@@ -231,6 +245,9 @@ router.post('/generate', async (req, res) => {
 
   } catch (error) {
     logger.error('Nano Banana generation error', { error: error.message, requestId: req.id });
+
+    // Track generation failed
+    analytics.generation.failed('nano-banana', error.message, {}, req);
 
     // Handle specific error types
     if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {

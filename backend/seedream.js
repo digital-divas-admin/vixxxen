@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
@@ -59,6 +60,13 @@ router.post('/generate', async (req, res) => {
       referenceImages: referenceImages.length,
       requestId: req.id
     });
+
+    // Track generation started
+    analytics.generation.started('seedream', {
+      num_outputs: numOutputs,
+      size: validSize,
+      reference_images: referenceImages.length
+    }, req);
 
     // Generate images sequentially
     const images = [];
@@ -191,6 +199,12 @@ router.post('/generate', async (req, res) => {
 
     logGeneration('seedream', 'completed', { imagesGenerated: images.length, requestId: req.id });
 
+    // Track generation completed
+    analytics.generation.completed('seedream', {
+      images_generated: images.length,
+      warnings_count: warnings.length
+    }, req);
+
     // Return the generated images
     // Note: Credits are handled by the frontend via Supabase RPC functions
     res.json({
@@ -209,6 +223,9 @@ router.post('/generate', async (req, res) => {
 
   } catch (error) {
     logger.error('Seedream generation error', { error: error.message, requestId: req.id });
+
+    // Track generation failed
+    analytics.generation.failed('seedream', error.message, {}, req);
 
     // Handle specific error types
     if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {

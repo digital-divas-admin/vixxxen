@@ -3,6 +3,7 @@ const router = express.Router();
 const { supabase } = require('./services/supabase');
 const { requireAuth } = require('./middleware/auth');
 const { logger } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // Helper to check if user is admin
 async function isAdmin(userId) {
@@ -159,6 +160,14 @@ router.post('/orders', requireAuth, async (req, res) => {
       .single();
 
     if (orderError) throw orderError;
+
+    // Track character order submitted
+    analytics.character.submitted({
+      order_id: order.id,
+      is_rush: is_rush || false,
+      has_revisions: revisions_purchased > 0,
+      total_price: totalPrice
+    }, req);
 
     res.json({ order });
   } catch (error) {
