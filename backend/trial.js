@@ -5,19 +5,10 @@
 
 const express = require('express');
 const fetch = require('node-fetch');
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { logger, logGeneration, maskIp } = require('./services/logger');
 
 const router = express.Router();
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
 
 // OpenRouter API endpoint
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';

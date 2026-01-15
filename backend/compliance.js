@@ -1,17 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { logger } = require('./services/logger');
-
-// Lazy initialization of Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
 
 // Generate SHA-256 hash of content
 function generateContentHash(content) {

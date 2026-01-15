@@ -10,17 +10,8 @@
  *   await setSetting('gpu_config', { mode: 'hybrid', ... });
  */
 
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./supabase');
 const { logger } = require('./logger');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
 
 // In-memory cache
 const cache = new Map();

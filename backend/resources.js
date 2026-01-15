@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./services/supabase');
 const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
 const { logger, maskUserId } = require('./services/logger');
 
@@ -17,15 +17,6 @@ const upload = multer({
     }
   }
 });
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
 
 // GET /api/resources - Get all resources with access control
 router.get('/', optionalAuth, async (req, res) => {

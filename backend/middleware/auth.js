@@ -2,17 +2,8 @@
  * Authentication Middleware
  * Verifies Supabase JWT tokens and extracts user information
  */
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('../services/supabase');
 const { logger, maskUserId } = require('../services/logger');
-
-// Initialize Supabase client for auth verification
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
 
 /**
  * Extract Bearer token from Authorization header
