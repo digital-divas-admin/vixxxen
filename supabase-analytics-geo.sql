@@ -11,14 +11,13 @@ add column if not exists latitude decimal(10, 6),
 add column if not exists longitude decimal(10, 6);
 
 -- Create index for faster queries on active sessions (sessions with recent activity)
-create index if not exists idx_user_sessions_last_seen
-on public.user_sessions(last_seen_at desc)
-where ended_at is null;
+-- Note: ended_at is used as "last seen" - it gets updated on each heartbeat
+create index if not exists idx_user_sessions_ended_at
+on public.user_sessions(ended_at desc);
 
 -- Create index for country grouping
 create index if not exists idx_user_sessions_country
-on public.user_sessions(country_code)
-where ended_at is null;
+on public.user_sessions(country_code);
 
 comment on column public.user_sessions.country is 'Country name from IP geolocation';
 comment on column public.user_sessions.country_code is 'ISO 2-letter country code';

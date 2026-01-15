@@ -1254,12 +1254,12 @@ router.get('/admin/live-users', requireAdmin, async (req, res) => {
     // Sessions active within the last 60 seconds
     const activeThreshold = new Date(Date.now() - 60 * 1000).toISOString();
 
+    // Note: ended_at is updated on each heartbeat, so we use it as "last activity"
     const { data: sessions, error } = await supabase
       .from('user_sessions')
-      .select('session_id, user_id, country, country_code, city, region, latitude, longitude, last_page, last_seen_at')
-      .is('ended_at', null)
-      .gte('last_seen_at', activeThreshold)
-      .order('last_seen_at', { ascending: false });
+      .select('session_id, user_id, country, country_code, city, region, latitude, longitude, last_page, ended_at')
+      .gte('ended_at', activeThreshold)
+      .order('ended_at', { ascending: false });
 
     if (error) {
       logger.error('Failed to fetch live users', { error: error.message, requestId: req.id });
@@ -1293,7 +1293,7 @@ router.get('/admin/live-users', requireAdmin, async (req, res) => {
         latitude: session.latitude,
         longitude: session.longitude,
         current_page: session.last_page,
-        last_activity: session.last_seen_at
+        last_activity: session.ended_at
       });
     }
 
