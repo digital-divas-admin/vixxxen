@@ -16921,6 +16921,7 @@
 
         // Update global isUserAdmin before calling updateCharacterDropdowns
         isUserAdmin = isAdmin;
+        window.isUserAdmin = isAdmin; // Expose for analytics tracking
 
         renderMarketplace();
         updateCharacterDropdowns();
@@ -17711,6 +17712,7 @@
           .single();
 
         isUserAdmin = profile?.role === 'admin';
+        window.isUserAdmin = isUserAdmin; // Expose for analytics tracking
 
         if (membership && membership.is_active) {
           userMembership = membership.tier;
@@ -17800,6 +17802,7 @@
       chatSocket.on('authenticated', (data) => {
         console.log('Authenticated with tier:', data.tier, 'admin:', data.isAdmin);
         isUserAdmin = data.isAdmin;
+        window.isUserAdmin = data.isAdmin; // Expose for analytics tracking
         renderChannels(data.channels);
 
         // If admin, request all members

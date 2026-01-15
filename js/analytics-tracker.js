@@ -315,6 +315,14 @@
    * Start session tracking
    */
   async function startSessionTracking() {
+    // Skip session tracking for admin users
+    if (window.isUserAdmin === true) {
+      if (CONFIG.debug) {
+        console.log('[Analytics] Skipping session tracking for admin user');
+      }
+      return;
+    }
+
     const token = getAuthToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -348,6 +356,9 @@
    * Send session heartbeat
    */
   async function sendHeartbeat() {
+    // Skip heartbeat for admin users
+    if (window.isUserAdmin === true) return;
+
     const token = getAuthToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -395,6 +406,9 @@
   async function endSessionTracking() {
     stopHeartbeat();
 
+    // Skip end session for admin users
+    if (window.isUserAdmin === true) return;
+
     const token = getAuthToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -424,6 +438,14 @@
    * @param {boolean} immediate - Send immediately instead of batching
    */
   function track(eventName, eventCategory, eventData = {}, immediate = false) {
+    // Skip tracking for admin users
+    if (window.isUserAdmin === true) {
+      if (CONFIG.debug) {
+        console.log('[Analytics] Skipping track for admin user:', eventName);
+      }
+      return;
+    }
+
     // Increment session event counter first
     eventsInSession++;
 
@@ -489,6 +511,14 @@
    * @param {object} options - Additional options
    */
   async function updateFunnel(funnelName, currentStep, options = {}) {
+    // Skip funnel tracking for admin users
+    if (window.isUserAdmin === true) {
+      if (CONFIG.debug) {
+        console.log('[Analytics] Skipping funnel update for admin user:', funnelName);
+      }
+      return;
+    }
+
     const {
       stepCompleted = null,
       funnelData = {},
