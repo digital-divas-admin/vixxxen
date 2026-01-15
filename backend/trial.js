@@ -6,6 +6,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
+const { logger, logGeneration, maskIp } = require('./services/logger');
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ async function checkGlobalDailyCap() {
       total: capRecord.total_generations
     };
   } catch (error) {
-    console.error('Error checking global daily cap:', error);
+    logger.error('Error checking global daily cap', { error: error.message });
     return { allowed: true, remaining: GLOBAL_DAILY_CAP };
   }
 }
@@ -114,7 +115,7 @@ async function incrementGlobalDailyCap() {
           .eq('date', today);
       }
     } catch (fallbackError) {
-      console.error('Error incrementing daily cap:', fallbackError);
+      logger.error('Error incrementing daily cap', { error: fallbackError.message });
     }
   }
 }
@@ -151,7 +152,7 @@ async function getTrialRecord(ipAddress, fingerprint) {
     const { data: records, error } = await query;
 
     if (error) {
-      console.error('Error fetching trial record:', error);
+      logger.error('Error fetching trial record', { error: error.message });
       return { generations_used: 0, isNew: true };
     }
 
@@ -173,7 +174,7 @@ async function getTrialRecord(ipAddress, fingerprint) {
       isNew: false
     };
   } catch (error) {
-    console.error('Error in getTrialRecord:', error);
+    logger.error('Error in getTrialRecord', { error: error.message });
     return { generations_used: 0, isNew: true };
   }
 }
@@ -208,7 +209,7 @@ async function updateTrialRecord(ipAddress, fingerprint, existingRecord) {
         .eq('id', existingRecord.id);
     }
   } catch (error) {
-    console.error('Error updating trial record:', error);
+    logger.error('Error updating trial record', { error: error.message });
   }
 }
 
@@ -231,7 +232,7 @@ router.get('/status', async (req, res) => {
       canGenerate: remaining > 0
     });
   } catch (error) {
-    console.error('Trial status error:', error);
+    logger.error('Trial status error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to check trial status' });
   }
 });
@@ -307,9 +308,7 @@ router.post('/generate', async (req, res) => {
       });
     }
 
-    console.log(`\n[Trial] Generating image for IP: ${ipAddress.substring(0, 10)}...`);
-    console.log(`   Prompt: ${prompt.substring(0, 50)}...`);
-    console.log(`   Trials remaining: ${remaining - 1}`);
+    logGeneration('trial', 'started', { ip: maskIp(ipAddress), promptLength: prompt.length, remaining: remaining - 1, requestId: req.id });
 
     // Build the generation prompt with demo character
     const fullPrompt = `${DEMO_CHARACTER.system_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
@@ -332,7 +331,7 @@ router.post('/generate', async (req, res) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`   API Error ${response.status}:`, errorText);
+      logger.error('Trial API error', { status: response.status, error: errorText, requestId: req.id });
 
       if (response.status === 429) {
         return res.status(429).json({ error: 'Service is busy. Please try again in a moment.' });
@@ -389,7 +388,7 @@ router.post('/generate', async (req, res) => {
     await updateTrialRecord(ipAddress, fingerprint, trialRecord);
     await incrementGlobalDailyCap();
 
-    console.log(`   [Trial] Generation successful!`);
+    logGeneration('trial', 'completed', { requestId: req.id });
 
     res.json({
       success: true,
@@ -399,7 +398,7 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Trial generation error:', error);
+    logger.error('Trial generation error', { error: error.message, requestId: req.id });
     res.status(500).json({
       error: 'Generation failed. Please try again.',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -428,7 +427,7 @@ router.post('/track-conversion', async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Track conversion error:', error);
+    logger.error('Track conversion error', { error: error.message, requestId: req.id });
     res.json({ success: false });
   }
 });
@@ -451,7 +450,7 @@ router.post('/analytics', express.text({ type: '*/*' }), async (req, res) => {
     const { event, fingerprint, timestamp } = data;
     const ipAddress = getClientIp(req);
 
-    console.log(`[Trial Analytics] ${event} from IP: ${ipAddress.substring(0, 10)}...`);
+    logger.info('Trial analytics event', { event, ip: maskIp(ipAddress) });
 
     // Could store analytics in Supabase here for reporting
     // For now, just log to console

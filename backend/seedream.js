@@ -1,5 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
+const { logger, logGeneration } = require('./services/logger');
 
 const router = express.Router();
 
@@ -52,19 +53,19 @@ router.post('/generate', async (req, res) => {
     // Seedream 4.5 uses 'size' parameter: "2K", "4K", or "custom"
     const validSize = ['2K', '4K'].includes(resolution) ? resolution : '2K';
 
-    console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via OpenRouter...`);
-    console.log(`   Prompt: ${prompt}`);
-    console.log(`   Reference Images: ${referenceImages.length}`);
-    console.log(`   Size: ${validSize}`);
-    console.log(`   Guidance Scale: ${guidanceScale}`);
-    console.log(`   Model: ${SEEDREAM_MODEL}`);
+    logGeneration('seedream', 'started', {
+      numOutputs,
+      size: validSize,
+      referenceImages: referenceImages.length,
+      requestId: req.id
+    });
 
     // Generate images sequentially
     const images = [];
     const warnings = [];
 
     for (let i = 0; i < numOutputs; i++) {
-      console.log(`   Generating image ${i + 1}/${numOutputs}...`);
+      logger.debug('Generating image', { model: 'seedream', index: i + 1, total: numOutputs });
 
       try {
         // Build the prompt
@@ -96,8 +97,6 @@ router.post('/generate', async (req, res) => {
           modalities: ["image", "text"]
         };
 
-        console.log(`   Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 500));
-
         // Make raw HTTP request to OpenRouter
         const response = await fetch(OPENROUTER_API_URL, {
           method: 'POST',
@@ -112,12 +111,11 @@ router.post('/generate', async (req, res) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`   API Error ${response.status}:`, errorText);
+          logger.error('Seedream API error', { status: response.status, requestId: req.id });
           throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
-        console.log(`   Response received, processing...`);
 
         // Extract images from response
         const message = result.choices[0]?.message;
@@ -129,7 +127,7 @@ router.post('/generate', async (req, res) => {
             const imageUrl = image.image_url?.url || image.url;
             if (imageUrl) {
               images.push(imageUrl);
-              console.log(`   ✅ Image ${i + 1}.${idx + 1} generated successfully (images array)`);
+              logger.debug('Image extracted', { method: 'images_array', index: i + 1 });
               imageFound = true;
             }
           });
@@ -142,12 +140,12 @@ router.post('/generate', async (req, res) => {
               const mimeType = part.inline_data.mime_type || 'image/png';
               const imageDataUrl = `data:${mimeType};base64,${part.inline_data.data}`;
               images.push(imageDataUrl);
-              console.log(`   ✅ Image ${i + 1} generated successfully (inline_data)`);
+              logger.debug('Image extracted', { method: 'inline_data', index: i + 1 });
               imageFound = true;
             }
             if (part.type === 'image_url' && part.image_url?.url) {
               images.push(part.image_url.url);
-              console.log(`   ✅ Image ${i + 1} generated successfully (image_url part)`);
+              logger.debug('Image extracted', { method: 'image_url_part', index: i + 1 });
               imageFound = true;
             }
           }
@@ -158,23 +156,23 @@ router.post('/generate', async (req, res) => {
           const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
           if (base64Match) {
             images.push(base64Match[0]);
-            console.log(`   ✅ Image ${i + 1} generated successfully (base64 string)`);
+            logger.debug('Image extracted', { method: 'base64_string', index: i + 1 });
             imageFound = true;
           }
         }
 
         if (!imageFound) {
-          console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+          logger.warn('No image in response', { index: i + 1, requestId: req.id });
           warnings.push(`No image in response ${i + 1}`);
         }
 
         // Check finish reason
         if (result.choices[0]?.finish_reason === 'content_filter') {
-          console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
+          logger.warn('Image blocked by content filter', { index: i + 1, requestId: req.id });
           warnings.push(`Image was blocked by content filter`);
         }
       } catch (apiError) {
-        console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
+        logger.error('Image generation failed', { index: i + 1, error: apiError.message, requestId: req.id });
         warnings.push(`Image ${i + 1} failed: ${apiError.message}`);
       }
 
@@ -191,10 +189,7 @@ router.post('/generate', async (req, res) => {
       throw new Error(errorMsg);
     }
 
-    console.log(`   ✅ Generation complete! Created ${images.length} image(s)`);
-    if (warnings.length > 0) {
-      console.log(`   ⚠️ Warnings: ${warnings.join(', ')}`);
-    }
+    logGeneration('seedream', 'completed', { imagesGenerated: images.length, requestId: req.id });
 
     // Return the generated images
     // Note: Credits are handled by the frontend via Supabase RPC functions
@@ -213,7 +208,7 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Seedream generation error:', error);
+    logger.error('Seedream generation error', { error: error.message, requestId: req.id });
 
     // Handle specific error types
     if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {

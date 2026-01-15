@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('./middleware/auth');
+const { logger } = require('./services/logger');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -57,7 +58,7 @@ router.get('/config', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching custom character config:', error);
+    logger.error('Error fetching custom character config', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch config' });
   }
 });
@@ -168,7 +169,7 @@ router.post('/orders', requireAuth, async (req, res) => {
 
     res.json({ order });
   } catch (error) {
-    console.error('Error creating custom character order:', error);
+    logger.error('Error creating custom character order', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to create order' });
   }
 });
@@ -196,7 +197,7 @@ router.get('/orders', requireAuth, async (req, res) => {
 
     res.json({ orders });
   } catch (error) {
-    console.error('Error fetching user orders:', error);
+    logger.error('Error fetching user orders', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
@@ -239,7 +240,7 @@ router.get('/orders/:id', requireAuth, async (req, res) => {
 
     res.json({ order });
   } catch (error) {
-    console.error('Error fetching order:', error);
+    logger.error('Error fetching order', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch order' });
   }
 });
@@ -313,7 +314,7 @@ router.post('/orders/:id/revision', requireAuth, async (req, res) => {
 
     res.json({ revision });
   } catch (error) {
-    console.error('Error requesting revision:', error);
+    logger.error('Error requesting revision', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to request revision' });
   }
 });
@@ -338,7 +339,7 @@ router.get('/admin/config', requireAuth, async (req, res) => {
 
     res.json({ config });
   } catch (error) {
-    console.error('Error fetching admin config:', error);
+    logger.error('Error fetching admin config', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch config' });
   }
 });
@@ -365,7 +366,7 @@ router.put('/admin/config', requireAuth, async (req, res) => {
 
     res.json({ config });
   } catch (error) {
-    console.error('Error updating config:', error);
+    logger.error('Error updating config', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update config' });
   }
 });
@@ -400,7 +401,7 @@ router.get('/admin/orders', requireAuth, async (req, res) => {
 
     res.json({ orders, total: count });
   } catch (error) {
-    console.error('Error fetching admin orders:', error);
+    logger.error('Error fetching admin orders', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
@@ -428,7 +429,7 @@ router.get('/admin/orders/:id', requireAuth, async (req, res) => {
 
     res.json({ order });
   } catch (error) {
-    console.error('Error fetching order:', error);
+    logger.error('Error fetching order', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch order' });
   }
 });
@@ -472,7 +473,7 @@ router.put('/admin/orders/:id', requireAuth, async (req, res) => {
 
     res.json({ order });
   } catch (error) {
-    console.error('Error updating order:', error);
+    logger.error('Error updating order', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update order' });
   }
 });
@@ -503,7 +504,7 @@ router.put('/admin/revisions/:id', requireAuth, async (req, res) => {
 
     res.json({ revision });
   } catch (error) {
-    console.error('Error updating revision:', error);
+    logger.error('Error updating revision', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update revision' });
   }
 });
@@ -539,7 +540,7 @@ router.get('/admin/stats', requireAuth, async (req, res) => {
 
     res.json({ stats });
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    logger.error('Error fetching stats', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

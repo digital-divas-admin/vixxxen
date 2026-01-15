@@ -4,6 +4,7 @@
  */
 
 const { Resend } = require('resend');
+const { logger, maskEmail } = require('./services/logger');
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -138,14 +139,14 @@ async function sendWelcomeEmail(email, name) {
     });
 
     if (error) {
-      console.error('❌ Failed to send welcome email:', error);
+      logger.error('Failed to send welcome email', { error: error.message, email: maskEmail(email) });
       return { success: false, error };
     }
 
-    console.log('✅ Welcome email sent to:', email);
+    logger.info('Welcome email sent', { email: maskEmail(email) });
     return { success: true, data };
   } catch (err) {
-    console.error('❌ Error sending welcome email:', err);
+    logger.error('Error sending welcome email', { error: err.message, email: maskEmail(email) });
     return { success: false, error: err.message };
   }
 }
@@ -225,14 +226,14 @@ async function sendSubscriptionEmail(email, name, tier, expiresAt) {
     });
 
     if (error) {
-      console.error('❌ Failed to send subscription email:', error);
+      logger.error('Failed to send subscription email', { error: error.message, email: maskEmail(email) });
       return { success: false, error };
     }
 
-    console.log('✅ Subscription email sent to:', email);
+    logger.info('Subscription email sent', { email: maskEmail(email), tier });
     return { success: true, data };
   } catch (err) {
-    console.error('❌ Error sending subscription email:', err);
+    logger.error('Error sending subscription email', { error: err.message, email: maskEmail(email) });
     return { success: false, error: err.message };
   }
 }
@@ -306,14 +307,14 @@ async function sendPaymentReceiptEmail(email, name, amount, currency, tier, tran
     });
 
     if (error) {
-      console.error('❌ Failed to send payment receipt:', error);
+      logger.error('Failed to send payment receipt', { error: error.message, email: maskEmail(email) });
       return { success: false, error };
     }
 
-    console.log('✅ Payment receipt sent to:', email);
+    logger.info('Payment receipt sent', { email: maskEmail(email), tier });
     return { success: true, data };
   } catch (err) {
-    console.error('❌ Error sending payment receipt:', err);
+    logger.error('Error sending payment receipt', { error: err.message, email: maskEmail(email) });
     return { success: false, error: err.message };
   }
 }
@@ -365,14 +366,14 @@ async function sendExpirationReminderEmail(email, name, tier, expiresAt) {
     });
 
     if (error) {
-      console.error('❌ Failed to send expiration reminder:', error);
+      logger.error('Failed to send expiration reminder', { error: error.message, email: maskEmail(email) });
       return { success: false, error };
     }
 
-    console.log('✅ Expiration reminder sent to:', email);
+    logger.info('Expiration reminder sent', { email: maskEmail(email), daysLeft });
     return { success: true, data };
   } catch (err) {
-    console.error('❌ Error sending expiration reminder:', err);
+    logger.error('Error sending expiration reminder', { error: err.message, email: maskEmail(email) });
     return { success: false, error: err.message };
   }
 }

@@ -1,5 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
+const { logger, logGeneration } = require('./services/logger');
 
 const router = express.Router();
 
@@ -49,16 +50,18 @@ router.post('/generate', async (req, res) => {
       input.seed = seed;
     }
 
-    console.log(`🎬 Generating video with Wan 2.2...`);
-    console.log(`   Prompt: ${prompt.substring(0, 50)}...`);
-    console.log(`   Resolution: ${resolution}`);
-    console.log(`   Frames: ${numFrames} @ ${framesPerSecond}fps`);
-    console.log(`   Has start image: ${!!image}`);
+    logGeneration('wan', 'started', {
+      resolution,
+      numFrames,
+      framesPerSecond,
+      hasImage: !!image,
+      requestId: req.id
+    });
 
     // Run the model
     const output = await replicate.run(WAN_MODEL, { input });
 
-    console.log(`✅ Wan 2.2 video generation complete`);
+    logGeneration('wan', 'completed', { requestId: req.id });
 
     // Return the video URL
     res.json({
@@ -80,7 +83,7 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Wan video generation failed:', error.message);
+    logger.error('Wan video generation failed', { error: error.message, requestId: req.id });
 
     // Handle specific error cases
     if (error.message?.includes('Invalid input')) {

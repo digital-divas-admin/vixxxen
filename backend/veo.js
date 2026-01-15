@@ -1,5 +1,6 @@
 const express = require('express');
 const Replicate = require('replicate');
+const { logger, logGeneration } = require('./services/logger');
 
 const router = express.Router();
 
@@ -57,19 +58,20 @@ router.post('/generate', async (req, res) => {
       input.seed = seed;
     }
 
-    console.log(`🎬 Generating video with Veo 3.1 Fast...`);
-    console.log(`   Prompt: ${prompt.substring(0, 50)}...`);
-    console.log(`   Aspect Ratio: ${aspectRatio}`);
-    console.log(`   Duration: ${duration}s`);
-    console.log(`   Resolution: ${resolution}`);
-    console.log(`   Generate Audio: ${generateAudio}`);
-    console.log(`   Has start image: ${!!image}`);
-    console.log(`   Has last frame: ${!!lastFrame}`);
+    logGeneration('veo', 'started', {
+      aspectRatio,
+      duration,
+      resolution,
+      generateAudio,
+      hasImage: !!image,
+      hasLastFrame: !!lastFrame,
+      requestId: req.id
+    });
 
     // Run the model
     const output = await replicate.run(VEO_MODEL, { input });
 
-    console.log(`✅ Veo 3.1 Fast video generation complete`);
+    logGeneration('veo', 'completed', { requestId: req.id });
 
     // Return the video URL
     res.json({
@@ -91,7 +93,7 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Veo video generation failed:', error.message);
+    logger.error('Veo video generation failed', { error: error.message, requestId: req.id });
 
     // Handle specific error cases
     if (error.message?.includes('Invalid input')) {

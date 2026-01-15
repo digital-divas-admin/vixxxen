@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { logger } = require('./services/logger');
 
 // Lazy initialization of Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -85,7 +86,7 @@ router.post('/log-generation', async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error logging generation:', error);
+      logger.error('Error logging generation', { error: error.message });
       // Don't fail the request, just log the error
       return res.json({ success: true, logged: false, reason: error.message });
     }
@@ -98,7 +99,7 @@ router.post('/log-generation', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in log-generation:', error);
+    logger.error('Error in log-generation', { error: error.message });
     // Don't fail the request, just acknowledge
     res.json({ success: true, logged: false, reason: error.message });
   }
@@ -136,7 +137,7 @@ router.get('/my-records', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching records:', error);
+    logger.error('Error fetching records', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch records' });
   }
 });
@@ -194,7 +195,7 @@ router.get('/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    logger.error('Error fetching stats', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

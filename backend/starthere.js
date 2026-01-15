@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
+const { logger } = require('./services/logger');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -40,7 +41,7 @@ router.get('/', optionalAuth, async (req, res) => {
       .order('sort_order', { ascending: true });
 
     if (error) {
-      console.error('Error fetching start here guides:', error);
+      logger.error('Error fetching start here guides', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch guides' });
     }
 
@@ -61,7 +62,7 @@ router.get('/', optionalAuth, async (req, res) => {
     res.json({ guides: processedGuides });
 
   } catch (error) {
-    console.error('Start here fetch error:', error);
+    logger.error('Start here fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -98,14 +99,14 @@ router.post('/:id/complete', requireAuth, async (req, res) => {
       });
 
     if (error) {
-      console.error('Error marking guide complete:', error);
+      logger.error('Error marking guide complete', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to mark guide complete' });
     }
 
     res.json({ success: true });
 
   } catch (error) {
-    console.error('Mark complete error:', error);
+    logger.error('Mark complete error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -141,14 +142,14 @@ router.post('/', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating guide:', error);
+      logger.error('Error creating guide', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create guide' });
     }
 
     res.status(201).json({ guide });
 
   } catch (error) {
-    console.error('Create guide error:', error);
+    logger.error('Create guide error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -184,14 +185,14 @@ router.put('/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating guide:', error);
+      logger.error('Error updating guide', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update guide' });
     }
 
     res.json({ guide });
 
   } catch (error) {
-    console.error('Update guide error:', error);
+    logger.error('Update guide error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -212,14 +213,14 @@ router.delete('/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting guide:', error);
+      logger.error('Error deleting guide', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete guide' });
     }
 
     res.json({ success: true });
 
   } catch (error) {
-    console.error('Delete guide error:', error);
+    logger.error('Delete guide error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('./middleware/auth');
+const { logger } = require('./services/logger');
 
 // Lazy initialization of Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -32,7 +33,7 @@ async function getLocationFromIP(ip) {
       ip_address: ip
     };
   } catch (error) {
-    console.error('Error getting location from IP:', error);
+    logger.error('Error getting location from IP', { error: error.message });
     // Default to non-restricted if geolocation fails
     return {
       country_code: 'US',
@@ -75,7 +76,7 @@ router.get('/status', requireAuth, async (req, res) => {
       verification: data || null
     });
   } catch (error) {
-    console.error('Error checking verification status:', error);
+    logger.error('Error checking verification status', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to check verification status' });
   }
 });
@@ -101,7 +102,7 @@ router.get('/check-location', async (req, res) => {
         : null
     });
   } catch (error) {
-    console.error('Error checking location:', error);
+    logger.error('Error checking location', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to check location' });
   }
 });
@@ -181,7 +182,7 @@ router.post('/verify', requireAuth, async (req, res) => {
       verification: data
     });
   } catch (error) {
-    console.error('Error submitting verification:', error);
+    logger.error('Error submitting verification', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to submit verification' });
   }
 });
@@ -215,7 +216,7 @@ router.put('/content-mode', requireAuth, async (req, res) => {
       content_mode: data.content_mode
     });
   } catch (error) {
-    console.error('Error updating content mode:', error);
+    logger.error('Error updating content mode', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update content mode' });
   }
 });

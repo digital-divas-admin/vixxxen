@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
+const { logger, logGeneration } = require('./services/logger');
 
 // RunPod Configuration
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -137,14 +138,14 @@ function buildLoraConfig(userLoras = []) {
 
       // Handle both string format ("lora.safetensors") and object format ({ name: "lora.safetensors", strength: 1 })
       if (typeof lora === 'string') {
-        console.log(`   → LoRA ${index + 1}: ${lora} (string format)`);
+        logger.debug('LoRA configured', { index: index + 1, lora, format: 'string' });
         defaultLoras[loraKey] = {
           "on": true,
           "lora": lora,
           "strength": 1
         };
       } else {
-        console.log(`   → LoRA ${index + 1}: ${lora.name} (object format, strength: ${lora.strength ?? 1})`);
+        logger.debug('LoRA configured', { index: index + 1, lora: lora.name, format: 'object', strength: lora.strength ?? 1 });
         defaultLoras[loraKey] = {
           "on": lora.enabled !== false,
           "lora": lora.name,
@@ -167,18 +168,18 @@ router.post('/generate', async (req, res) => {
     }
 
     if (!RUNPOD_API_KEY || !RUNPOD_ENDPOINT_ID) {
-      console.error('❌ RunPod configuration missing');
+      logger.error('RunPod configuration missing', { requestId: req.id });
       return res.status(500).json({
         error: 'RunPod not configured',
         message: 'RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID must be set'
       });
     }
 
-    console.log('🎨 Qwen generation request:', {
-      prompt: prompt.substring(0, 100),
-      loras,
-      width,
-      height
+    logGeneration('qwen', 'started', {
+      loraCount: loras?.length || 0,
+      width: width || 1152,
+      height: height || 1536,
+      requestId: req.id
     });
 
     // Build the workflow
@@ -191,9 +192,6 @@ router.post('/generate', async (req, res) => {
       loras
     });
 
-    console.log('\n📤 Submitting job via GPU router...');
-    console.log(`   Prompt: ${prompt.substring(0, 100)}...`);
-
     // Route through GPU router (handles dedicated/serverless/hybrid)
     const result = await routeGenerationRequest({
       workflow,
@@ -202,14 +200,19 @@ router.post('/generate', async (req, res) => {
     });
 
     if (!result.success) {
-      console.error('❌ GPU router error:', result.error);
+      logger.error('GPU router error', { error: result.error, requestId: req.id });
       return res.status(500).json({
         error: 'Failed to submit job',
         details: result.error
       });
     }
 
-    console.log(`📋 Job submitted: ${result.jobId} via ${result.endpoint}${result.usedFallback ? ' (fallback)' : ''}`);
+    logger.info('Job submitted', {
+      jobId: result.jobId,
+      endpoint: result.endpoint,
+      usedFallback: result.usedFallback || false,
+      requestId: req.id
+    });
 
     // Return job ID for status polling
     res.json({
@@ -220,7 +223,7 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Qwen generate error:', error);
+    logger.error('Qwen generate error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -271,16 +274,12 @@ router.get('/status/:jobId', async (req, res) => {
 
     // If completed, include the output
     if (data.status === 'COMPLETED' && data.output) {
-      console.log('✅ RunPod job completed.');
-      console.log('   Output keys:', Object.keys(data.output));
-      console.log('   Full output (first 1000 chars):', JSON.stringify(data.output, null, 2).substring(0, 1000));
+      logger.debug('RunPod job completed', { jobId, outputKeys: Object.keys(data.output) });
 
       // Extract image URL from output
       // RunPod ComfyUI worker can return images in different formats
       if (data.output.images && data.output.images.length > 0) {
         const firstImage = data.output.images[0];
-        console.log('   → Found images array with', data.output.images.length, 'items');
-        console.log('   → First image type:', typeof firstImage);
 
         // Handle different image formats
         let base64Data;
@@ -289,7 +288,6 @@ router.get('/status/:jobId', async (req, res) => {
           base64Data = firstImage;
         } else if (firstImage && typeof firstImage === 'object' && firstImage.data) {
           // Object format: { data: "base64string" }
-          console.log('   → Image is object with data property');
           base64Data = firstImage.data;
         } else if (firstImage && typeof firstImage === 'object' && firstImage.image) {
           // Object format: { image: "base64string" }
@@ -297,16 +295,13 @@ router.get('/status/:jobId', async (req, res) => {
         }
 
         if (base64Data) {
-          console.log('   → Base64 data length:', base64Data.length);
-          console.log('   → Base64 preview:', base64Data.substring(0, 50));
           result.imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
           result.images = [result.imageUrl];
         } else {
-          console.log('   → Could not extract base64 from image object:', JSON.stringify(firstImage).substring(0, 200));
+          logger.debug('Could not extract base64 from image object', { jobId });
           result.output = data.output;
         }
       } else if (data.output.image) {
-        console.log('   → Found single image');
         const imageData = typeof data.output.image === 'object' && data.output.image.data
           ? data.output.image.data
           : data.output.image;
@@ -315,29 +310,27 @@ router.get('/status/:jobId', async (req, res) => {
       } else if (data.output.message && typeof data.output.message === 'string') {
         // Base64 output format from ComfyUI worker
         const base64Data = data.output.message;
-        console.log('   → Found output.message (length:', base64Data.length, ')');
-        console.log('   → Starts with:', base64Data.substring(0, 50));
         // Handle both with and without data: prefix
         result.imageUrl = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
         result.images = [result.imageUrl];
-        console.log('✅ Extracted base64 image from output.message');
+        logger.debug('Extracted base64 image from output.message', { jobId });
       } else {
         // Pass through raw output for debugging
-        console.log('   → No recognized image format, passing through raw output');
+        logger.debug('No recognized image format', { jobId });
         result.output = data.output;
       }
     }
 
     // Include error info if failed
     if (data.status === 'FAILED') {
-      console.error('❌ RunPod job failed:', data.error);
+      logger.error('RunPod job failed', { jobId, error: data.error });
       result.error = data.error;
     }
 
     res.json(result);
 
   } catch (error) {
-    console.error('❌ Qwen status error:', error);
+    logger.error('Qwen status error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });

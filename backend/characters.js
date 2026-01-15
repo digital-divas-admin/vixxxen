@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
+const { logger } = require('./services/logger');
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -25,7 +26,7 @@ let charactersCache = {
 function getCachedCharacters(type) {
   const cache = charactersCache[type];
   if (cache.data && (Date.now() - cache.timestamp) < CACHE_TTL) {
-    console.log(`📦 Characters cache HIT (${type})`);
+    logger.debug('Characters cache hit', { type });
     return cache.data;
   }
   return null;
@@ -33,7 +34,7 @@ function getCachedCharacters(type) {
 
 function setCachedCharacters(type, data) {
   charactersCache[type] = { data, timestamp: Date.now() };
-  console.log(`📦 Characters cache SET (${type}): ${data?.length || 0} items`);
+  logger.debug('Characters cache set', { type, count: data?.length || 0 });
 }
 
 function clearCharactersCache() {
@@ -41,7 +42,7 @@ function clearCharactersCache() {
     public: { data: null, timestamp: 0 },
     all: { data: null, timestamp: 0 }
   };
-  console.log('📦 Characters cache CLEARED');
+  logger.debug('Characters cache cleared');
 }
 
 // GET /api/characters - Get all characters with ownership status
@@ -81,7 +82,7 @@ router.get('/', optionalAuth, async (req, res) => {
         .order('sort_order', { ascending: true });
 
       if (error) {
-        console.error('Error fetching characters:', error);
+        logger.error('Error fetching characters', { error: error.message, requestId: req.id });
         return res.status(500).json({ error: 'Failed to fetch characters' });
       }
 
@@ -98,7 +99,7 @@ router.get('/', optionalAuth, async (req, res) => {
     res.json({ characters: processedCharacters });
 
   } catch (error) {
-    console.error('Characters fetch error:', error);
+    logger.error('Characters fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -122,7 +123,7 @@ router.get('/all', requireAdmin, async (req, res) => {
         .order('sort_order', { ascending: true });
 
       if (error) {
-        console.error('Error fetching all characters:', error);
+        logger.error('Error fetching all characters', { error: error.message, requestId: req.id });
         return res.status(500).json({ error: 'Failed to fetch characters' });
       }
 
@@ -133,7 +134,7 @@ router.get('/all', requireAdmin, async (req, res) => {
     res.json({ characters });
 
   } catch (error) {
-    console.error('Characters fetch error:', error);
+    logger.error('Characters fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -177,7 +178,7 @@ router.post('/', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating character:', error);
+      logger.error('Error creating character', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to create character' });
     }
 
@@ -187,7 +188,7 @@ router.post('/', requireAdmin, async (req, res) => {
     res.status(201).json({ character });
 
   } catch (error) {
-    console.error('Create character error:', error);
+    logger.error('Create character error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -233,7 +234,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating character:', error);
+      logger.error('Error updating character', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update character' });
     }
 
@@ -243,7 +244,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     res.json({ character });
 
   } catch (error) {
-    console.error('Update character error:', error);
+    logger.error('Update character error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -264,7 +265,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting character:', error);
+      logger.error('Error deleting character', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to delete character' });
     }
 
@@ -274,7 +275,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
 
   } catch (error) {
-    console.error('Delete character error:', error);
+    logger.error('Delete character error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -323,7 +324,7 @@ router.post('/:id/purchase', requireAuth, async (req, res) => {
       });
 
     if (error) {
-      console.error('Error recording purchase:', error);
+      logger.error('Error recording purchase', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to record purchase' });
     }
 
@@ -336,7 +337,7 @@ router.post('/:id/purchase', requireAuth, async (req, res) => {
     res.json({ success: true });
 
   } catch (error) {
-    console.error('Purchase error:', error);
+    logger.error('Purchase error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
