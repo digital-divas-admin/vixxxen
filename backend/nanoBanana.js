@@ -1,5 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
+const { compressImages } = require('./services/imageCompression');
 
 const router = express.Router();
 
@@ -53,6 +54,15 @@ router.post('/generate', async (req, res) => {
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Model: ${NANO_BANANA_MODEL}`);
 
+    // Compress reference images to avoid API size limits
+    let compressedReferenceImages = [];
+    if (referenceImages && referenceImages.length > 0) {
+      compressedReferenceImages = await compressImages(referenceImages, {
+        maxDimension: 1536,
+        quality: 80
+      });
+    }
+
     // Generate images sequentially
     const images = [];
     const warnings = [];
@@ -68,8 +78,8 @@ router.post('/generate', async (req, res) => {
         let messages = [];
 
         // Add reference images if provided
-        if (referenceImages && referenceImages.length > 0) {
-          const contentParts = referenceImages.map(imageDataUrl => ({
+        if (compressedReferenceImages && compressedReferenceImages.length > 0) {
+          const contentParts = compressedReferenceImages.map(imageDataUrl => ({
             type: "image_url",
             image_url: { url: imageDataUrl }
           }));
