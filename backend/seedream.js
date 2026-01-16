@@ -4,8 +4,9 @@ const { compressImages } = require('./services/imageCompression');
 
 const router = express.Router();
 
-// WaveSpeed API endpoint for Seedream 4.5
-const WAVESPEED_API_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
+// WaveSpeed API endpoints for Seedream 4.5
+const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
+const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5-edit';
 const WAVESPEED_RESULT_URL = 'https://api.wavespeed.ai/api/v3/predictions';
 
 /**
@@ -49,11 +50,17 @@ router.post('/generate', async (req, res) => {
     const validatedWidth = Math.min(Math.max(parseInt(width) || 2048, 512), 4096);
     const validatedHeight = Math.min(Math.max(parseInt(height) || 2048, 512), 4096);
 
+    // Determine which endpoint to use based on whether we have reference images
+    const hasReferenceImage = referenceImages && referenceImages.length > 0;
+    const apiEndpoint = hasReferenceImage ? WAVESPEED_IMG2IMG_URL : WAVESPEED_TEXT2IMG_URL;
+    const modelName = hasReferenceImage ? 'seedream-v4.5-edit' : 'seedream-v4.5';
+
     console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via WaveSpeed...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   📐 DIMENSIONS: ${validatedWidth}x${validatedHeight}`);
     console.log(`   Reference Images: ${referenceImages.length}`);
-    console.log(`   Model: bytedance/seedream-v4.5`);
+    console.log(`   Using endpoint: ${hasReferenceImage ? 'seedream-v4.5-edit (img2img)' : 'seedream-v4.5 (text2img)'}`);
+    console.log(`   Model: bytedance/${modelName}`);
 
     // Compress reference images to avoid API size limits (max 10MB per image)
     let compressedReferenceImages = [];
@@ -86,23 +93,33 @@ router.post('/generate', async (req, res) => {
       // Format size as "width*height"
       const sizeString = `${validatedWidth}*${validatedHeight}`;
 
-      const requestBody = {
-        prompt: imagePrompt,
-        size: sizeString,
-        n: Math.min(numOutputs, 4),
-        enable_base64_output: true,
-        enable_sync_mode: true  // Use sync mode for simpler response handling
-      };
+      let requestBody;
 
-      // Add reference images if provided (WaveSpeed may support this)
-      if (compressedReferenceImages.length > 0) {
-        requestBody.image = compressedReferenceImages[0]; // Primary reference
+      if (hasReferenceImage && compressedReferenceImages.length > 0) {
+        // Image-to-image mode (seedream-v4.5-edit)
+        requestBody = {
+          prompt: imagePrompt,
+          image: compressedReferenceImages[0], // Reference image required for edit endpoint
+          size: sizeString,
+          seed: -1, // Random seed
+          enable_base64_output: true,
+          enable_sync_mode: true
+        };
+      } else {
+        // Text-to-image mode (seedream-v4.5)
+        requestBody = {
+          prompt: imagePrompt,
+          size: sizeString,
+          n: Math.min(numOutputs, 4),
+          enable_base64_output: true,
+          enable_sync_mode: true
+        };
       }
 
       console.log(`   Request body:`, JSON.stringify({ ...requestBody, image: requestBody.image ? '[base64 data]' : undefined }, null, 2));
 
-      // Make request to WaveSpeed API
-      const response = await fetch(WAVESPEED_API_URL, {
+      // Make request to WaveSpeed API (use appropriate endpoint)
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
@@ -323,7 +340,10 @@ router.get('/status', (req, res) => {
   res.json({
     model: 'seedream-4.5',
     configured: !!process.env.WAVESPEED_API_KEY,
-    endpoint: WAVESPEED_API_URL,
+    endpoints: {
+      text2img: WAVESPEED_TEXT2IMG_URL,
+      img2img: WAVESPEED_IMG2IMG_URL
+    },
     provider: 'wavespeed',
     status: process.env.WAVESPEED_API_KEY ? 'ready' : 'missing_api_key'
   });
