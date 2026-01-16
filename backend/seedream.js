@@ -9,6 +9,42 @@ const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedre
 const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5-edit';
 const WAVESPEED_RESULT_URL = 'https://api.wavespeed.ai/api/v3/predictions';
 
+// Retry settings for rate limits
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000; // Start with 2 seconds
+
+/**
+ * Helper function to make API request with retry logic for 429 errors
+ */
+async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If we get a 429, retry with exponential backoff
+      if (response.status === 429 && attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.log(`   ⏳ Rate limited (429), retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.log(`   ⏳ Request failed, retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries');
+}
+
 /**
  * POST /api/seedream/generate
  * Generate an image using Seedream 4.5 model via WaveSpeed API
@@ -62,12 +98,12 @@ router.post('/generate', async (req, res) => {
     console.log(`   Using endpoint: ${hasReferenceImage ? 'seedream-v4.5-edit (img2img)' : 'seedream-v4.5 (text2img)'}`);
     console.log(`   Model: bytedance/${modelName}`);
 
-    // Compress reference images to avoid API size limits (max 10MB per image)
+    // Compress reference images more aggressively (1024px is plenty for style guidance)
     let compressedReferenceImages = [];
     if (referenceImages && referenceImages.length > 0) {
       compressedReferenceImages = await compressImages(referenceImages, {
-        maxDimension: 1536,
-        quality: 80
+        maxDimension: 1024,
+        quality: 75
       });
     }
 
@@ -118,8 +154,8 @@ router.post('/generate', async (req, res) => {
 
       console.log(`   Request body:`, JSON.stringify({ ...requestBody, image: requestBody.image ? '[base64 data]' : undefined }, null, 2));
 
-      // Make request to WaveSpeed API (use appropriate endpoint)
-      const response = await fetch(apiEndpoint, {
+      // Make request to WaveSpeed API with retry logic for rate limits
+      const response = await fetchWithRetry(apiEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
