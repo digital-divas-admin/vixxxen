@@ -1,6 +1,8 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { compressImages } = require('./services/imageCompression');
+const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const router = express.Router();
 
