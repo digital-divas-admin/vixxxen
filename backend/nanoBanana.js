@@ -1,7 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const { logger, logGeneration } = require('./services/logger');
-const analytics = require('./services/analyticsService');
+const { compressImages } = require('./services/imageCompression');
 
 const router = express.Router();
 
@@ -10,6 +9,42 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Nano Banana Pro model (Gemini 3 Pro Image Preview via OpenRouter)
 const NANO_BANANA_MODEL = "google/gemini-3-pro-image-preview";
+
+// Retry settings for rate limits
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000;
+
+/**
+ * Helper function to make API request with retry logic
+ */
+async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If we get a 429, retry with exponential backoff
+      if (response.status === 429 && attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.log(`   ⏳ Rate limited (429), retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.log(`   ⏳ Request failed, retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries');
+}
 
 /**
  * POST /api/nano-banana/generate
@@ -63,9 +98,19 @@ router.post('/generate', async (req, res) => {
       reference_images: referenceImages.length
     }, req);
 
+    // Compress reference images to avoid API size limits
+    let compressedReferenceImages = [];
+    if (referenceImages && referenceImages.length > 0) {
+      compressedReferenceImages = await compressImages(referenceImages, {
+        maxDimension: 1536,
+        quality: 80
+      });
+    }
+
     // Generate images sequentially
     const images = [];
     const warnings = [];
+    let contentFilterBlocked = false;
 
     for (let i = 0; i < numOutputs; i++) {
       logger.debug('Generating image', { model: 'nano-banana', index: i + 1, total: numOutputs });
@@ -78,8 +123,8 @@ router.post('/generate', async (req, res) => {
         let messages = [];
 
         // Add reference images if provided
-        if (referenceImages && referenceImages.length > 0) {
-          const contentParts = referenceImages.map(imageDataUrl => ({
+        if (compressedReferenceImages && compressedReferenceImages.length > 0) {
+          const contentParts = compressedReferenceImages.map(imageDataUrl => ({
             type: "image_url",
             image_url: { url: imageDataUrl }
           }));
@@ -100,8 +145,10 @@ router.post('/generate', async (req, res) => {
           }
         };
 
-        // Make raw HTTP request to OpenRouter
-        const response = await fetch(OPENROUTER_API_URL, {
+        console.log(`   Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 1000));
+
+        // Make raw HTTP request to OpenRouter with retry logic
+        const response = await fetchWithRetry(OPENROUTER_API_URL, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -123,6 +170,20 @@ router.post('/generate', async (req, res) => {
         // Extract images from response
         const message = result.choices[0]?.message;
         let imageFound = false;
+
+        // Check for refusal first
+        if (message?.refusal) {
+          console.log(`   ⚠️ Model refused request: ${message.refusal}`);
+          warnings.push(`Model refused: ${message.refusal}`);
+        }
+
+        // Log message structure for debugging
+        if (message) {
+          console.log(`   Message keys:`, Object.keys(message));
+          if (message.reasoning) {
+            console.log(`   Model reasoning:`, message.reasoning.substring(0, 200));
+          }
+        }
 
         // Method 1: Check message.images array (OpenRouter standard)
         if (message?.images && message.images.length > 0) {
@@ -193,14 +254,35 @@ router.post('/generate', async (req, res) => {
         }
 
         if (!imageFound) {
-          logger.warn('No image in response', { index: i + 1, requestId: req.id });
-          warnings.push(`No image in response ${i + 1}`);
+          console.log(`   ⚠️ No image found in response for image ${i + 1}`);
+          console.log(`   Message keys:`, message ? Object.keys(message) : 'no message');
+          console.log(`   Message content type:`, typeof message?.content);
+
+          // Log the full text content - this usually explains why no image was generated
+          if (message?.content && typeof message.content === 'string') {
+            console.log(`   📝 MODEL TEXT RESPONSE (content filter may have blocked image):`);
+            console.log(`   ${message.content}`);
+          }
+
+          // Check for explicit refusal
+          if (message?.refusal) {
+            console.log(`   🚫 MODEL REFUSAL: ${message.refusal}`);
+            warnings.push(`Model refused: ${message.refusal}`);
+          }
+
+          warnings.push(`No image in response ${i + 1} - model returned text instead (likely content filter)`);
         }
 
-        // Check finish reason
-        if (result.choices[0]?.finish_reason === 'content_filter') {
-          logger.warn('Image blocked by content filter', { index: i + 1, requestId: req.id });
-          warnings.push(`Image was blocked by content filter`);
+        // Check finish reason - detect content filter
+        const nativeFinishReason = result.choices[0]?.native_finish_reason;
+        const finishReason = result.choices[0]?.finish_reason;
+
+        if (nativeFinishReason === 'IMAGE_OTHER' || finishReason === 'content_filter') {
+          console.log(`   🚫 CONTENT FILTER DETECTED: native_finish_reason=${nativeFinishReason}, finish_reason=${finishReason}`);
+          // Set a flag to return a helpful error
+          contentFilterBlocked = true;
+        } else if (finishReason) {
+          console.log(`   Finish reason: ${finishReason}`);
         }
       } catch (apiError) {
         logger.error('Image generation failed', { index: i + 1, error: apiError.message, requestId: req.id });
@@ -214,6 +296,16 @@ router.post('/generate', async (req, res) => {
     }
 
     if (images.length === 0) {
+      // Check if it was blocked by content filter - return helpful error
+      if (contentFilterBlocked) {
+        return res.status(451).json({
+          error: 'Content blocked by Nano Banana',
+          message: 'This content was blocked by Nano Banana\'s safety filter. Try using Seedream instead - it supports a wider range of content.',
+          suggestion: 'seedream',
+          code: 'CONTENT_FILTER'
+        });
+      }
+
       const errorMsg = warnings.length > 0
         ? `No images were generated. ${warnings.join('. ')}`
         : 'No images were generated.';

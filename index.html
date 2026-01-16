@@ -7939,21 +7939,19 @@
         <div class="login-modal-title">Welcome to Vixxxen</div>
         <div class="login-modal-subtitle">Sign in or create an account to start creating</div>
 
-        <!-- Google Sign In Button -->
+        <!-- Google Sign-In Button -->
         <button class="google-signin-btn" onclick="handleGoogleSignIn()">
-          <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-            <g transform="matrix(1, 0, 0, 1, 0, 0)">
-              <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
-              <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09c1.97 3.92 6.02 6.62 10.71 6.62z"/>
-              <path fill="#FBBC05" d="M5.525 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29v-3.09h-3.98c-.82 1.62-1.29 3.44-1.29 5.38s.47 3.76 1.29 5.38l3.98-3.09z"/>
-              <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42c-2.07-1.94-4.78-3.13-8.02-3.13-4.69 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
-            </g>
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.26c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+            <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
           </svg>
           Continue with Google
         </button>
 
         <div class="login-divider">
-          <span>or</span>
+          <span>or use email</span>
         </div>
 
         <input type="email" class="login-input" placeholder="Email" id="loginEmail">
@@ -8026,7 +8024,8 @@
         <div class="section" id="standardSettings">
           <div class="section-label">Settings</div>
           <div class="settings-grid">
-            <div class="setting-item">
+            <!-- Aspect Ratio - for Nano Banana only -->
+            <div class="setting-item" id="aspectRatioSetting">
               <select id="aspectRatio">
                 <option value="1:1">1:1 Square</option>
                 <option value="16:9">16:9 Landscape</option>
@@ -8035,10 +8034,21 @@
                 <option value="3:4">3:4 Portrait</option>
               </select>
             </div>
-            <div class="setting-item" id="resolutionSetting">
-              <select id="resolution">
-                <option value="2K" selected>2K Resolution</option>
-                <option value="4K">4K Resolution</option>
+            <!-- Seedream Aspect Ratio + Resolution -->
+            <div class="setting-item" id="seedreamAspectSetting" style="display: none;">
+              <select id="seedreamAspectRatio">
+                <option value="1:1">1:1 Square</option>
+                <option value="16:9">16:9 Landscape</option>
+                <option value="9:16">9:16 Portrait</option>
+                <option value="4:3">4:3 Classic</option>
+                <option value="3:4">3:4 Portrait</option>
+              </select>
+            </div>
+            <div class="setting-item" id="seedreamResolutionSetting" style="display: none;">
+              <select id="seedreamResolution">
+                <option value="1K">1K</option>
+                <option value="2K" selected>2K</option>
+                <option value="4K">4K</option>
               </select>
             </div>
             <div class="setting-item full">
@@ -12078,6 +12088,42 @@
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
 
+    // Resolution lookup table: aspectRatio + quality -> { width, height }
+    const RESOLUTION_TABLE = {
+      '1:1': {
+        '1K': { width: 1024, height: 1024 },
+        '2K': { width: 2048, height: 2048 },
+        '4K': { width: 4096, height: 4096 }
+      },
+      '16:9': {
+        '1K': { width: 1280, height: 720 },
+        '2K': { width: 2560, height: 1440 },
+        '4K': { width: 3840, height: 2160 }
+      },
+      '9:16': {
+        '1K': { width: 720, height: 1280 },
+        '2K': { width: 1440, height: 2560 },
+        '4K': { width: 2160, height: 3840 }
+      },
+      '4:3': {
+        '1K': { width: 1536, height: 1152 },
+        '2K': { width: 2048, height: 1536 },
+        '4K': { width: 4096, height: 3072 }
+      },
+      '3:4': {
+        '1K': { width: 1152, height: 1536 },
+        '2K': { width: 1536, height: 2048 },
+        '4K': { width: 3072, height: 4096 }
+      }
+    };
+
+    // Get pixel dimensions from aspect ratio and resolution
+    function getResolutionDimensions(aspectRatio, resolution) {
+      const ar = RESOLUTION_TABLE[aspectRatio] || RESOLUTION_TABLE['1:1'];
+      const dims = ar[resolution] || ar['2K'];
+      return dims;
+    }
+
     // Helper to check if content should be tagged NSFW (based on mode OR model)
     function isNsfwContent(model) {
       return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
@@ -12721,7 +12767,9 @@
       const referenceSection = document.getElementById('referenceSection');
       const standardSettings = document.getElementById('standardSettings');
       const qwenGenSettings = document.getElementById('qwenGenSettings');
-      const resolutionSetting = document.getElementById('resolutionSetting');
+      const aspectRatioSetting = document.getElementById('aspectRatioSetting');
+      const seedreamAspectSetting = document.getElementById('seedreamAspectSetting');
+      const seedreamResolutionSetting = document.getElementById('seedreamResolutionSetting');
 
       // Reset all tabs
       nanoTab.classList.remove('active');
@@ -12741,14 +12789,18 @@
         nanoTab.classList.add('active');
         referenceSection.style.display = 'block';
         standardSettings.style.display = 'block';
-        // Hide resolution for Nano Banana (uses aspect ratio instead)
-        if (resolutionSetting) resolutionSetting.style.display = 'none';
+        // Nano Banana: Show aspect ratio, hide Seedream settings
+        if (aspectRatioSetting) aspectRatioSetting.style.display = 'block';
+        if (seedreamAspectSetting) seedreamAspectSetting.style.display = 'none';
+        if (seedreamResolutionSetting) seedreamResolutionSetting.style.display = 'none';
       } else if (model === 'seedream') {
         seedreamTab.classList.add('active');
         referenceSection.style.display = 'block';
         standardSettings.style.display = 'block';
-        // Show resolution for Seedream
-        if (resolutionSetting) resolutionSetting.style.display = 'block';
+        // Seedream: Hide Nano aspect ratio, show Seedream aspect + resolution
+        if (aspectRatioSetting) aspectRatioSetting.style.display = 'none';
+        if (seedreamAspectSetting) seedreamAspectSetting.style.display = 'block';
+        if (seedreamResolutionSetting) seedreamResolutionSetting.style.display = 'block';
       } else if (model === 'qwen') {
         qwenGenTab.classList.add('active');
         referenceSection.style.display = 'none';
@@ -15267,7 +15319,9 @@
           }
         }
 
-        console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId });
+        // Calculate pixel dimensions from aspect ratio and resolution
+        const dimensions = getResolutionDimensions(aspectRatio, resolution);
+        console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId, dimensions });
 
         // Track generation started
         if (window.VxAnalytics && window.VxAnalytics.generation) {
@@ -15284,7 +15338,12 @@
           // Submit job via backend proxy
           const submitResponse = await authFetch(`${API_BASE_URL}/api/qwen/generate`, {
             method: 'POST',
-            body: JSON.stringify({ prompt: qwenPrompt, loras })
+            body: JSON.stringify({
+              prompt: qwenPrompt,
+              loras,
+              width: dimensions.width,
+              height: dimensions.height
+            })
           });
 
           if (!submitResponse.ok) {
@@ -15512,15 +15571,26 @@
       }
 
       // Calculate and check credits
-      let aspectRatio, numOutputs;
+      let aspectRatio, numOutputs, resolution, seedreamWidth, seedreamHeight;
       if (currentModel === 'qwen') {
         aspectRatio = document.getElementById('qwenGenAspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('qwenGenNumGenerations')?.value || 1);
+        resolution = '1K'; // Qwen always uses 1K resolution
+      } else if (currentModel === 'seedream') {
+        // Seedream uses aspect ratio + resolution selectors
+        aspectRatio = document.getElementById('seedreamAspectRatio')?.value || '1:1';
+        resolution = document.getElementById('seedreamResolution')?.value || '2K';
+        numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
+        // Get exact dimensions from resolution table
+        const dims = getResolutionDimensions(aspectRatio, resolution);
+        seedreamWidth = dims.width;
+        seedreamHeight = dims.height;
       } else {
+        // Nano Banana uses aspect ratio only
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
+        resolution = '1K'; // Nano Banana doesn't support resolution control
       }
-      const resolution = document.getElementById('resolution')?.value || '2K';
 
       const costPerImage = calculateCreditCost('image', currentModel, { aspectRatio, resolution });
       const totalCost = costPerImage * numOutputs;
@@ -15583,25 +15653,29 @@
         let endpoint, payload;
 
         if (capturedModel === 'seedream') {
+          // Seedream: Use direct width/height from user input
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
-            resolution: resolution, // Use selected resolution (2K or 4K)
+            width: seedreamWidth,
+            height: seedreamHeight,
             numOutputs
           };
+          console.log(`🌊 Seedream request: ${seedreamWidth}x${seedreamHeight}`);
 
           // Add reference images if any are uploaded
           if (referenceImages.length > 0) {
             payload.referenceImages = referenceImages.map(img => img.dataUrl);
           }
         } else {
-          // Nano Banana Pro
+          // Nano Banana Pro - only supports aspect ratio, not custom dimensions
           endpoint = `${API_BASE_URL}/api/nano-banana/generate`;
           payload = {
             prompt,
-            aspectRatio: aspectRatio, // Pass aspect ratio to Nano Banana
+            aspectRatio: aspectRatio,
             numOutputs
           };
+          console.log(`🍌 Nano Banana request: AR=${aspectRatio}`);
 
           // Add reference images if any are uploaded
           if (referenceImages.length > 0) {
@@ -15631,7 +15705,11 @@
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Generation failed');
+          // Check for content filter error with suggestion
+          if (data.code === 'CONTENT_FILTER' && data.suggestion === 'seedream') {
+            throw new Error('🚫 Content blocked by Nano Banana\'s safety filter. Switch to Seedream for this type of content.');
+          }
+          throw new Error(data.message || data.error || 'Generation failed');
         }
 
         console.log('Generation successful:', data);
@@ -16316,10 +16394,15 @@
         aspectRatio = document.getElementById('qwenAspectRatio')?.value || '1:1';
         numOutputs = 1; // Qwen Image Edit only generates 1 image
         resolution = '2K'; // Default for cost calculation
+      } else if (currentModel === 'seedream') {
+        // Seedream uses its own aspect ratio and resolution selectors
+        aspectRatio = document.getElementById('seedreamAspectRatio')?.value || '1:1';
+        resolution = document.getElementById('seedreamResolution')?.value || '2K';
+        numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
       } else {
-        // Nano Banana and Seedream use standard settings
+        // Nano Banana uses standard aspect ratio only
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
-        resolution = document.getElementById('resolution')?.value || '2K';
+        resolution = '1K'; // Nano Banana is always 1K
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
       }
 
@@ -16594,6 +16677,45 @@
       } catch (err) {
         console.error('Sign up error:', err);
         alert('An error occurred during sign up');
+      }
+    }
+
+    // Handle Google OAuth Sign-In (works for both login and signup)
+    async function handleGoogleSignIn() {
+      const googleBtn = document.querySelector('.google-signin-btn');
+      const originalHTML = googleBtn.innerHTML;
+      googleBtn.innerHTML = '<span class="loading-spinner-small"></span> Connecting...';
+      googleBtn.disabled = true;
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent'
+            }
+          }
+        });
+
+        if (error) {
+          console.error('Google sign-in error:', error);
+          alert('Google sign-in failed: ' + error.message);
+          googleBtn.innerHTML = originalHTML;
+          googleBtn.disabled = false;
+          return;
+        }
+
+        // If we get here, Supabase will redirect to Google
+        // The auth state change listener will handle the rest after redirect back
+        console.log('🔄 Redirecting to Google for authentication...');
+
+      } catch (err) {
+        console.error('Google sign-in error:', err);
+        alert('An error occurred during Google sign-in');
+        googleBtn.innerHTML = originalHTML;
+        googleBtn.disabled = false;
       }
     }
 
@@ -17750,6 +17872,17 @@
       }
       if (fluxCharacterSelect) {
         fluxCharacterSelect.addEventListener('change', updateImageGenerateButtonCost);
+      }
+
+      // Seedream settings
+      const seedreamAspectRatioSelect = document.getElementById('seedreamAspectRatio');
+      const seedreamResolutionSelect = document.getElementById('seedreamResolution');
+
+      if (seedreamAspectRatioSelect) {
+        seedreamAspectRatioSelect.addEventListener('change', updateImageGenerateButtonCost);
+      }
+      if (seedreamResolutionSelect) {
+        seedreamResolutionSelect.addEventListener('change', updateImageGenerateButtonCost);
       }
 
       // Qwen Generation settings

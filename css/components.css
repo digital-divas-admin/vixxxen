@@ -268,13 +268,9 @@
   border-color: #ff2ebb;
 }
 
-/* Google Sign In Button */
+/* Google Sign-In Button */
 .google-signin-btn {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
   padding: 12px 16px;
   background: #fff;
   border: 1px solid #dadce0;
@@ -283,7 +279,11 @@
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s;
 }
 
 .google-signin-btn:hover {
@@ -291,8 +291,9 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.google-signin-btn:active {
-  background: #f1f3f4;
+.google-signin-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .google-signin-btn svg {
@@ -305,6 +306,8 @@
   align-items: center;
   width: 100%;
   margin: 16px 0;
+  color: #666;
+  font-size: 0.85rem;
 }
 
 .login-divider::before,
@@ -312,13 +315,26 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #2a2a2a;
+  background: #333;
 }
 
 .login-divider span {
   padding: 0 12px;
-  color: #666;
-  font-size: 0.85rem;
+}
+
+/* Small loading spinner for buttons */
+.loading-spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ccc;
+  border-top-color: #3c4043;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ==================== GENERIC MODALS ==================== */
