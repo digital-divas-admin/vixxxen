@@ -10,6 +10,42 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // Nano Banana Pro model (Gemini 3 Pro Image Preview via OpenRouter)
 const NANO_BANANA_MODEL = "google/gemini-3-pro-image-preview";
 
+// Retry settings for rate limits
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000;
+
+/**
+ * Helper function to make API request with retry logic
+ */
+async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If we get a 429, retry with exponential backoff
+      if (response.status === 429 && attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.log(`   ⏳ Rate limited (429), retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.log(`   ⏳ Request failed, retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries');
+}
+
 /**
  * POST /api/nano-banana/generate
  * Generate an image using Nano Banana Pro (Gemini 3 via OpenRouter)
@@ -102,8 +138,8 @@ router.post('/generate', async (req, res) => {
 
         console.log(`   Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 1000));
 
-        // Make raw HTTP request to OpenRouter
-        const response = await fetch(OPENROUTER_API_URL, {
+        // Make raw HTTP request to OpenRouter with retry logic
+        const response = await fetchWithRetry(OPENROUTER_API_URL, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -127,6 +163,20 @@ router.post('/generate', async (req, res) => {
         // Extract images from response
         const message = result.choices[0]?.message;
         let imageFound = false;
+
+        // Check for refusal first
+        if (message?.refusal) {
+          console.log(`   ⚠️ Model refused request: ${message.refusal}`);
+          warnings.push(`Model refused: ${message.refusal}`);
+        }
+
+        // Log message structure for debugging
+        if (message) {
+          console.log(`   Message keys:`, Object.keys(message));
+          if (message.reasoning) {
+            console.log(`   Model reasoning:`, message.reasoning.substring(0, 200));
+          }
+        }
 
         // Method 1: Check message.images array (OpenRouter standard)
         if (message?.images && message.images.length > 0) {
