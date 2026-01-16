@@ -124,7 +124,11 @@ router.post('/generate', async (req, res) => {
       if (result.data && result.data.outputs) {
         // Sync mode - images directly in response
         for (const output of result.data.outputs) {
-          if (output.url) {
+          if (typeof output === 'string') {
+            // WaveSpeed returns data URLs directly as strings
+            images.push(output);
+            console.log(`   ✅ Image generated successfully (data URL string)`);
+          } else if (output.url) {
             images.push(output.url);
             console.log(`   ✅ Image generated successfully (URL)`);
           } else if (output.base64) {
