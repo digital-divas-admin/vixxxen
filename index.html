@@ -7644,18 +7644,22 @@
                 <option value="3:4">3:4 Portrait</option>
               </select>
             </div>
-            <!-- Width/Height - for Seedream only -->
-            <div class="setting-item" id="widthSetting" style="display: none;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="color: #888; font-size: 0.85rem; min-width: 45px;">Width</label>
-                <input type="number" id="seedreamWidth" value="2048" min="512" max="4096" step="64" style="flex: 1; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem;">
-              </div>
+            <!-- Seedream Aspect Ratio + Resolution -->
+            <div class="setting-item" id="seedreamAspectSetting" style="display: none;">
+              <select id="seedreamAspectRatio">
+                <option value="1:1">1:1 Square</option>
+                <option value="16:9">16:9 Landscape</option>
+                <option value="9:16">9:16 Portrait</option>
+                <option value="4:3">4:3 Classic</option>
+                <option value="3:4">3:4 Portrait</option>
+              </select>
             </div>
-            <div class="setting-item" id="heightSetting" style="display: none;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="color: #888; font-size: 0.85rem; min-width: 45px;">Height</label>
-                <input type="number" id="seedreamHeight" value="2048" min="512" max="4096" step="64" style="flex: 1; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem;">
-              </div>
+            <div class="setting-item" id="seedreamResolutionSetting" style="display: none;">
+              <select id="seedreamResolution">
+                <option value="1K">1K</option>
+                <option value="2K" selected>2K</option>
+                <option value="4K">4K</option>
+              </select>
             </div>
             <div class="setting-item full">
               <select id="numGenerations">
@@ -12200,8 +12204,8 @@
       const standardSettings = document.getElementById('standardSettings');
       const qwenGenSettings = document.getElementById('qwenGenSettings');
       const aspectRatioSetting = document.getElementById('aspectRatioSetting');
-      const widthSetting = document.getElementById('widthSetting');
-      const heightSetting = document.getElementById('heightSetting');
+      const seedreamAspectSetting = document.getElementById('seedreamAspectSetting');
+      const seedreamResolutionSetting = document.getElementById('seedreamResolutionSetting');
 
       // Reset all tabs
       nanoTab.classList.remove('active');
@@ -12221,18 +12225,18 @@
         nanoTab.classList.add('active');
         referenceSection.style.display = 'block';
         standardSettings.style.display = 'block';
-        // Nano Banana: Show aspect ratio, hide width/height
+        // Nano Banana: Show aspect ratio, hide Seedream settings
         if (aspectRatioSetting) aspectRatioSetting.style.display = 'block';
-        if (widthSetting) widthSetting.style.display = 'none';
-        if (heightSetting) heightSetting.style.display = 'none';
+        if (seedreamAspectSetting) seedreamAspectSetting.style.display = 'none';
+        if (seedreamResolutionSetting) seedreamResolutionSetting.style.display = 'none';
       } else if (model === 'seedream') {
         seedreamTab.classList.add('active');
         referenceSection.style.display = 'block';
         standardSettings.style.display = 'block';
-        // Seedream: Hide aspect ratio, show width/height
+        // Seedream: Hide Nano aspect ratio, show Seedream aspect + resolution
         if (aspectRatioSetting) aspectRatioSetting.style.display = 'none';
-        if (widthSetting) widthSetting.style.display = 'block';
-        if (heightSetting) heightSetting.style.display = 'block';
+        if (seedreamAspectSetting) seedreamAspectSetting.style.display = 'block';
+        if (seedreamResolutionSetting) seedreamResolutionSetting.style.display = 'block';
       } else if (model === 'qwen') {
         qwenGenTab.classList.add('active');
         referenceSection.style.display = 'none';
@@ -14975,14 +14979,14 @@
         numOutputs = parseInt(document.getElementById('qwenGenNumGenerations')?.value || 1);
         resolution = '1K'; // Qwen always uses 1K resolution
       } else if (currentModel === 'seedream') {
-        // Seedream uses direct width/height
-        seedreamWidth = parseInt(document.getElementById('seedreamWidth')?.value || 2048);
-        seedreamHeight = parseInt(document.getElementById('seedreamHeight')?.value || 2048);
+        // Seedream uses aspect ratio + resolution selectors
+        aspectRatio = document.getElementById('seedreamAspectRatio')?.value || '1:1';
+        resolution = document.getElementById('seedreamResolution')?.value || '2K';
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
-        // Calculate approximate resolution tier for cost
-        const maxDim = Math.max(seedreamWidth, seedreamHeight);
-        resolution = maxDim <= 1536 ? '1K' : maxDim <= 2560 ? '2K' : '4K';
-        aspectRatio = '1:1'; // Not used for Seedream but needed for cost calc
+        // Get exact dimensions from resolution table
+        const dims = getResolutionDimensions(aspectRatio, resolution);
+        seedreamWidth = dims.width;
+        seedreamHeight = dims.height;
       } else {
         // Nano Banana uses aspect ratio only
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
@@ -15769,10 +15773,15 @@
         aspectRatio = document.getElementById('qwenAspectRatio')?.value || '1:1';
         numOutputs = 1; // Qwen Image Edit only generates 1 image
         resolution = '2K'; // Default for cost calculation
+      } else if (currentModel === 'seedream') {
+        // Seedream uses its own aspect ratio and resolution selectors
+        aspectRatio = document.getElementById('seedreamAspectRatio')?.value || '1:1';
+        resolution = document.getElementById('seedreamResolution')?.value || '2K';
+        numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
       } else {
-        // Nano Banana and Seedream use standard settings
+        // Nano Banana uses standard aspect ratio only
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
-        resolution = document.getElementById('resolution')?.value || '2K';
+        resolution = '1K'; // Nano Banana is always 1K
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
       }
 
@@ -17173,6 +17182,17 @@
       }
       if (fluxCharacterSelect) {
         fluxCharacterSelect.addEventListener('change', updateImageGenerateButtonCost);
+      }
+
+      // Seedream settings
+      const seedreamAspectRatioSelect = document.getElementById('seedreamAspectRatio');
+      const seedreamResolutionSelect = document.getElementById('seedreamResolution');
+
+      if (seedreamAspectRatioSelect) {
+        seedreamAspectRatioSelect.addEventListener('change', updateImageGenerateButtonCost);
+      }
+      if (seedreamResolutionSelect) {
+        seedreamResolutionSelect.addEventListener('change', updateImageGenerateButtonCost);
       }
 
       // Qwen Generation settings
