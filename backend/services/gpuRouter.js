@@ -12,6 +12,7 @@
  */
 
 const { getGpuConfig } = require('./settingsService');
+const { logger } = require('./logger');
 
 // Job tracking: maps jobId to { endpoint: 'dedicated' | 'serverless', ... }
 const jobEndpoints = new Map();
@@ -78,7 +79,7 @@ async function submitToDedicated(dedicatedUrl, workflow, timeout = 5000, images 
     }
 
     const targetUrl = `${dedicatedUrl}/run`;
-    console.log(`   → Dedicated POST to: ${targetUrl}`);
+    logger.debug('Dedicated POST', { url: targetUrl });
 
     const response = await fetch(targetUrl, {
       method: 'POST',
@@ -89,7 +90,7 @@ async function submitToDedicated(dedicatedUrl, workflow, timeout = 5000, images 
     });
     clearTimeout(timeoutId);
 
-    console.log(`   → Dedicated response: ${response.status} ${response.statusText}`);
+    logger.debug('Dedicated response', { status: response.status, statusText: response.statusText });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -172,11 +173,11 @@ async function submitToServerless(runpodUrl, runpodApiKey, workflow, images = nu
 async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, images = null, forceEndpoint = null }) {
   const config = await getGpuConfig();
 
-  console.log(`🔀 GPU Router: mode=${config.mode}, dedicated=${config.dedicatedUrl ? 'configured' : 'not set'}${images ? `, images=${images.length}` : ''}${forceEndpoint ? `, forced=${forceEndpoint}` : ''}`);
+  logger.debug('GPU Router', { mode: config.mode, dedicatedConfigured: !!config.dedicatedUrl, images: images?.length || 0, forceEndpoint });
 
   // Force endpoint override (bypasses all config logic)
   if (forceEndpoint === 'serverless') {
-    console.log('   → Forced to serverless');
+    logger.debug('Forced to serverless');
     const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (result.success) {
       trackJob(result.jobId, 'serverless');
@@ -185,7 +186,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
   }
 
   if (forceEndpoint === 'dedicated') {
-    console.log('   → Forced to dedicated');
+    logger.debug('Forced to dedicated');
     if (!config.dedicatedUrl) {
       return { success: false, error: 'Dedicated URL not configured', endpoint: 'dedicated' };
     }
@@ -198,7 +199,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
 
   // Mode: serverless - always use serverless (current behavior)
   if (config.mode === 'serverless' || !config.dedicatedUrl) {
-    console.log('   → Using serverless (mode or no dedicated URL)');
+    logger.debug('Using serverless (mode or no dedicated URL)');
     const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (result.success) {
       trackJob(result.jobId, 'serverless');
@@ -208,7 +209,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
 
   // Mode: dedicated - always use dedicated, fail if unavailable
   if (config.mode === 'dedicated') {
-    console.log('   → Using dedicated only');
+    logger.debug('Using dedicated only');
     const result = await submitToDedicated(config.dedicatedUrl, workflow, config.dedicatedTimeout, images);
     if (result.success) {
       trackJob(result.jobId, 'dedicated');
@@ -218,12 +219,12 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
 
   // Mode: hybrid - try dedicated first, fall back to serverless
   if (config.mode === 'hybrid') {
-    console.log('   → Trying dedicated first (hybrid mode)');
+    logger.debug('Trying dedicated first (hybrid mode)');
 
     // Check dedicated health first
     const health = await checkDedicatedHealth(config.dedicatedUrl);
     if (!health.healthy) {
-      console.log(`   → Dedicated unhealthy (${health.reason}), using serverless`);
+      logger.debug('Dedicated unhealthy, using serverless', { reason: health.reason });
       const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
       if (result.success) {
         trackJob(result.jobId, 'serverless');
@@ -239,7 +240,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
     }
 
     // Fall back to serverless
-    console.log(`   → Dedicated failed (${dedicatedResult.error}), falling back to serverless`);
+    logger.debug('Dedicated failed, falling back to serverless', { error: dedicatedResult.error });
     const serverlessResult = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (serverlessResult.success) {
       trackJob(serverlessResult.jobId, 'serverless');
@@ -249,7 +250,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
 
   // Mode: serverless-primary - try serverless first, fall back to dedicated
   if (config.mode === 'serverless-primary') {
-    console.log('   → Trying serverless first (serverless-primary mode)');
+    logger.debug('Trying serverless first (serverless-primary mode)');
 
     const serverlessResult = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
     if (serverlessResult.success) {
@@ -258,7 +259,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
     }
 
     // Fall back to dedicated
-    console.log(`   → Serverless failed (${serverlessResult.error}), falling back to dedicated`);
+    logger.debug('Serverless failed, falling back to dedicated', { error: serverlessResult.error });
     if (!config.dedicatedUrl) {
       return serverlessResult; // No dedicated to fall back to
     }
@@ -271,7 +272,7 @@ async function routeGenerationRequest({ workflow, runpodUrl, runpodApiKey, image
   }
 
   // Unknown mode - default to serverless
-  console.log('   → Unknown mode, using serverless');
+  logger.debug('Unknown mode, using serverless');
   const result = await submitToServerless(runpodUrl, runpodApiKey, workflow, images);
   if (result.success) {
     trackJob(result.jobId, 'serverless');

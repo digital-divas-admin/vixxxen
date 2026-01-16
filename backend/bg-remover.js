@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Replicate = require('replicate');
+const { logger, logGeneration } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY,
@@ -12,8 +14,6 @@ router.post('/remove', async (req, res) => {
   try {
     const { image } = req.body;
 
-    console.log('Received background removal request');
-
     if (!image) {
       return res.status(400).json({
         success: false,
@@ -21,7 +21,10 @@ router.post('/remove', async (req, res) => {
       });
     }
 
-    console.log('Running 851 Labs background remover...');
+    logGeneration('bg-remover', 'started', { requestId: req.id });
+
+    // Track analytics
+    analytics.generation.started('bg-remover', {}, req);
 
     const output = await replicate.run(BG_REMOVER_MODEL, {
       input: {
@@ -29,7 +32,10 @@ router.post('/remove', async (req, res) => {
       }
     });
 
-    console.log('Background removal completed');
+    logGeneration('bg-remover', 'completed', { requestId: req.id });
+
+    // Track analytics
+    analytics.generation.completed('bg-remover', {}, req);
 
     // The output is a file object with a url() method
     const resultUrl = output.url ? output.url() : output;
@@ -40,7 +46,8 @@ router.post('/remove', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Background removal error:', error);
+    logger.error('Background removal error', { error: error.message, requestId: req.id });
+    analytics.generation.failed('bg-remover', error.message, {}, req);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to remove background'

@@ -274,10 +274,13 @@ router.post('/generate', async (req, res) => {
       throw new Error(errorMsg);
     }
 
-    console.log(`   ✅ Generation complete! Created ${images.length} image(s)`);
-    if (warnings.length > 0) {
-      console.log(`   ⚠️ Warnings: ${warnings.join(', ')}`);
-    }
+    logGeneration('seedream', 'completed', { imagesGenerated: images.length, requestId: req.id });
+
+    // Track generation completed
+    analytics.generation.completed('seedream', {
+      images_generated: images.length,
+      warnings_count: warnings.length
+    }, req);
 
     // Return the generated images
     res.json({
@@ -296,7 +299,10 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Seedream generation error:', error);
+    logger.error('Seedream generation error', { error: error.message, requestId: req.id });
+
+    // Track generation failed
+    analytics.generation.failed('seedream', error.message, {}, req);
 
     // Handle specific error types
     if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {

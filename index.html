@@ -67,9 +67,9 @@
   </style>
 
   <!-- External CSS - Organized styles -->
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/landing-page.css">
-  <link rel="stylesheet" href="css/onboarding-wizard.css">
+  <link rel="stylesheet" href="css/main.css?v=20260115">
+  <link rel="stylesheet" href="css/landing-page.css?v=20260115">
+  <link rel="stylesheet" href="css/onboarding-wizard.css?v=20260115">
 
   <style>
     /* ===========================================
@@ -2507,6 +2507,80 @@
       border-bottom: 1px solid var(--border-color);
     }
 
+    /* Live Users Widget */
+    .live-users-widget {
+      background: linear-gradient(135deg, rgba(0, 200, 83, 0.15), rgba(0, 150, 60, 0.1));
+      border: 1px solid rgba(0, 200, 83, 0.3);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .live-users-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .live-users-pulse {
+      width: 12px;
+      height: 12px;
+      background: #00c853;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 8px rgba(0, 200, 83, 0.6);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    .live-users-count {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #00c853;
+    }
+
+    .live-users-label {
+      font-size: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .live-users-countries {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .live-users-country {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+
+    .live-users-country-flag {
+      font-size: 1.1rem;
+    }
+
+    .live-users-country-count {
+      font-weight: 600;
+      color: #00c853;
+    }
+
+    .live-users-loading {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
     .analytics-cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2577,6 +2651,307 @@
 
     .analytics-chart-container canvas {
       max-height: 250px;
+    }
+
+    /* Analytics Sub-tabs */
+    .analytics-subtab {
+      padding: 10px 20px;
+      background: rgba(157, 78, 221, 0.1);
+      border: 1px solid rgba(157, 78, 221, 0.2);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .analytics-subtab:hover {
+      background: rgba(157, 78, 221, 0.2);
+      border-color: rgba(157, 78, 221, 0.4);
+    }
+
+    .analytics-subtab.active {
+      background: linear-gradient(135deg, #9d4edd, #ff2ebb);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .analytics-subtab-content {
+      display: block;
+    }
+
+    .analytics-subtab-content:not(.active) {
+      display: none;
+    }
+
+    /* Funnel Visualization */
+    .funnel-container {
+      min-height: 200px;
+    }
+
+    .funnel-loading {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 40px;
+    }
+
+    .funnel-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .funnel-step-bar {
+      height: 36px;
+      background: linear-gradient(90deg, #9d4edd, #ff2ebb);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      transition: width 0.5s ease;
+      min-width: 60px;
+    }
+
+    .funnel-step-label {
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .funnel-step-value {
+      margin-left: 12px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      min-width: 80px;
+    }
+
+    .funnel-step-value strong {
+      color: var(--text-primary);
+    }
+
+    .funnel-summary {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+    }
+
+    .funnel-summary-rate {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #9d4edd, #ff2ebb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .funnel-summary-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Top Events List */
+    .top-events-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .top-event-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .top-event-item:last-child {
+      border-bottom: none;
+    }
+
+    .top-event-name {
+      font-size: 0.85rem;
+      color: var(--text-primary);
+    }
+
+    .top-event-count {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #9d4edd;
+      background: rgba(157, 78, 221, 0.1);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    /* Session Stats Styles */
+    .session-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .session-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .session-stat-item {
+      text-align: center;
+      padding: 12px;
+      background: rgba(157, 78, 221, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(157, 78, 221, 0.1);
+    }
+
+    .session-stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #9d4edd;
+    }
+
+    .session-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .duration-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .duration-bar-label {
+      width: 60px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .duration-bar-container {
+      flex: 1;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .duration-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #9d4edd, #ff2ebb);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .duration-bar-count {
+      width: 40px;
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* First Generation Metrics Styles */
+    .first-gen-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .first-gen-metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .first-gen-metric {
+      text-align: center;
+      padding: 16px 12px;
+      background: rgba(157, 78, 221, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(157, 78, 221, 0.1);
+    }
+
+    .first-gen-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #9d4edd;
+    }
+
+    .first-gen-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Retention Table Styles */
+    .retention-summary-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(157, 78, 221, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(157, 78, 221, 0.1);
+    }
+
+    .retention-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .retention-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #9d4edd;
+    }
+
+    .retention-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .retention-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .retention-table th {
+      text-align: left;
+      padding: 12px 8px;
+      border-bottom: 2px solid rgba(157, 78, 221, 0.2);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .retention-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .retention-table tr:hover td {
+      background: rgba(157, 78, 221, 0.05);
+    }
+
+    .retention-high {
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    .retention-medium {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+
+    .retention-low {
+      color: #ef4444;
+      font-weight: 600;
     }
 
     /* GPU Usage Heatmap Styles */
@@ -8794,6 +9169,31 @@
                     <p class="admin-section-subtitle">Platform metrics and usage statistics</p>
                   </div>
 
+                  <!-- Analytics Sub-tabs -->
+                  <div class="analytics-subtabs" style="display: flex; gap: 8px; margin-bottom: 24px; justify-content: center;">
+                    <button class="analytics-subtab active" onclick="switchAnalyticsSubtab('platform')" id="platformSubtab">
+                      📊 Platform Stats
+                    </button>
+                    <button class="analytics-subtab" onclick="switchAnalyticsSubtab('user')" id="userSubtab">
+                      👥 User Analytics
+                    </button>
+                  </div>
+
+                  <!-- Platform Stats Content -->
+                  <div class="analytics-subtab-content active" id="platformStatsContent">
+
+                <!-- Live Users Widget -->
+                <div class="live-users-widget" id="liveUsersWidget">
+                  <div class="live-users-header">
+                    <div class="live-users-pulse"></div>
+                    <span class="live-users-count" id="liveUsersCount">0</span>
+                    <span class="live-users-label">users online now</span>
+                  </div>
+                  <div class="live-users-countries" id="liveUsersCountries">
+                    <span class="live-users-loading">Loading...</span>
+                  </div>
+                </div>
+
                 <!-- Summary Cards -->
                 <div class="analytics-cards">
                   <div class="analytics-card">
@@ -8870,6 +9270,140 @@
                     🔄 Refresh Analytics
                   </button>
                 </div>
+                  </div>
+                  <!-- End Platform Stats Content -->
+
+                  <!-- User Analytics Content -->
+                  <div class="analytics-subtab-content" id="userAnalyticsContent" style="display: none;">
+
+                    <!-- Date Range Selector -->
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                      <select id="userAnalyticsDateRange" onchange="loadUserAnalytics()" style="padding: 8px 16px; background: #1a1a1a; border: 1px solid rgba(157, 78, 221, 0.3); border-radius: 8px; color: #fff; font-size: 0.9rem; cursor: pointer;">
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                      </select>
+                    </div>
+
+                    <!-- User Analytics Summary Cards -->
+                    <div class="analytics-cards">
+                      <div class="analytics-card">
+                        <div class="analytics-card-icon">📈</div>
+                        <div class="analytics-card-value" id="uaTotalEvents">-</div>
+                        <div class="analytics-card-label">Total Events</div>
+                      </div>
+                      <div class="analytics-card">
+                        <div class="analytics-card-icon">👤</div>
+                        <div class="analytics-card-value" id="uaUniqueUsers">-</div>
+                        <div class="analytics-card-label">Unique Users</div>
+                      </div>
+                      <div class="analytics-card">
+                        <div class="analytics-card-icon">🚀</div>
+                        <div class="analytics-card-value" id="uaOnboardingRate">-</div>
+                        <div class="analytics-card-label">Onboarding Rate</div>
+                      </div>
+                      <div class="analytics-card">
+                        <div class="analytics-card-icon">💳</div>
+                        <div class="analytics-card-value" id="uaConversionRate">-</div>
+                        <div class="analytics-card-label">Trial Conversion</div>
+                      </div>
+                    </div>
+
+                    <!-- Funnels Section -->
+                    <h3 class="analytics-section-title" style="margin-top: 32px;">Conversion Funnels</h3>
+
+                    <div class="analytics-charts">
+                      <!-- Onboarding Funnel -->
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Onboarding Funnel</h3>
+                        <div class="funnel-container" id="onboardingFunnel">
+                          <div class="funnel-loading">Loading funnel data...</div>
+                        </div>
+                      </div>
+
+                      <!-- Trial Funnel -->
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Trial Funnel</h3>
+                        <div class="funnel-container" id="trialFunnel">
+                          <div class="funnel-loading">Loading funnel data...</div>
+                        </div>
+                      </div>
+
+                      <!-- Signup to Value Funnel -->
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Signup → Value Funnel</h3>
+                        <div class="funnel-container" id="signupToValueFunnel">
+                          <div class="funnel-loading">Loading funnel data...</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- First Generation Metrics -->
+                    <h3 class="analytics-section-title" style="margin-top: 32px;">First Generation Metrics</h3>
+                    <div class="analytics-full-width">
+                      <div class="analytics-chart-container" id="firstGenMetricsContainer">
+                        <div class="funnel-loading">Loading first generation data...</div>
+                      </div>
+                    </div>
+
+                    <!-- Daily Activity Chart -->
+                    <h3 class="analytics-section-title" style="margin-top: 32px;">Daily Activity</h3>
+                    <div class="analytics-full-width">
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Events & Users Over Time</h3>
+                        <canvas id="dailyActivityChart"></canvas>
+                      </div>
+                    </div>
+
+                    <!-- Events by Category -->
+                    <h3 class="analytics-section-title" style="margin-top: 32px;">Events by Category</h3>
+                    <div class="analytics-charts">
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Event Distribution</h3>
+                        <canvas id="eventCategoryChart"></canvas>
+                      </div>
+                      <div class="analytics-chart-container">
+                        <h3 class="analytics-chart-title">Top Events</h3>
+                        <div class="top-events-list" id="topEventsList">
+                          <div class="funnel-loading">Loading events...</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Session Stats Section -->
+                    <div style="margin-top: 32px;">
+                      <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">Session Analytics</h3>
+                      <div class="analytics-chart-container" id="sessionStatsContainer">
+                        <div class="funnel-loading">Loading session data...</div>
+                      </div>
+                    </div>
+
+                    <!-- Retention Cohorts Section -->
+                    <div style="margin-top: 32px;">
+                      <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">User Retention</h3>
+                      <div class="analytics-chart-container" id="retentionTableContainer">
+                        <div class="funnel-loading">Loading retention data...</div>
+                      </div>
+                    </div>
+
+                    <!-- Device Breakdown Section -->
+                    <div style="margin-top: 32px;">
+                      <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 16px; font-weight: 600;">Device Breakdown</h3>
+                      <div class="analytics-chart-container" id="deviceBreakdownContainer">
+                        <div class="funnel-loading">Loading device data...</div>
+                      </div>
+                    </div>
+
+                    <!-- Refresh Button -->
+                    <div style="text-align: center; margin-top: 20px;">
+                      <button onclick="loadUserAnalytics()" style="padding: 10px 24px; background: linear-gradient(135deg, #9d4edd, #ff2ebb); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 500;">
+                        🔄 Refresh User Analytics
+                      </button>
+                    </div>
+                  </div>
+                  <!-- End User Analytics Content -->
+
                 </div>
                 <!-- End Analytics Section -->
 
@@ -10337,18 +10871,19 @@
                 <span class="credits-balance-label">Current Balance</span>
               </div>
 
+              <!-- TEST PRICES - CHANGE BACK FOR PRODUCTION -->
               <div class="credits-packages">
-                <button class="credits-package" onclick="purchaseCredits(500, 12.00)">
+                <button class="credits-package" onclick="purchaseCredits(500, 1.00)">
                   <span class="package-credits">500</span>
-                  <span class="package-price">$12</span>
+                  <span class="package-price">$1</span>
                 </button>
-                <button class="credits-package" onclick="purchaseCredits(1000, 22.00)">
+                <button class="credits-package" onclick="purchaseCredits(1000, 1.50)">
                   <span class="package-credits">1,000</span>
-                  <span class="package-price">$22</span>
+                  <span class="package-price">$1.50</span>
                 </button>
-                <button class="credits-package featured" onclick="purchaseCredits(2500, 50.00)">
+                <button class="credits-package featured" onclick="purchaseCredits(2500, 2.00)">
                   <span class="package-credits">2,500</span>
-                  <span class="package-price">$50</span>
+                  <span class="package-price">$2</span>
                 </button>
               </div>
             </div>
@@ -10620,27 +11155,29 @@
   </div>
 
   <!-- External JavaScript Modules (load in order) -->
-  <script src="js/config.js"></script>
-  <script src="js/landing-page.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/zoom-controls.js"></script>
-  <script src="js/reporting.js"></script>
-  <script src="js/theme.js"></script>
-  <script src="js/admin-reports.js"></script>
-  <script src="js/character-cache.js"></script>
-  <script src="js/admin-characters.js"></script>
-  <script src="js/admin-onboarding.js"></script>
-  <script src="js/admin-custom-characters.js"></script>
-  <script src="js/admin-landing.js"></script>
-  <script src="js/custom-character-order.js"></script>
-  <script src="js/payment-modals.js"></script>
-  <script src="js/analytics.js"></script>
-  <script src="js/modals.js"></script>
-  <script src="js/bulk-selection.js"></script>
-  <script src="js/account-page.js"></script>
-  <script src="js/billing-page.js"></script>
-  <script src="js/delete-functions.js"></script>
-  <script src="js/onboarding-wizard.js"></script>
+  <script src="js/config.js?v=20260115"></script>
+  <script src="js/analytics-tracker.js?v=20260115"></script>
+  <script src="js/landing-page.js?v=20260115"></script>
+  <script src="js/utils.js?v=20260115"></script>
+  <script src="js/zoom-controls.js?v=20260115"></script>
+  <script src="js/reporting.js?v=20260115"></script>
+  <script src="js/theme.js?v=20260115"></script>
+  <script src="js/admin-reports.js?v=20260115"></script>
+  <script src="js/character-cache.js?v=20260115"></script>
+  <script src="js/admin-characters.js?v=20260115"></script>
+  <script src="js/admin-onboarding.js?v=20260115"></script>
+  <script src="js/admin-custom-characters.js?v=20260115"></script>
+  <script src="js/admin-landing.js?v=20260115"></script>
+  <script src="js/custom-character-order.js?v=20260115"></script>
+  <script src="js/payment-modals.js?v=20260115"></script>
+  <script src="js/analytics.js?v=20260115"></script>
+  <script src="js/admin-user-analytics.js?v=20260115"></script>
+  <script src="js/modals.js?v=20260115"></script>
+  <script src="js/bulk-selection.js?v=20260115"></script>
+  <script src="js/account-page.js?v=20260115"></script>
+  <script src="js/billing-page.js?v=20260115"></script>
+  <script src="js/delete-functions.js?v=20260115"></script>
+  <script src="js/onboarding-wizard.js?v=20260115"></script>
 
   <script>
     // ===========================================
@@ -10783,6 +11320,12 @@
         }
 
         console.log('📁 Image metadata saved to database');
+
+        // Track save for value moment analysis
+        if (window.VxAnalytics && window.VxAnalytics.engagement) {
+          window.VxAnalytics.engagement.saved('image', { model: metadata.model });
+        }
+
         return publicUrl;
 
       } catch (err) {
@@ -10854,6 +11397,12 @@
         }
 
         console.log('🎬 Video metadata saved to database');
+
+        // Track save for value moment analysis
+        if (window.VxAnalytics && window.VxAnalytics.engagement) {
+          window.VxAnalytics.engagement.saved('video', { model: metadata.model });
+        }
+
         return publicUrl;
 
       } catch (err) {
@@ -12694,6 +13243,11 @@
 
         console.log(`Generating video with ${modelName}:`, { endpoint, payload: { ...payload, image: videoStartImage ? '[data...]' : null, startImage: videoStartImage ? '[data...]' : null } });
 
+        // Track generation started
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.started(modelName, { content_type: 'video' });
+        }
+
         // Add timeout to fetch request (5 minutes for video generation)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
@@ -12752,6 +13306,11 @@
         // Log generation for 2257 compliance
         logGeneration('video', modelName, prompt, isNsfwAtStart, 1, data.videoUrl);
 
+        // Track generation completed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.completed(modelName, { content_type: 'video' });
+        }
+
       } catch (error) {
         console.error('Video generation failed:', error);
 
@@ -12769,6 +13328,11 @@
         // Mark placeholder as failed
         updateVideoPlaceholderWithError(placeholder, errorMessage);
         showVideoError(errorMessage);
+
+        // Track generation failed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.failed(capturedVideoModel, errorMessage, { content_type: 'video' });
+        }
       } finally {
         isGeneratingVideo = false;
         btn.classList.remove('generating');
@@ -12876,6 +13440,10 @@
           link.download = `vixxxen-video-${timestamp}.mp4`;
           link.click();
           URL.revokeObjectURL(link.href);
+          // Track download for value moment analysis
+          if (window.VxAnalytics && window.VxAnalytics.engagement) {
+            window.VxAnalytics.engagement.downloaded('video');
+          }
         })
         .catch(err => {
           console.error('Download failed:', err);
@@ -14755,6 +15323,11 @@
         const dimensions = getResolutionDimensions(aspectRatio, resolution);
         console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId, dimensions });
 
+        // Track generation started
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.started('qwen', { content_type: 'image', num_outputs: numOutputs });
+        }
+
         // Reverse placeholders array so first generation fills the top placeholder
         const qwenPlaceholders = [...placeholders].reverse();
 
@@ -14915,9 +15488,19 @@
         logGeneration('image', 'qwen', qwenPrompt, isNsfwAtStart, numOutputs);
         console.log(`✅ [Batch ${batchId}] Qwen generation complete`);
 
+        // Track generation completed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.completed('qwen', { content_type: 'image', num_outputs: numOutputs });
+        }
+
       } catch (error) {
         console.error(`❌ [Batch ${batchId}] Qwen generation error:`, error);
         showError(error.message || 'Generation failed');
+
+        // Track generation failed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.failed('qwen', error.message || 'Generation failed', { content_type: 'image' });
+        }
 
         // Refund credits on failure
         await refundCredits(totalCost, `Qwen generation failed: ${error.message || 'Unknown error'}`);
@@ -15102,6 +15685,11 @@
 
         console.log('Generating with:', { endpoint, payload });
 
+        // Track generation started
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.started(capturedModel, { content_type: 'image', num_outputs: numOutputs });
+        }
+
         // Add timeout to fetch request (2 minutes for image generation)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
@@ -15128,6 +15716,11 @@
 
         // Log generation for 2257 compliance
         logGeneration('image', capturedModel, prompt, isNsfwAtStart, data.images?.length || 1);
+
+        // Track generation completed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.completed(capturedModel, { content_type: 'image', num_images: data.images?.length || 1 });
+        }
 
         // Replace placeholders with actual images
         let imageIndex = 0;
@@ -15192,6 +15785,11 @@
           updatePlaceholderWithError(placeholder, errorMessage);
         });
         showError(errorMessage);
+
+        // Track generation failed
+        if (window.VxAnalytics && window.VxAnalytics.generation) {
+          window.VxAnalytics.generation.failed(capturedModel, errorMessage, { content_type: 'image' });
+        }
       } finally {
         // Decrement batch counter and update button state
         activeGenerationBatches--;
@@ -15360,6 +15958,10 @@
           link.download = `vixxxen-${timestamp}.png`;
           link.click();
           URL.revokeObjectURL(link.href);
+          // Track download for value moment analysis
+          if (window.VxAnalytics && window.VxAnalytics.engagement) {
+            window.VxAnalytics.engagement.downloaded('image');
+          }
         })
         .catch(err => {
           console.error('Download failed:', err);
@@ -15935,6 +16537,35 @@
         if (container) {
           container.style.display = 'none';
         }
+      }
+    }
+
+    async function handleGoogleSignIn() {
+      const btn = document.querySelector('.google-signin-btn');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<span>Connecting...</span>';
+      btn.disabled = true;
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin
+          }
+        });
+
+        if (error) {
+          console.error('Google sign-in error:', error);
+          alert('Failed to connect with Google: ' + error.message);
+          btn.innerHTML = originalContent;
+          btn.disabled = false;
+        }
+        // If successful, user will be redirected to Google
+      } catch (err) {
+        console.error('Google sign-in error:', err);
+        alert('An error occurred during Google sign-in');
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
       }
     }
 
@@ -16545,6 +17176,7 @@
 
         // Update global isUserAdmin before calling updateCharacterDropdowns
         isUserAdmin = isAdmin;
+        window.isUserAdmin = isAdmin; // Expose for analytics tracking
 
         renderMarketplace();
         updateCharacterDropdowns();
@@ -17346,6 +17978,7 @@
           .single();
 
         isUserAdmin = profile?.role === 'admin';
+        window.isUserAdmin = isUserAdmin; // Expose for analytics tracking
 
         if (membership && membership.is_active) {
           userMembership = membership.tier;
@@ -17435,6 +18068,7 @@
       chatSocket.on('authenticated', (data) => {
         console.log('Authenticated with tier:', data.tier, 'admin:', data.isAdmin);
         isUserAdmin = data.isAdmin;
+        window.isUserAdmin = data.isAdmin; // Expose for analytics tracking
         renderChannels(data.channels);
 
         // If admin, request all members
@@ -21246,5 +21880,8 @@
     };
 
   </script>
+
+  <!-- Tidio Chat Widget -->
+  <script src="//code.tidio.co/fnunrrlpajmwhyf4q88ygib7zm84nlih.js" async></script>
 </body>
 </html>

@@ -181,6 +181,11 @@ async function bulkDownloadImages() {
     }
   }
 
+  // Track bulk download for value moment analysis (only trigger value moment once)
+  if (downloaded > 0 && window.VxAnalytics && window.VxAnalytics.engagement) {
+    window.VxAnalytics.engagement.downloaded('image', { bulk_count: downloaded });
+  }
+
   downloadBtn.disabled = false;
   downloadBtn.innerHTML = `
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -219,6 +224,11 @@ async function bulkDownloadVideos() {
     } catch (err) {
       console.error('Download failed for:', url, err);
     }
+  }
+
+  // Track bulk download for value moment analysis (only trigger value moment once)
+  if (downloaded > 0 && window.VxAnalytics && window.VxAnalytics.engagement) {
+    window.VxAnalytics.engagement.downloaded('video', { bulk_count: downloaded });
   }
 
   downloadBtn.disabled = false;

@@ -1,15 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-// Lazy initialization of Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
+const { supabase } = require('./services/supabase');
+const { logger } = require('./services/logger');
 
 // Rate limit settings
 const RATE_LIMIT_WINDOW_HOURS = 24;
@@ -82,7 +74,7 @@ async function checkRateLimit(userId) {
 
     return { allowed: true, remaining: MAX_REPORTS_PER_WINDOW - currentCount - 1 };
   } catch (error) {
-    console.error('Rate limit check error:', error);
+    logger.error('Rate limit check error', { error: error.message });
     return { allowed: true }; // Allow on error
   }
 }
@@ -168,7 +160,7 @@ router.post('/', async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error creating report:', error);
+      logger.error('Error creating report', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to submit report' });
     }
 
@@ -179,7 +171,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Report submission error:', error);
+    logger.error('Report submission error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -218,7 +210,7 @@ router.get('/', async (req, res) => {
     const { data: reports, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching reports:', error);
+      logger.error('Error fetching reports', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch reports' });
     }
 
@@ -239,7 +231,7 @@ router.get('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching reports:', error);
+    logger.error('Error fetching reports', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -302,7 +294,7 @@ router.get('/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching report stats:', error);
+    logger.error('Error fetching report stats', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -342,9 +334,9 @@ router.put('/:id', async (req, res) => {
     if (action_taken === 'content_removed') {
       try {
         await removeReportedContent(existingReport);
-        console.log(`Content removed for report ${id}: ${existingReport.content_type}`);
+        logger.info('Content removed for report', { reportId: id, contentType: existingReport.content_type, requestId: req.id });
       } catch (removeError) {
-        console.error('Error removing content:', removeError);
+        logger.error('Error removing content', { error: removeError.message, requestId: req.id });
         // Continue with report update even if removal fails
       }
     }
@@ -377,7 +369,7 @@ router.put('/:id', async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Error updating report:', error);
+      logger.error('Error updating report', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update report' });
     }
 
@@ -392,7 +384,7 @@ router.put('/:id', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating report:', error);
+    logger.error('Error updating report', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -409,7 +401,7 @@ async function removeReportedContent(report) {
           .from('generated_images')
           .delete()
           .eq('public_url', content_url);
-        if (error) console.error('Error deleting image record:', error);
+        if (error) logger.error('Error deleting image record', { error: error.message });
       }
       // Also try by content_id if it's a database ID
       if (content_id && content_id.match(/^[0-9a-f-]{36}$/i)) {
@@ -417,7 +409,7 @@ async function removeReportedContent(report) {
           .from('generated_images')
           .delete()
           .eq('id', content_id);
-        if (error) console.error('Error deleting image by ID:', error);
+        if (error) logger.error('Error deleting image by ID', { error: error.message });
       }
       break;
 
@@ -428,7 +420,7 @@ async function removeReportedContent(report) {
           .from('generated_videos')
           .delete()
           .eq('public_url', content_url);
-        if (error) console.error('Error deleting video record:', error);
+        if (error) logger.error('Error deleting video record', { error: error.message });
       }
       // Also try by content_id if it's a database ID
       if (content_id && content_id.match(/^[0-9a-f-]{36}$/i)) {
@@ -436,7 +428,7 @@ async function removeReportedContent(report) {
           .from('generated_videos')
           .delete()
           .eq('id', content_id);
-        if (error) console.error('Error deleting video by ID:', error);
+        if (error) logger.error('Error deleting video by ID', { error: error.message });
       }
       break;
 
@@ -447,17 +439,17 @@ async function removeReportedContent(report) {
           .from('chat_messages')
           .delete()
           .eq('id', content_id);
-        if (error) console.error('Error deleting chat message:', error);
+        if (error) logger.error('Error deleting chat message', { error: error.message });
       }
       break;
 
     case 'audio':
       // Audio deletion - add if you have an audio table
-      console.log('Audio content removal not yet implemented');
+      logger.warn('Audio content removal not yet implemented');
       break;
 
     default:
-      console.log(`Unknown content type: ${content_type}`);
+      logger.warn('Unknown content type', { contentType: content_type });
   }
 }
 
@@ -496,7 +488,7 @@ router.get('/:id', async (req, res) => {
     res.json({ report });
 
   } catch (error) {
-    console.error('Error fetching report:', error);
+    logger.error('Error fetching report', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -523,7 +515,7 @@ router.get('/check/:contentType/:contentId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error checking content status:', error);
+    logger.error('Error checking content status', { error: error.message, requestId: req.id });
     res.json({ hidden: false });
   }
 });

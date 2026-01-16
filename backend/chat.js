@@ -1,16 +1,13 @@
-const { createClient } = require('@supabase/supabase-js');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const { supabase } = require('./services/supabase');
+const { logger, maskUserId } = require('./services/logger');
+const analytics = require('./services/analyticsService');
 
 // Store connected users
 const connectedUsers = new Map();
 
 function initializeChat(io) {
   io.on('connection', async (socket) => {
-    console.log('User connected:', socket.id);
+    logger.debug('Socket connected', { socketId: socket.id });
 
     // Handle authentication
     socket.on('authenticate', async (data) => {
@@ -30,7 +27,7 @@ function initializeChat(io) {
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching membership:', error);
+          logger.error('Error fetching membership', { error: error.message });
         }
 
         const userTier = membership?.is_active ? membership.tier : null;
@@ -69,9 +66,9 @@ function initializeChat(io) {
           channels
         });
 
-        console.log(`User ${displayName} authenticated with tier: ${userTier || 'none'}, admin: ${isAdmin}`);
+        logger.info('User authenticated to chat', { userId: maskUserId(userId), tier: userTier, isAdmin });
       } catch (err) {
-        console.error('Authentication error:', err);
+        logger.error('Chat authentication error', { error: err.message });
         socket.emit('auth_error', { message: 'Authentication failed' });
       }
     });
@@ -118,6 +115,11 @@ function initializeChat(io) {
           onlineUsers
         });
 
+        // Track chat channel joined
+        analytics.chat.joined(channelId, socket.userTier, {
+          is_admin: socket.isAdmin
+        }, { userId: socket.userId, headers: {} });
+
         // Notify others in channel
         socket.to(channelId).emit('user_joined', {
           user: {
@@ -127,7 +129,7 @@ function initializeChat(io) {
         });
 
       } catch (err) {
-        console.error('Join channel error:', err);
+        logger.error('Join channel error', { error: err.message });
         socket.emit('error', { message: 'Failed to join channel' });
       }
     });
@@ -167,7 +169,7 @@ function initializeChat(io) {
           .single();
 
         if (error) {
-          console.error('Error saving message:', error);
+          logger.error('Error saving message', { error: error.message });
           socket.emit('error', { message: 'Failed to send message' });
           return;
         }
@@ -186,8 +188,13 @@ function initializeChat(io) {
 
         io.to(channelId).emit('new_message', messageData);
 
+        // Track chat message sent
+        analytics.chat.messageSent(channelId, {
+          tier: socket.userTier
+        }, { userId: socket.userId, headers: {} });
+
       } catch (err) {
-        console.error('Send message error:', err);
+        logger.error('Send message error', { error: err.message });
         socket.emit('error', { message: 'Failed to send message' });
       }
     });
@@ -222,7 +229,7 @@ function initializeChat(io) {
         const members = await getAllMembers();
         socket.emit('all_members', { members });
       } catch (err) {
-        console.error('Error getting members:', err);
+        logger.error('Error getting members', { error: err.message });
         socket.emit('error', { message: 'Failed to get members' });
       }
     });
@@ -244,16 +251,16 @@ function initializeChat(io) {
           .eq('id', messageId);
 
         if (error) {
-          console.error('Error deleting message:', error);
+          logger.error('Error deleting message', { error: error.message });
           socket.emit('error', { message: 'Failed to delete message' });
           return;
         }
 
         // Broadcast to all users in channel
         io.to(channelId).emit('message_deleted', { messageId });
-        console.log(`Admin ${socket.userId} deleted message ${messageId}`);
+        logger.info('Admin deleted message', { userId: maskUserId(socket.userId), messageId });
       } catch (err) {
-        console.error('Delete message error:', err);
+        logger.error('Delete message error', { error: err.message });
         socket.emit('error', { message: 'Failed to delete message' });
       }
     });
@@ -288,7 +295,7 @@ function initializeChat(io) {
           });
 
         if (error) {
-          console.error('Error adding reaction:', error);
+          logger.error('Error adding reaction', { error: error.message });
           socket.emit('error', { message: 'Failed to add reaction' });
           return;
         }
@@ -302,7 +309,7 @@ function initializeChat(io) {
         });
 
       } catch (err) {
-        console.error('Add reaction error:', err);
+        logger.error('Add reaction error', { error: err.message });
         socket.emit('error', { message: 'Failed to add reaction' });
       }
     });
@@ -327,7 +334,7 @@ function initializeChat(io) {
           .eq('emoji', emoji);
 
         if (error) {
-          console.error('Error removing reaction:', error);
+          logger.error('Error removing reaction', { error: error.message });
           socket.emit('error', { message: 'Failed to remove reaction' });
           return;
         }
@@ -340,7 +347,7 @@ function initializeChat(io) {
         });
 
       } catch (err) {
-        console.error('Remove reaction error:', err);
+        logger.error('Remove reaction error', { error: err.message });
         socket.emit('error', { message: 'Failed to remove reaction' });
       }
     });
@@ -354,7 +361,7 @@ function initializeChat(io) {
         });
       }
       connectedUsers.delete(socket.id);
-      console.log('User disconnected:', socket.id);
+      logger.debug('Socket disconnected', { socketId: socket.id });
     });
   });
 }
@@ -371,7 +378,7 @@ async function getAccessibleChannels(userId, userTier, isAdmin = false) {
         .order('name', { ascending: true });
 
       if (error) {
-        console.error('Error fetching all channels for admin:', error);
+        logger.error('Error fetching all channels for admin', { error: error.message });
         return [];
       }
       return allChannels || [];
@@ -394,7 +401,7 @@ async function getAccessibleChannels(userId, userTier, isAdmin = false) {
     const { data: publicChannels, error: publicError } = await query.eq('is_private', false);
 
     if (publicError) {
-      console.error('Error fetching public channels:', publicError);
+      logger.error('Error fetching public channels', { error: publicError.message });
       return [];
     }
 
@@ -405,7 +412,7 @@ async function getAccessibleChannels(userId, userTier, isAdmin = false) {
       .eq('user_id', userId);
 
     if (privateError) {
-      console.error('Error fetching private channels:', privateError);
+      logger.error('Error fetching private channels', { error: privateError.message });
     }
 
     const allChannels = [
@@ -415,7 +422,7 @@ async function getAccessibleChannels(userId, userTier, isAdmin = false) {
 
     return allChannels;
   } catch (err) {
-    console.error('Error getting accessible channels:', err);
+    logger.error('Error getting accessible channels', { error: err.message });
     return [];
   }
 }
@@ -460,7 +467,7 @@ async function checkChannelAccess(userId, userTier, channelId) {
 
     return false;
   } catch (err) {
-    console.error('Error checking channel access:', err);
+    logger.error('Error checking channel access', { error: err.message });
     return false;
   }
 }
@@ -480,7 +487,7 @@ async function getChannelMessages(channelId, limit = 50) {
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching messages:', error);
+      logger.error('Error fetching messages', { error: error.message });
       return [];
     }
 
@@ -532,7 +539,7 @@ async function getChannelMessages(channelId, limit = 50) {
       };
     });
   } catch (err) {
-    console.error('Error getting messages:', err);
+    logger.error('Error getting messages', { error: err.message });
     return [];
   }
 }
@@ -572,7 +579,7 @@ async function getAllMembers() {
       .order('created_at', { ascending: false });
 
     if (profileError) {
-      console.error('Error fetching profiles:', profileError);
+      logger.error('Error fetching profiles', { error: profileError.message });
       return [];
     }
 
@@ -605,7 +612,7 @@ async function getAllMembers() {
       joinedAt: p.created_at
     }));
   } catch (err) {
-    console.error('Error getting all members:', err);
+    logger.error('Error getting all members', { error: err.message });
     return [];
   }
 }
@@ -626,7 +633,7 @@ async function createMentorChannel(mentorId, studentId, studentName) {
       .single();
 
     if (error) {
-      console.error('Error creating mentor channel:', error);
+      logger.error('Error creating mentor channel', { error: error.message });
       return null;
     }
 
@@ -640,7 +647,7 @@ async function createMentorChannel(mentorId, studentId, studentName) {
 
     return channel;
   } catch (err) {
-    console.error('Error creating mentor channel:', err);
+    logger.error('Error creating mentor channel', { error: err.message });
     return null;
   }
 }

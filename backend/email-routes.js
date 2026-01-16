@@ -6,6 +6,7 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
+const { logger } = require('./services/logger');
 const {
   sendWelcomeEmail,
   sendSubscriptionEmail,
@@ -68,7 +69,7 @@ router.post('/welcome', requireAuth, async (req, res) => {
       res.status(500).json({ error: 'Failed to send welcome email', details: result.error });
     }
   } catch (error) {
-    console.error('Error sending welcome email:', error);
+    logger.error('Error sending welcome email', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to send welcome email' });
   }
 });
@@ -129,7 +130,7 @@ router.post('/admin/test', requireAdmin, async (req, res) => {
       res.status(500).json({ error: 'Failed to send test email', details: result.error });
     }
   } catch (error) {
-    console.error('Error sending test email:', error);
+    logger.error('Error sending test email', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to send test email', details: error.message });
   }
 });
@@ -166,7 +167,7 @@ router.post('/admin/send-reminders', requireAdmin, async (req, res) => {
       .gt('expires_at', new Date().toISOString());
 
     if (error) {
-      console.error('Error fetching expiring memberships:', error);
+      logger.error('Error fetching expiring memberships', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch expiring memberships' });
     }
 
@@ -192,7 +193,6 @@ router.post('/admin/send-reminders', requireAdmin, async (req, res) => {
         sent++;
       } else {
         failed++;
-        console.error(`Failed to send reminder to ${profile.email}:`, result.error);
       }
     }
 
@@ -204,7 +204,7 @@ router.post('/admin/send-reminders', requireAdmin, async (req, res) => {
       message: `Sent ${sent} reminder emails (${failed} failed)`,
     });
   } catch (error) {
-    console.error('Error sending reminder emails:', error);
+    logger.error('Error sending reminder emails', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to send reminder emails' });
   }
 });

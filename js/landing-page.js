@@ -1287,12 +1287,30 @@ function closeTrialModal() {
 function trackTrialEvent(eventName, data = {}) {
   console.log(`[Trial Analytics] ${eventName}`, data);
 
-  // If analytics is available, track the event
-  if (typeof window.trackEvent === 'function') {
-    window.trackEvent('trial', eventName, data);
+  // Use VxAnalytics if available
+  if (window.VxAnalytics) {
+    switch (eventName) {
+      case 'modal_opened':
+        VxAnalytics.trial.started({ fingerprint: trialFingerprint, ...data });
+        break;
+      case 'generation_started':
+        VxAnalytics.trial.generationUsed(3 - trialRemaining, { fingerprint: trialFingerprint, ...data });
+        break;
+      case 'generation_completed':
+        VxAnalytics.track('trial_generation_completed', 'trial', { fingerprint: trialFingerprint, remaining: trialRemaining, ...data });
+        break;
+      case 'trial_exhausted':
+        VxAnalytics.trial.completed({ fingerprint: trialFingerprint, converted: false, ...data });
+        break;
+      case 'signup_clicked':
+        VxAnalytics.trial.converted({ fingerprint: trialFingerprint, ...data });
+        break;
+      default:
+        VxAnalytics.track(`trial_${eventName}`, 'trial', { fingerprint: trialFingerprint, ...data });
+    }
   }
 
-  // Also send to backend for server-side analytics
+  // Legacy: Also send to backend for server-side analytics
   try {
     navigator.sendBeacon('/api/trial/analytics', JSON.stringify({
       event: eventName,

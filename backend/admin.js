@@ -10,6 +10,7 @@ const router = express.Router();
 const { requireAdmin, supabase } = require('./middleware/auth');
 const { getSetting, setSetting, getGpuConfig, DEFAULTS } = require('./services/settingsService');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
+const { logger, logAdminAction, maskEmail, maskUserId } = require('./services/logger');
 
 // All admin routes require admin authentication
 router.use(requireAdmin);
@@ -28,7 +29,7 @@ router.get('/gpu-config', async (req, res) => {
       modes: ['serverless', 'dedicated', 'hybrid', 'serverless-primary']
     });
   } catch (error) {
-    console.error('Admin GPU config fetch error:', error);
+    logger.error('Admin GPU config fetch error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch GPU config' });
   }
 });
@@ -76,14 +77,14 @@ router.post('/gpu-config', async (req, res) => {
       return res.status(500).json({ error: 'Failed to save GPU config' });
     }
 
-    console.log(`🔧 Admin ${req.user.email} updated GPU config:`, newConfig);
+    logAdminAction(req.user.email, 'Updated GPU config', { mode: newConfig.mode });
 
     res.json({
       success: true,
       config: newConfig
     });
   } catch (error) {
-    console.error('Admin GPU config update error:', error);
+    logger.error('Admin GPU config update error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to update GPU config' });
   }
 });
@@ -119,7 +120,7 @@ router.get('/gpu-status', async (req, res) => {
 
     res.json(status);
   } catch (error) {
-    console.error('Admin GPU status error:', error);
+    logger.error('Admin GPU status error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to get GPU status' });
   }
 });
@@ -148,7 +149,7 @@ router.get('/gpu-stats', async (req, res) => {
       message: 'Stats tracking not yet implemented'
     });
   } catch (error) {
-    console.error('Admin GPU stats error:', error);
+    logger.error('Admin GPU stats error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to get GPU stats' });
   }
 });
@@ -169,7 +170,7 @@ router.post('/gpu-test', async (req, res) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    console.log(`🧪 Admin ${req.user.email} testing GPU endpoint: ${url}`);
+    logAdminAction(req.user.email, 'Testing GPU endpoint');
 
     const health = await checkDedicatedHealth(url);
 
@@ -179,7 +180,7 @@ router.post('/gpu-test', async (req, res) => {
       tested_at: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Admin GPU test error:', error);
+    logger.error('Admin GPU test error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to test GPU endpoint' });
   }
 });
@@ -219,7 +220,7 @@ router.get('/warmup-status', async (req, res) => {
       message: 'GPU online, models loaded'
     });
   } catch (error) {
-    console.error('Warmup status error:', error);
+    logger.error('Warmup status error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to check warmup status' });
   }
 });
@@ -240,7 +241,7 @@ router.post('/warmup', async (req, res) => {
       });
     }
 
-    console.log(`🔥 Admin ${req.user.email} triggering warmup for model: ${model}`);
+    logAdminAction(req.user.email, 'Triggering warmup', { model });
 
     // Call the dedicated GPU's warmup endpoint
     const warmupUrl = `${config.dedicatedUrl}/warmup`;
@@ -252,7 +253,7 @@ router.post('/warmup', async (req, res) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Warmup request failed:', errorText);
+      logger.error('Warmup request failed', { error: errorText, requestId: req.id });
       return res.status(500).json({
         success: false,
         error: 'Warmup request failed',
@@ -262,7 +263,7 @@ router.post('/warmup', async (req, res) => {
 
     const result = await response.json();
 
-    console.log(`✅ Warmup complete for ${model}:`, result);
+    logger.info('Warmup complete', { model, loadTimeSeconds: result.loadTimeSeconds });
 
     res.json({
       success: true,
@@ -271,7 +272,7 @@ router.post('/warmup', async (req, res) => {
       message: result.message || `${model} model loaded successfully`
     });
   } catch (error) {
-    console.error('Warmup trigger error:', error);
+    logger.error('Warmup trigger error', { error: error.message, requestId: req.id });
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to trigger warmup'
@@ -307,13 +308,13 @@ router.get('/users/search', async (req, res) => {
       .limit(10);
 
     if (error) {
-      console.error('User search error:', error);
+      logger.error('User search error', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to search users' });
     }
 
     res.json({ users: users || [] });
   } catch (error) {
-    console.error('User search error:', error);
+    logger.error('User search error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to search users' });
   }
 });
@@ -337,7 +338,7 @@ router.get('/users/:userId/characters', async (req, res) => {
       .eq('user_id', userId);
 
     if (userCharsError) {
-      console.error('Fetch user characters error:', userCharsError);
+      logger.error('Fetch user characters error', { error: userCharsError.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch owned characters', details: userCharsError.message });
     }
 
@@ -353,7 +354,7 @@ router.get('/users/:userId/characters', async (req, res) => {
       .in('id', characterIds);
 
     if (charsError) {
-      console.error('Fetch character details error:', charsError);
+      logger.error('Fetch character details error', { error: charsError.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch character details', details: charsError.message });
     }
 
@@ -373,7 +374,7 @@ router.get('/users/:userId/characters', async (req, res) => {
       userId
     });
   } catch (error) {
-    console.error('Fetch owned characters error:', error);
+    logger.error('Fetch owned characters error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch owned characters' });
   }
 });
@@ -396,13 +397,13 @@ router.get('/characters', async (req, res) => {
       .order('name');
 
     if (error) {
-      console.error('Fetch characters error:', error);
+      logger.error('Fetch characters error', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to fetch characters' });
     }
 
     res.json({ characters: characters || [] });
   } catch (error) {
-    console.error('Fetch characters error:', error);
+    logger.error('Fetch characters error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to fetch characters' });
   }
 });
@@ -432,7 +433,7 @@ router.post('/grant-character', async (req, res) => {
       .maybeSingle();
 
     if (checkError) {
-      console.error('Check existing grant error:', checkError);
+      logger.error('Check existing grant error', { error: checkError.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to check existing access' });
     }
 
@@ -452,11 +453,14 @@ router.post('/grant-character', async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Grant character error:', error);
+      logger.error('Grant character error', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to grant character access', details: error.message });
     }
 
-    console.log(`🎁 Admin ${req.user.email} granted character ${characterId} to user ${userId}`);
+    logAdminAction(req.user.email, 'Granted character access', {
+      characterId,
+      userId: maskUserId(userId)
+    });
 
     res.json({
       success: true,
@@ -464,7 +468,7 @@ router.post('/grant-character', async (req, res) => {
       grant: data
     });
   } catch (error) {
-    console.error('Grant character error:', error);
+    logger.error('Grant character error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to grant character access' });
   }
 });
@@ -492,18 +496,21 @@ router.post('/revoke-character', async (req, res) => {
       .eq('character_id', characterId);
 
     if (error) {
-      console.error('Revoke character error:', error);
+      logger.error('Revoke character error', { error: error.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to revoke character access' });
     }
 
-    console.log(`🚫 Admin ${req.user.email} revoked character ${characterId} from user ${userId}`);
+    logAdminAction(req.user.email, 'Revoked character access', {
+      characterId,
+      userId: maskUserId(userId)
+    });
 
     res.json({
       success: true,
       message: 'Character access revoked'
     });
   } catch (error) {
-    console.error('Revoke character error:', error);
+    logger.error('Revoke character error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to revoke character access' });
   }
 });
@@ -552,7 +559,7 @@ router.post('/gift-credits', async (req, res) => {
       .eq('id', userId);
 
     if (updateError) {
-      console.error('Update credits error:', updateError);
+      logger.error('Update credits error', { error: updateError.message, requestId: req.id });
       return res.status(500).json({ error: 'Failed to update credits' });
     }
 
@@ -572,11 +579,15 @@ router.post('/gift-credits', async (req, res) => {
       });
 
     if (transactionError) {
-      console.error('Transaction record error:', transactionError);
+      logger.error('Transaction record error', { error: transactionError.message, requestId: req.id });
       // Credits were updated but transaction failed - log it but don't fail the request
     }
 
-    console.log(`🎁 Admin ${adminEmail} gifted ${creditAmount} credits to user ${userId}: ${reason}`);
+    logAdminAction(adminEmail, 'Gifted credits', {
+      credits: creditAmount,
+      userId: maskUserId(userId),
+      reason
+    });
 
     res.json({
       success: true,
@@ -584,7 +595,7 @@ router.post('/gift-credits', async (req, res) => {
       newBalance: newBalance
     });
   } catch (error) {
-    console.error('Gift credits error:', error);
+    logger.error('Gift credits error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Failed to gift credits' });
   }
 });

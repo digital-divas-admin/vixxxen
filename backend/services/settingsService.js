@@ -10,16 +10,8 @@
  *   await setSetting('gpu_config', { mode: 'hybrid', ... });
  */
 
-const { createClient } = require('@supabase/supabase-js');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-}
+const { supabase } = require('./supabase');
+const { logger } = require('./logger');
 
 // In-memory cache
 const cache = new Map();
@@ -48,7 +40,7 @@ async function getSetting(key) {
 
   // Fetch from database
   if (!supabase) {
-    console.warn('Settings: Supabase not configured, using defaults');
+    logger.warn('Settings: Supabase not configured, using defaults');
     return DEFAULTS[key] || null;
   }
 
@@ -62,10 +54,10 @@ async function getSetting(key) {
     if (error) {
       if (error.code === 'PGRST116') {
         // Row not found - use default
-        console.log(`Settings: Key "${key}" not found, using default`);
+        logger.debug('Settings: Key not found, using default', { key });
         return DEFAULTS[key] || null;
       }
-      console.error('Settings fetch error:', error);
+      logger.error('Settings fetch error', { error: error.message });
       // Return cached value if available (even if expired)
       return cached?.value || DEFAULTS[key] || null;
     }
@@ -78,7 +70,7 @@ async function getSetting(key) {
 
     return data.value;
   } catch (error) {
-    console.error('Settings service error:', error);
+    logger.error('Settings service error', { error: error.message });
     return cached?.value || DEFAULTS[key] || null;
   }
 }
@@ -89,7 +81,7 @@ async function getSetting(key) {
  */
 async function setSetting(key, value) {
   if (!supabase) {
-    console.error('Settings: Supabase not configured, cannot save');
+    logger.error('Settings: Supabase not configured, cannot save');
     return false;
   }
 
@@ -105,7 +97,7 @@ async function setSetting(key, value) {
       });
 
     if (error) {
-      console.error('Settings save error:', error);
+      logger.error('Settings save error', { error: error.message });
       return false;
     }
 
@@ -115,10 +107,10 @@ async function setSetting(key, value) {
       timestamp: Date.now()
     });
 
-    console.log(`Settings: Updated "${key}"`);
+    logger.info('Settings updated', { key });
     return true;
   } catch (error) {
-    console.error('Settings service error:', error);
+    logger.error('Settings service error', { error: error.message });
     return false;
   }
 }
