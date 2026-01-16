@@ -7634,7 +7634,8 @@
         <div class="section" id="standardSettings">
           <div class="section-label">Settings</div>
           <div class="settings-grid">
-            <div class="setting-item">
+            <!-- Aspect Ratio - for Nano Banana only -->
+            <div class="setting-item" id="aspectRatioSetting">
               <select id="aspectRatio">
                 <option value="1:1">1:1 Square</option>
                 <option value="16:9">16:9 Landscape</option>
@@ -7643,12 +7644,18 @@
                 <option value="3:4">3:4 Portrait</option>
               </select>
             </div>
-            <div class="setting-item" id="resolutionSetting">
-              <select id="resolution">
-                <option value="1K">1K Resolution</option>
-                <option value="2K" selected>2K Resolution</option>
-                <option value="4K">4K Resolution</option>
-              </select>
+            <!-- Width/Height - for Seedream only -->
+            <div class="setting-item" id="widthSetting" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="color: #888; font-size: 0.85rem; min-width: 45px;">Width</label>
+                <input type="number" id="seedreamWidth" value="2048" min="512" max="4096" step="64" style="flex: 1; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem;">
+              </div>
+            </div>
+            <div class="setting-item" id="heightSetting" style="display: none;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="color: #888; font-size: 0.85rem; min-width: 45px;">Height</label>
+                <input type="number" id="seedreamHeight" value="2048" min="512" max="4096" step="64" style="flex: 1; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem;">
+              </div>
             </div>
             <div class="setting-item full">
               <select id="numGenerations">
@@ -12192,7 +12199,9 @@
       const referenceSection = document.getElementById('referenceSection');
       const standardSettings = document.getElementById('standardSettings');
       const qwenGenSettings = document.getElementById('qwenGenSettings');
-      const resolutionSetting = document.getElementById('resolutionSetting');
+      const aspectRatioSetting = document.getElementById('aspectRatioSetting');
+      const widthSetting = document.getElementById('widthSetting');
+      const heightSetting = document.getElementById('heightSetting');
 
       // Reset all tabs
       nanoTab.classList.remove('active');
@@ -12212,14 +12221,18 @@
         nanoTab.classList.add('active');
         referenceSection.style.display = 'block';
         standardSettings.style.display = 'block';
-        // Hide resolution for Nano Banana (uses aspect ratio instead)
-        if (resolutionSetting) resolutionSetting.style.display = 'none';
+        // Nano Banana: Show aspect ratio, hide width/height
+        if (aspectRatioSetting) aspectRatioSetting.style.display = 'block';
+        if (widthSetting) widthSetting.style.display = 'none';
+        if (heightSetting) heightSetting.style.display = 'none';
       } else if (model === 'seedream') {
         seedreamTab.classList.add('active');
         referenceSection.style.display = 'block';
         standardSettings.style.display = 'block';
-        // Show resolution for Seedream
-        if (resolutionSetting) resolutionSetting.style.display = 'block';
+        // Seedream: Hide aspect ratio, show width/height
+        if (aspectRatioSetting) aspectRatioSetting.style.display = 'none';
+        if (widthSetting) widthSetting.style.display = 'block';
+        if (heightSetting) heightSetting.style.display = 'block';
       } else if (model === 'qwen') {
         qwenGenTab.classList.add('active');
         referenceSection.style.display = 'none';
@@ -14956,15 +14969,25 @@
       }
 
       // Calculate and check credits
-      let aspectRatio, numOutputs, resolution;
+      let aspectRatio, numOutputs, resolution, seedreamWidth, seedreamHeight;
       if (currentModel === 'qwen') {
         aspectRatio = document.getElementById('qwenGenAspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('qwenGenNumGenerations')?.value || 1);
         resolution = '1K'; // Qwen always uses 1K resolution
+      } else if (currentModel === 'seedream') {
+        // Seedream uses direct width/height
+        seedreamWidth = parseInt(document.getElementById('seedreamWidth')?.value || 2048);
+        seedreamHeight = parseInt(document.getElementById('seedreamHeight')?.value || 2048);
+        numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
+        // Calculate approximate resolution tier for cost
+        const maxDim = Math.max(seedreamWidth, seedreamHeight);
+        resolution = maxDim <= 1536 ? '1K' : maxDim <= 2560 ? '2K' : '4K';
+        aspectRatio = '1:1'; // Not used for Seedream but needed for cost calc
       } else {
+        // Nano Banana uses aspect ratio only
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
-        resolution = document.getElementById('resolution')?.value || '2K';
+        resolution = '1K'; // Nano Banana doesn't support resolution control
       }
 
       const costPerImage = calculateCreditCost('image', currentModel, { aspectRatio, resolution });
@@ -15027,19 +15050,16 @@
       try {
         let endpoint, payload;
 
-        // Calculate pixel dimensions from aspect ratio and resolution
-        const dimensions = getResolutionDimensions(aspectRatio, resolution);
-        console.log(`📐 Resolution: AR=${aspectRatio}, Res=${resolution} → ${dimensions.width}x${dimensions.height}`);
-
         if (capturedModel === 'seedream') {
+          // Seedream: Use direct width/height from user input
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
-            width: dimensions.width,
-            height: dimensions.height,
+            width: seedreamWidth,
+            height: seedreamHeight,
             numOutputs
           };
-          console.log(`🌊 Seedream request: ${dimensions.width}x${dimensions.height}`);
+          console.log(`🌊 Seedream request: ${seedreamWidth}x${seedreamHeight}`);
 
           // Add reference images if any are uploaded
           if (referenceImages.length > 0) {
@@ -15053,6 +15073,7 @@
             aspectRatio: aspectRatio,
             numOutputs
           };
+          console.log(`🍌 Nano Banana request: AR=${aspectRatio}`);
 
           // Add reference images if any are uploaded
           if (referenceImages.length > 0) {
