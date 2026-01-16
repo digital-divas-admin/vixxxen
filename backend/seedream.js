@@ -6,7 +6,7 @@ const router = express.Router();
 
 // WaveSpeed API endpoints for Seedream 4.5
 const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
-const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5-edit';
+const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5/edit';
 const WAVESPEED_RESULT_URL = 'https://api.wavespeed.ai/api/v3/predictions';
 
 // Retry settings for rate limits
