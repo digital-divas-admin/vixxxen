@@ -102,6 +102,7 @@ router.post('/generate', async (req, res) => {
     // Generate images sequentially
     const images = [];
     const warnings = [];
+    let contentFilterBlocked = false;
 
     for (let i = 0; i < numOutputs; i++) {
       console.log(`   Generating image ${i + 1}/${numOutputs}...`);
@@ -266,12 +267,16 @@ router.post('/generate', async (req, res) => {
           warnings.push(`No image in response ${i + 1} - model returned text instead (likely content filter)`);
         }
 
-        // Check finish reason
-        if (result.choices[0]?.finish_reason === 'content_filter') {
-          console.log(`   🚫 CONTENT FILTER: Image ${i + 1} explicitly blocked by content filter`);
-          warnings.push(`Image was blocked by content filter`);
-        } else if (result.choices[0]?.finish_reason) {
-          console.log(`   Finish reason: ${result.choices[0].finish_reason}`);
+        // Check finish reason - detect content filter
+        const nativeFinishReason = result.choices[0]?.native_finish_reason;
+        const finishReason = result.choices[0]?.finish_reason;
+
+        if (nativeFinishReason === 'IMAGE_OTHER' || finishReason === 'content_filter') {
+          console.log(`   🚫 CONTENT FILTER DETECTED: native_finish_reason=${nativeFinishReason}, finish_reason=${finishReason}`);
+          // Set a flag to return a helpful error
+          contentFilterBlocked = true;
+        } else if (finishReason) {
+          console.log(`   Finish reason: ${finishReason}`);
         }
       } catch (apiError) {
         console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
@@ -285,6 +290,16 @@ router.post('/generate', async (req, res) => {
     }
 
     if (images.length === 0) {
+      // Check if it was blocked by content filter - return helpful error
+      if (contentFilterBlocked) {
+        return res.status(451).json({
+          error: 'Content blocked by Nano Banana',
+          message: 'This content was blocked by Nano Banana\'s safety filter. Try using Seedream instead - it supports a wider range of content.',
+          suggestion: 'seedream',
+          code: 'CONTENT_FILTER'
+        });
+      }
+
       const errorMsg = warnings.length > 0
         ? `No images were generated. ${warnings.join('. ')}`
         : 'No images were generated.';

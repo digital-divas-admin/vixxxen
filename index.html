@@ -15102,7 +15102,11 @@
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Generation failed');
+          // Check for content filter error with suggestion
+          if (data.code === 'CONTENT_FILTER' && data.suggestion === 'seedream') {
+            throw new Error('🚫 Content blocked by Nano Banana\'s safety filter. Switch to Seedream for this type of content.');
+          }
+          throw new Error(data.message || data.error || 'Generation failed');
         }
 
         console.log('Generation successful:', data);
