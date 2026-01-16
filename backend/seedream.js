@@ -17,7 +17,8 @@ const SEEDREAM_MODEL = "bytedance-seed/seedream-4.5";
  * {
  *   prompt: string (required)
  *   negativePrompt: string (optional)
- *   resolution: "2K" | "4K" (default: "2K")
+ *   width: number (default: 2048)
+ *   height: number (default: 2048)
  *   numOutputs: number (default: 1, max: 4)
  *   guidanceScale: number (default: 7)
  *   numInferenceSteps: number (default: 28)
@@ -28,7 +29,8 @@ router.post('/generate', async (req, res) => {
     const {
       prompt,
       negativePrompt = "worst quality, low quality, blurry, distorted",
-      resolution = "2K",
+      width = 2048,
+      height = 2048,
       numOutputs = 1,
       guidanceScale = 7,
       numInferenceSteps = 28,
@@ -49,13 +51,10 @@ router.post('/generate', async (req, res) => {
       return res.status(400).json({ error: 'Maximum 14 reference images allowed' });
     }
 
-    // Seedream 4.5 uses 'size' parameter: "2K", "4K", or "custom"
-    const validSize = ['2K', '4K'].includes(resolution) ? resolution : '2K';
-
     console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via OpenRouter...`);
     console.log(`   Prompt: ${prompt}`);
+    console.log(`   Dimensions: ${width}x${height}`);
     console.log(`   Reference Images: ${referenceImages.length}`);
-    console.log(`   Size: ${validSize}`);
     console.log(`   Guidance Scale: ${guidanceScale}`);
     console.log(`   Model: ${SEEDREAM_MODEL}`);
 
@@ -93,7 +92,11 @@ router.post('/generate', async (req, res) => {
         const requestBody = {
           model: SEEDREAM_MODEL,
           messages: messages,
-          modalities: ["image", "text"]
+          modalities: ["image", "text"],
+          image_config: {
+            width: width,
+            height: height
+          }
         };
 
         console.log(`   Request body:`, JSON.stringify(requestBody, null, 2).substring(0, 500));
@@ -205,7 +208,8 @@ router.post('/generate', async (req, res) => {
       warnings: warnings.length > 0 ? warnings : undefined,
       parameters: {
         prompt,
-        size: validSize,
+        width,
+        height,
         numOutputs,
         referenceImagesCount: referenceImages.length
       },

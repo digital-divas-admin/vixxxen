@@ -7645,6 +7645,7 @@
             </div>
             <div class="setting-item" id="resolutionSetting">
               <select id="resolution">
+                <option value="1K">1K Resolution</option>
                 <option value="2K" selected>2K Resolution</option>
                 <option value="4K">4K Resolution</option>
               </select>
@@ -7671,6 +7672,13 @@
                 <option value="9:16">9:16 Portrait</option>
                 <option value="4:3">4:3 Classic</option>
                 <option value="3:4">3:4 Portrait</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <select id="qwenGenResolution">
+                <option value="1K">1K Resolution</option>
+                <option value="2K" selected>2K Resolution</option>
+                <option value="4K">4K Resolution</option>
               </select>
             </div>
             <div class="setting-item">
@@ -11512,6 +11520,42 @@
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
 
+    // Resolution lookup table: aspectRatio + quality -> { width, height }
+    const RESOLUTION_TABLE = {
+      '1:1': {
+        '1K': { width: 1024, height: 1024 },
+        '2K': { width: 2048, height: 2048 },
+        '4K': { width: 4096, height: 4096 }
+      },
+      '16:9': {
+        '1K': { width: 1280, height: 720 },
+        '2K': { width: 2560, height: 1440 },
+        '4K': { width: 3840, height: 2160 }
+      },
+      '9:16': {
+        '1K': { width: 720, height: 1280 },
+        '2K': { width: 1440, height: 2560 },
+        '4K': { width: 2160, height: 3840 }
+      },
+      '4:3': {
+        '1K': { width: 1536, height: 1152 },
+        '2K': { width: 2048, height: 1536 },
+        '4K': { width: 4096, height: 3072 }
+      },
+      '3:4': {
+        '1K': { width: 1152, height: 1536 },
+        '2K': { width: 1536, height: 2048 },
+        '4K': { width: 3072, height: 4096 }
+      }
+    };
+
+    // Get pixel dimensions from aspect ratio and resolution
+    function getResolutionDimensions(aspectRatio, resolution) {
+      const ar = RESOLUTION_TABLE[aspectRatio] || RESOLUTION_TABLE['1:1'];
+      const dims = ar[resolution] || ar['2K'];
+      return dims;
+    }
+
     // Helper to check if content should be tagged NSFW (based on mode OR model)
     function isNsfwContent(model) {
       return contentMode === 'nsfw' || NSFW_ONLY_MODELS.includes(model);
@@ -14682,7 +14726,9 @@
           }
         }
 
-        console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId });
+        // Calculate pixel dimensions from aspect ratio and resolution
+        const dimensions = getResolutionDimensions(aspectRatio, resolution);
+        console.log('🎨 Qwen generation via ComfyUI:', { prompt: qwenPrompt, loras, numOutputs, batchId, dimensions });
 
         // Reverse placeholders array so first generation fills the top placeholder
         const qwenPlaceholders = [...placeholders].reverse();
@@ -14694,7 +14740,12 @@
           // Submit job via backend proxy
           const submitResponse = await authFetch(`${API_BASE_URL}/api/qwen/generate`, {
             method: 'POST',
-            body: JSON.stringify({ prompt: qwenPrompt, loras })
+            body: JSON.stringify({
+              prompt: qwenPrompt,
+              loras,
+              width: dimensions.width,
+              height: dimensions.height
+            })
           });
 
           if (!submitResponse.ok) {
@@ -14912,15 +14963,16 @@
       }
 
       // Calculate and check credits
-      let aspectRatio, numOutputs;
+      let aspectRatio, numOutputs, resolution;
       if (currentModel === 'qwen') {
         aspectRatio = document.getElementById('qwenGenAspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('qwenGenNumGenerations')?.value || 1);
+        resolution = document.getElementById('qwenGenResolution')?.value || '2K';
       } else {
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);
+        resolution = document.getElementById('resolution')?.value || '2K';
       }
-      const resolution = document.getElementById('resolution')?.value || '2K';
 
       const costPerImage = calculateCreditCost('image', currentModel, { aspectRatio, resolution });
       const totalCost = costPerImage * numOutputs;
@@ -14982,11 +15034,15 @@
       try {
         let endpoint, payload;
 
+        // Calculate pixel dimensions from aspect ratio and resolution
+        const dimensions = getResolutionDimensions(aspectRatio, resolution);
+
         if (capturedModel === 'seedream') {
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
           payload = {
             prompt,
-            resolution: resolution, // Use selected resolution (2K or 4K)
+            width: dimensions.width,
+            height: dimensions.height,
             numOutputs
           };
 
@@ -14995,11 +15051,11 @@
             payload.referenceImages = referenceImages.map(img => img.dataUrl);
           }
         } else {
-          // Nano Banana Pro
+          // Nano Banana Pro - only supports aspect ratio, not custom dimensions
           endpoint = `${API_BASE_URL}/api/nano-banana/generate`;
           payload = {
             prompt,
-            aspectRatio: aspectRatio, // Pass aspect ratio to Nano Banana
+            aspectRatio: aspectRatio,
             numOutputs
           };
 
