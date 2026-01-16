@@ -132,12 +132,12 @@ router.post('/generate', async (req, res) => {
       let requestBody;
 
       if (hasReferenceImage && compressedReferenceImages.length > 0) {
-        // Image-to-image mode (seedream-v4.5-edit)
+        // Image-to-image mode (seedream-v4.5/edit)
+        // API expects "images" as an array, not "image"
         requestBody = {
           prompt: imagePrompt,
-          image: compressedReferenceImages[0], // Reference image required for edit endpoint
+          images: compressedReferenceImages, // Array of images (1-10 supported)
           size: sizeString,
-          seed: -1, // Random seed
           enable_base64_output: true,
           enable_sync_mode: true
         };
@@ -152,7 +152,7 @@ router.post('/generate', async (req, res) => {
         };
       }
 
-      console.log(`   Request body:`, JSON.stringify({ ...requestBody, image: requestBody.image ? '[base64 data]' : undefined }, null, 2));
+      console.log(`   Request body:`, JSON.stringify({ ...requestBody, images: requestBody.images ? `[${requestBody.images.length} base64 images]` : undefined }, null, 2));
 
       // Make request to WaveSpeed API with retry logic for rate limits
       const response = await fetchWithRetry(apiEndpoint, {
