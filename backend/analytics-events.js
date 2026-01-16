@@ -122,6 +122,36 @@ function getClientIp(req) {
 }
 
 /**
+ * Lookup geolocation from IP address using ip-api.com (free tier)
+ * Rate limit: 45 requests/minute
+ */
+async function lookupGeoIp(ip) {
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    return null; // Skip local/private IPs
+  }
+
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,city,lat,lon`);
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      return {
+        country: data.country,
+        country_code: data.countryCode,
+        region: data.region,
+        city: data.city,
+        latitude: data.lat,
+        longitude: data.lon
+      };
+    }
+    return null;
+  } catch (error) {
+    logger.warn('Geo lookup failed', { ip, error: error.message });
+    return null;
+  }
+}
+
+/**
  * Parse UTM parameters from URL
  */
 function parseUtmParams(url) {
@@ -529,6 +559,10 @@ router.post('/session/start', optionalAuth, async (req, res) => {
       return res.json({ tracked: true, existing: true });
     }
 
+    // Get client IP and lookup geolocation
+    const clientIp = getClientIp(req);
+    const geoData = await lookupGeoIp(clientIp);
+
     const sessionRecord = {
       user_id: req.userId || null,
       anonymous_id: anonymous_id || null,
@@ -538,7 +572,14 @@ router.post('/session/start', optionalAuth, async (req, res) => {
       last_page: page_url,
       referrer,
       user_agent: req.headers['user-agent'],
-      ip_hash: hashIp(getClientIp(req))
+      ip_hash: hashIp(clientIp),
+      // Geo data
+      country: geoData?.country || null,
+      country_code: geoData?.country_code || null,
+      city: geoData?.city || null,
+      region: geoData?.region || null,
+      latitude: geoData?.latitude || null,
+      longitude: geoData?.longitude || null
     };
 
     const { error } = await supabase
@@ -1195,6 +1236,75 @@ router.get('/admin/report/generate', requireAdmin, async (req, res) => {
 
   } catch (error) {
     logger.error('Report generation error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/analytics/admin/live-users
+ * Get currently active users with geo data (for admin dashboard)
+ * Active = heartbeat within last 60 seconds
+ */
+router.get('/admin/live-users', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Sessions active within the last 60 seconds
+    const activeThreshold = new Date(Date.now() - 60 * 1000).toISOString();
+
+    // Note: ended_at is updated on each heartbeat, so we use it as "last activity"
+    const { data: sessions, error } = await supabase
+      .from('user_sessions')
+      .select('session_id, user_id, country, country_code, city, region, latitude, longitude, last_page, ended_at')
+      .gte('ended_at', activeThreshold)
+      .order('ended_at', { ascending: false });
+
+    if (error) {
+      logger.error('Failed to fetch live users', { error: error.message, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to fetch live users' });
+    }
+
+    // Group by country
+    const byCountry = {};
+    const users = [];
+
+    for (const session of sessions || []) {
+      const countryCode = session.country_code || 'XX';
+      const country = session.country || 'Unknown';
+
+      if (!byCountry[countryCode]) {
+        byCountry[countryCode] = {
+          country,
+          country_code: countryCode,
+          count: 0
+        };
+      }
+      byCountry[countryCode].count++;
+
+      users.push({
+        session_id: session.session_id,
+        is_registered: !!session.user_id,
+        country: country,
+        country_code: countryCode,
+        city: session.city,
+        region: session.region,
+        latitude: session.latitude,
+        longitude: session.longitude,
+        current_page: session.last_page,
+        last_activity: session.ended_at
+      });
+    }
+
+    res.json({
+      total: users.length,
+      by_country: Object.values(byCountry).sort((a, b) => b.count - a.count),
+      users
+    });
+
+  } catch (error) {
+    logger.error('Live users error', { error: error.message, requestId: req.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

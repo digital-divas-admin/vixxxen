@@ -7,11 +7,82 @@
 let generationTrendChart = null;
 let modelUsageChart = null;
 let serverlessHourlyChart = null;
+let liveUsersInterval = null;
+
+// Country code to flag emoji mapping
+function countryCodeToFlag(countryCode) {
+  if (!countryCode || countryCode === 'XX') return '🌍';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt());
+  return String.fromCodePoint(...codePoints);
+}
+
+// Fetch live users from API
+async function fetchLiveUsers() {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/analytics/admin/live-users`);
+    if (!response.ok) throw new Error('Failed to fetch live users');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching live users:', error);
+    return { total: 0, by_country: [], users: [] };
+  }
+}
+
+// Render live users widget
+function renderLiveUsers(data) {
+  const countEl = document.getElementById('liveUsersCount');
+  const countriesEl = document.getElementById('liveUsersCountries');
+
+  if (countEl) {
+    countEl.textContent = data.total;
+  }
+
+  if (countriesEl) {
+    if (data.total === 0) {
+      countriesEl.innerHTML = '<span class="live-users-loading">No active users</span>';
+    } else {
+      countriesEl.innerHTML = data.by_country.map(country => `
+        <div class="live-users-country">
+          <span class="live-users-country-flag">${countryCodeToFlag(country.country_code)}</span>
+          <span>${country.country}</span>
+          <span class="live-users-country-count">${country.count}</span>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+// Start live users auto-refresh
+function startLiveUsersRefresh() {
+  // Initial load
+  fetchLiveUsers().then(renderLiveUsers);
+
+  // Refresh every 30 seconds
+  if (liveUsersInterval) clearInterval(liveUsersInterval);
+  liveUsersInterval = setInterval(async () => {
+    const data = await fetchLiveUsers();
+    renderLiveUsers(data);
+  }, 30000);
+}
+
+// Stop live users auto-refresh
+function stopLiveUsersRefresh() {
+  if (liveUsersInterval) {
+    clearInterval(liveUsersInterval);
+    liveUsersInterval = null;
+  }
+}
 
 async function loadAnalyticsDashboard() {
   if (!isUserAdmin) return;
 
   console.log('📊 Loading analytics dashboard...');
+
+  // Start live users widget
+  startLiveUsersRefresh();
 
   try {
     // Fetch all metrics in parallel
