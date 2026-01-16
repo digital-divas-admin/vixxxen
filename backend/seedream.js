@@ -54,7 +54,7 @@ router.post('/generate', async (req, res) => {
 
     console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via OpenRouter...`);
     console.log(`   Prompt: ${prompt}`);
-    console.log(`   Dimensions: ${width}x${height}`);
+    console.log(`   📐 REQUESTED DIMENSIONS: ${width}x${height}`);
     console.log(`   Reference Images: ${referenceImages.length}`);
     console.log(`   Guidance Scale: ${guidanceScale}`);
     console.log(`   Model: ${SEEDREAM_MODEL}`);

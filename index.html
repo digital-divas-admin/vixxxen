@@ -15029,6 +15029,7 @@
 
         // Calculate pixel dimensions from aspect ratio and resolution
         const dimensions = getResolutionDimensions(aspectRatio, resolution);
+        console.log(`📐 Resolution: AR=${aspectRatio}, Res=${resolution} → ${dimensions.width}x${dimensions.height}`);
 
         if (capturedModel === 'seedream') {
           endpoint = `${API_BASE_URL}/api/seedream/generate`;
@@ -15038,6 +15039,7 @@
             height: dimensions.height,
             numOutputs
           };
+          console.log(`🌊 Seedream request: ${dimensions.width}x${dimensions.height}`);
 
           // Add reference images if any are uploaded
           if (referenceImages.length > 0) {
