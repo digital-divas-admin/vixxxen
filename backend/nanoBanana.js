@@ -250,19 +250,28 @@ router.post('/generate', async (req, res) => {
           console.log(`   ⚠️ No image found in response for image ${i + 1}`);
           console.log(`   Message keys:`, message ? Object.keys(message) : 'no message');
           console.log(`   Message content type:`, typeof message?.content);
-          if (message?.content) {
-            const contentPreview = typeof message.content === 'string'
-              ? message.content.substring(0, 500)
-              : JSON.stringify(message.content).substring(0, 500);
-            console.log(`   Content preview:`, contentPreview);
+
+          // Log the full text content - this usually explains why no image was generated
+          if (message?.content && typeof message.content === 'string') {
+            console.log(`   📝 MODEL TEXT RESPONSE (content filter may have blocked image):`);
+            console.log(`   ${message.content}`);
           }
-          warnings.push(`No image in response ${i + 1}`);
+
+          // Check for explicit refusal
+          if (message?.refusal) {
+            console.log(`   🚫 MODEL REFUSAL: ${message.refusal}`);
+            warnings.push(`Model refused: ${message.refusal}`);
+          }
+
+          warnings.push(`No image in response ${i + 1} - model returned text instead (likely content filter)`);
         }
 
         // Check finish reason
         if (result.choices[0]?.finish_reason === 'content_filter') {
-          console.log(`   ⚠️ Image ${i + 1} blocked by content filter`);
+          console.log(`   🚫 CONTENT FILTER: Image ${i + 1} explicitly blocked by content filter`);
           warnings.push(`Image was blocked by content filter`);
+        } else if (result.choices[0]?.finish_reason) {
+          console.log(`   Finish reason: ${result.choices[0].finish_reason}`);
         }
       } catch (apiError) {
         console.error(`   ❌ Error generating image ${i + 1}:`, apiError.message);
