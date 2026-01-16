@@ -7675,13 +7675,6 @@
               </select>
             </div>
             <div class="setting-item">
-              <select id="qwenGenResolution">
-                <option value="1K">1K Resolution</option>
-                <option value="2K" selected>2K Resolution</option>
-                <option value="4K">4K Resolution</option>
-              </select>
-            </div>
-            <div class="setting-item">
               <select id="qwenGenNumGenerations">
                 <option value="1" selected>1 Generation</option>
                 <option value="2">2 Generations</option>
@@ -14967,7 +14960,7 @@
       if (currentModel === 'qwen') {
         aspectRatio = document.getElementById('qwenGenAspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('qwenGenNumGenerations')?.value || 1);
-        resolution = document.getElementById('qwenGenResolution')?.value || '2K';
+        resolution = '1K'; // Qwen always uses 1K resolution
       } else {
         aspectRatio = document.getElementById('aspectRatio')?.value || '1:1';
         numOutputs = parseInt(document.getElementById('numGenerations')?.value || 1);

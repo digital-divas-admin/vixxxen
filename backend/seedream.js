@@ -98,14 +98,31 @@ router.post('/generate', async (req, res) => {
           messages.push({ role: "user", content: imagePrompt });
         }
 
+        // Calculate aspect ratio from dimensions for OpenRouter compatibility
+        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+        const divisor = gcd(width, height);
+        const aspectW = width / divisor;
+        const aspectH = height / divisor;
+        // Map to standard aspect ratios
+        let aspectRatio = '1:1';
+        if (aspectW === 16 && aspectH === 9) aspectRatio = '16:9';
+        else if (aspectW === 9 && aspectH === 16) aspectRatio = '9:16';
+        else if (aspectW === 4 && aspectH === 3) aspectRatio = '4:3';
+        else if (aspectW === 3 && aspectH === 4) aspectRatio = '3:4';
+        else if (width === height) aspectRatio = '1:1';
+        else if (width > height) aspectRatio = '16:9';
+        else aspectRatio = '9:16';
+
         // Build request body with all required parameters
+        // Try both width/height and aspect_ratio for maximum compatibility
         const requestBody = {
           model: SEEDREAM_MODEL,
           messages: messages,
           modalities: ["image", "text"],
           image_config: {
             width: width,
-            height: height
+            height: height,
+            aspect_ratio: aspectRatio
           }
         };
 
