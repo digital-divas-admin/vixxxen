@@ -15277,6 +15277,12 @@
 
             if (!response.ok) {
               console.error(`Generation ${i + 1} failed:`, data.error);
+
+              // Check for moderation error - show modal if image was saved for appeal
+              if (data.canAppeal && data.savedImageIds?.length > 0) {
+                showModerationModal(data, imageBase64);
+              }
+
               continue;
             }
 
@@ -15816,6 +15822,12 @@
 
           if (!submitResponse.ok) {
             const errorData = await submitResponse.json().catch(() => ({}));
+
+            // Check for moderation error - show modal if image was saved for appeal
+            if (errorData.canAppeal && errorData.savedImageIds?.length > 0) {
+              showModerationModal(errorData);
+            }
+
             throw new Error(errorData.error || 'Failed to submit job to ComfyUI');
           }
 
@@ -16177,6 +16189,14 @@
           if (data.code === 'CONTENT_FILTER' && data.suggestion === 'seedream') {
             throw new Error('🚫 Content blocked by Nano Banana\'s safety filter. Switch to Seedream for this type of content.');
           }
+
+          // Check for moderation error - show modal if image was saved for appeal
+          if (data.canAppeal && data.savedImageIds?.length > 0) {
+            // Get the first reference image to show in the modal (if available)
+            const imagePreview = referenceImages.length > 0 ? referenceImages[0] : null;
+            showModerationModal(data, imagePreview);
+          }
+
           throw new Error(data.message || data.error || 'Generation failed');
         }
 
