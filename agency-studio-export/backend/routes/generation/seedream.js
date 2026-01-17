@@ -220,15 +220,29 @@ router.post('/', requireAuth, requireCredits('seedream'), async (req, res) => {
       })
     );
 
+    // Log request details
+    logger.info('WaveSpeed request body:', JSON.stringify(requestBody, (key, val) => {
+      if (key === 'images' && Array.isArray(val)) return `[${val.length} images]`;
+      return val;
+    }));
+
+    const responseText = await response.text();
+    logger.info(`WaveSpeed response status: ${response.status}`);
+    logger.info(`WaveSpeed response text (first 2000 chars): ${responseText.substring(0, 2000)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`WaveSpeed API error: ${response.status} - ${errorText}`);
+      throw new Error(`WaveSpeed API error: ${response.status} - ${responseText}`);
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      logger.error('Failed to parse WaveSpeed response as JSON:', e.message);
+      throw new Error('Invalid JSON response from WaveSpeed API');
+    }
 
-    // Debug log the full response
-    logger.info('WaveSpeed API response:', JSON.stringify(result, null, 2).substring(0, 2000));
+    logger.info('Parsed result keys:', Object.keys(result || {}));
 
     const images = [];
 
