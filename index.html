@@ -16525,7 +16525,7 @@
           // Check for moderation error - show modal if image was saved for appeal
           if (data.canAppeal && data.savedImageIds?.length > 0) {
             // Get the first reference image to show in the modal (if available)
-            const imagePreview = referenceImages.length > 0 ? referenceImages[0] : null;
+            const imagePreview = referenceImages.length > 0 ? referenceImages[0].dataUrl : null;
             showModerationModal(data, imagePreview);
           }
 

@@ -54,8 +54,8 @@ function showModerationModal(errorResponse, imageData = null) {
   const flaggedPreview = document.getElementById('flaggedImagePreview');
   if (flaggedPreview) {
     if (imageData) {
-      // Use provided image data
-      flaggedPreview.innerHTML = `<img src="${imageData}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;">`;
+      // Use provided image data with fallback for load errors
+      flaggedPreview.innerHTML = `<img src="${imageData}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;" onerror="this.parentElement.innerHTML='<div style=\\'color: #888; padding: 20px;\\'>Preview not available</div>'">`;
       flaggedPreview.style.display = 'block';
     } else if (errorResponse.savedImageIds?.length > 0) {
       // Try to load from saved image
@@ -227,7 +227,7 @@ async function loadFlaggedImagePreview(imageId, container) {
     if (response.ok) {
       const data = await response.json();
       if (data.dataUrl) {
-        container.innerHTML = `<img src="${data.dataUrl}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;">`;
+        container.innerHTML = `<img src="${data.dataUrl}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;" onerror="this.parentElement.innerHTML='<div style=\\'color: #888; padding: 20px;\\'>Preview not available</div>'">`;
         return;
       }
     }
