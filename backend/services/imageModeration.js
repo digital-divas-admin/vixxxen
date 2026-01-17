@@ -275,14 +275,15 @@ async function detectFaces(client, imageBuffer) {
     confidence: face.Confidence
   }));
 
-  // Check if any face appears to be a minor - STRICT MODE
-  // Flag if the LOW end of the age range is under 18
-  // This catches anyone who COULD be a minor based on appearance
-  // Examples: 13-17 (flagged), 14-20 (flagged), 16-22 (flagged), 18-24 (OK)
+  // Check if any face appears to be a minor - BALANCED MODE
+  // Flag if LOW < 18 (could be minor) AND HIGH < 21 (looks young)
+  // This catches clear minors but allows adults who just look young
+  // Examples: 14-20 (flagged), 15-21 (flagged), 16-22 (OK), 18-24 (OK)
   const minorFaces = faces.filter(face => {
     if (face.ageRange) {
-      // Flag if the LOW end suggests they could be under 18
-      return face.ageRange.Low < MINOR_AGE_THRESHOLD;
+      const { Low, High } = face.ageRange;
+      // Flag if the person could be under 18 AND doesn't look clearly adult
+      return Low < MINOR_AGE_THRESHOLD && High < 21;
     }
     return false;
   });

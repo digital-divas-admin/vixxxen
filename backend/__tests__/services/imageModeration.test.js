@@ -207,8 +207,28 @@ describe('Image Moderation Service', () => {
       expect(result.faceDetails.minorFaces).toHaveLength(1);
     });
 
-    it('should reject borderline cases where LOW age is under 18', async () => {
-      // Strict mode: flag if LOW end could be a minor (e.g., 16-22 is flagged)
+    it('should reject when LOW < 18 AND HIGH < 21 (likely minor)', async () => {
+      // Balanced mode: flag if LOW < 18 AND HIGH < 21
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 15, High: 20 },
+            Confidence: 99
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(false);
+      expect(result.hasMinor).toBe(true);
+    });
+
+    it('should approve when LOW < 18 BUT HIGH >= 21 (young-looking adult)', async () => {
+      // Balanced mode: allow if HIGH >= 21 even if LOW < 18
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
         .mockResolvedValueOnce({ ModerationLabels: [] })
@@ -223,12 +243,12 @@ describe('Image Moderation Service', () => {
         Buffer.from('fake-image-data')
       );
 
-      expect(result.approved).toBe(false);
-      expect(result.hasMinor).toBe(true);
+      expect(result.approved).toBe(true);
+      expect(result.hasMinor).toBe(false);
     });
 
     it('should approve when face age range LOW is 18 or above', async () => {
-      // Only approve when the LOW end is definitely adult
+      // Clearly adult
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
         .mockResolvedValueOnce({ ModerationLabels: [] })
