@@ -6828,6 +6828,7 @@
 
     /* Failed placeholder */
     .output-placeholder-failed {
+      position: relative;
       width: 100%;
       aspect-ratio: 1;
       display: flex;
@@ -6839,6 +6840,29 @@
       color: #ff6666;
       padding: 20px;
       text-align: center;
+    }
+
+    .failed-dismiss-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 68, 68, 0.2);
+      color: #ff6666;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .failed-dismiss-btn:hover {
+      background: rgba(255, 68, 68, 0.5);
+      color: #fff;
     }
 
     .failed-icon {
@@ -14119,6 +14143,7 @@
     function updateVideoPlaceholderWithError(placeholder, errorMessage) {
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
+          <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Video generation failed'}</div>
         </div>
@@ -15033,6 +15058,7 @@
     function updateEditPlaceholderWithError(placeholder, errorMessage) {
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
+          <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Object removal failed'}</div>
         </div>
@@ -16596,6 +16622,7 @@
     function updatePlaceholderWithError(placeholder, errorMessage) {
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
+          <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Generation failed'}</div>
         </div>
