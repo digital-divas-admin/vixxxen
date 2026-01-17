@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Replicate = require('replicate');
 const { logger, logGeneration } = require('./services/logger');
+const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY,
@@ -42,6 +43,23 @@ router.post('/generate', async (req, res) => {
         success: false,
         error: 'Prompt is required'
       });
+    }
+
+    // Screen uploaded images for celebrities and minors
+    if (isModerationEnabled()) {
+      const moderationResult = await screenImages(images);
+      if (!moderationResult.approved) {
+        logger.warn('Image edit images rejected by moderation', {
+          reasons: moderationResult.reasons,
+          requestId: req.id
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Image rejected by content moderation',
+          reasons: moderationResult.reasons,
+          message: 'One or more uploaded images contain content that is not allowed (celebrity or minor detected).'
+        });
+      }
     }
 
     logGeneration('qwen-image-edit', 'started', {

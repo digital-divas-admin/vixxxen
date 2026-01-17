@@ -3,6 +3,7 @@ const router = express.Router();
 const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter');
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
+const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
 
 // RunPod Configuration (shared with qwen.js)
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -472,6 +473,22 @@ router.post('/inpaint-sfw', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    // Screen uploaded image for celebrities and minors
+    if (isModerationEnabled()) {
+      const moderationResult = await screenImages([image]);
+      if (!moderationResult.approved) {
+        logger.warn('Inpaint image rejected by moderation', {
+          reasons: moderationResult.reasons,
+          requestId: req.id
+        });
+        return res.status(400).json({
+          error: 'Image rejected by content moderation',
+          reasons: moderationResult.reasons,
+          message: 'The uploaded image contains content that is not allowed (celebrity or minor detected).'
+        });
+      }
+    }
+
     logGeneration('inpaint-sfw', 'started', {
       loraCount: loras.length,
       denoise,
@@ -561,6 +578,22 @@ router.post('/inpaint-nsfw', async (req, res) => {
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    // Screen uploaded image for celebrities and minors
+    if (isModerationEnabled()) {
+      const moderationResult = await screenImages([image]);
+      if (!moderationResult.approved) {
+        logger.warn('Inpaint image rejected by moderation', {
+          reasons: moderationResult.reasons,
+          requestId: req.id
+        });
+        return res.status(400).json({
+          error: 'Image rejected by content moderation',
+          reasons: moderationResult.reasons,
+          message: 'The uploaded image contains content that is not allowed (celebrity or minor detected).'
+        });
+      }
     }
 
     logGeneration('inpaint-nsfw', 'started', {

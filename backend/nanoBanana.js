@@ -3,6 +3,7 @@ const { compressImages } = require('./services/imageCompression');
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { RequestQueue, createFetchWithRetry } = require('./services/rateLimitService');
+const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
 
 const router = express.Router();
 
@@ -62,6 +63,22 @@ router.post('/generate', async (req, res) => {
       return res.status(400).json({
         error: `Invalid aspect ratio. Must be one of: ${validAspectRatios.join(', ')}`
       });
+    }
+
+    // Screen reference images for celebrities and minors before processing
+    if (referenceImages && referenceImages.length > 0 && isModerationEnabled()) {
+      const moderationResult = await screenImages(referenceImages);
+      if (!moderationResult.approved) {
+        logger.warn('Reference images rejected by moderation', {
+          reasons: moderationResult.reasons,
+          requestId: req.id
+        });
+        return res.status(400).json({
+          error: 'Reference image rejected by content moderation',
+          reasons: moderationResult.reasons,
+          message: 'One or more reference images contain content that is not allowed (celebrity or minor detected).'
+        });
+      }
     }
 
     logGeneration('nano-banana', 'started', {

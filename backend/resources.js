@@ -4,6 +4,7 @@ const multer = require('multer');
 const { supabase } = require('./services/supabase');
 const { requireAuth, optionalAuth, requireAdmin } = require('./middleware/auth');
 const { logger, maskUserId } = require('./services/logger');
+const { screenImage, isEnabled: isModerationEnabled } = require('./services/imageModeration');
 
 // Configure multer for memory storage
 const upload = multer({
@@ -359,6 +360,24 @@ router.post('/upload', requireAdmin, upload.single('thumbnail'), async (req, res
     // User is verified admin via requireAdmin middleware
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Screen image for celebrities and minors using AWS Rekognition
+    if (isModerationEnabled()) {
+      const moderationResult = await screenImage(req.file.buffer);
+
+      if (!moderationResult.approved) {
+        logger.warn('Image upload rejected by moderation', {
+          reasons: moderationResult.reasons,
+          requestId: req.id
+        });
+        return res.status(400).json({
+          error: 'Image rejected by content moderation',
+          reasons: moderationResult.reasons,
+          hasCelebrity: moderationResult.hasCelebrity,
+          hasMinor: moderationResult.hasMinor
+        });
+      }
     }
 
     // Generate unique filename
