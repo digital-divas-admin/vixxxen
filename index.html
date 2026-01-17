@@ -3745,12 +3745,12 @@
     .channel-sidebar {
       width: 260px;
       min-width: 260px;
+      height: 100%;
       background: #111;
       border-right: 1px solid #2a2a2a;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      min-height: 0; /* Allow flexbox to shrink below content size */
+      overflow: hidden;
     }
 
     .channel-header {
@@ -3773,6 +3773,13 @@
 
     .channel-section {
       padding: 16px;
+      flex-shrink: 0;
+    }
+
+    .channel-section:first-of-type {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .channel-section-title {
