@@ -5603,92 +5603,248 @@
       color: var(--text-primary);
     }
 
-    /* Mobile Discord-like Chat Layout */
+    /* ========== MOBILE COMMUNITY OVERLAY ========== */
+    .mobile-community-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10000;
+      background: #111;
+      flex-direction: column;
+    }
+
+    .mobile-community-overlay.active {
+      display: flex;
+    }
+
+    .mobile-community-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    .mobile-community-close {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      min-height: 36px;
+    }
+
+    .mobile-community-close:active {
+      background: #3a3a3a;
+    }
+
+    .mobile-community-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .mobile-community-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* When community chat is inside the overlay */
+    .mobile-community-content .education-chat {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+      padding-bottom: 0;
+    }
+
+    .mobile-community-content .channel-sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      transform: translateX(0);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      background: #111;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-community-content .chat-area {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Slide animations for overlay */
+    .mobile-community-content .education-chat.mobile-chat-active .channel-sidebar {
+      transform: translateX(-100%);
+    }
+
+    .mobile-community-content .education-chat.mobile-chat-active .chat-area {
+      transform: translateX(0);
+    }
+
+    /* Chat area layout inside overlay */
+    .mobile-community-content .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-community-content .chat-input-area {
+      flex-shrink: 0;
+      padding: 12px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+      box-sizing: border-box;
+      width: 100%;
+      gap: 8px;
+    }
+
+    .mobile-community-content .chat-send-btn {
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .mobile-community-content .chat-media-btn {
+      padding: 8px;
+      min-width: 40px;
+      flex-shrink: 0;
+    }
+
+    .mobile-community-content .chat-input {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .mobile-community-content .chat-back-btn {
+      display: block;
+    }
+
+    /* Slimmer chat header in mobile overlay */
+    .mobile-community-content .chat-header {
+      padding: 10px 12px;
+    }
+
+    .mobile-community-content .chat-channel-name {
+      font-size: 0.95rem;
+    }
+
+    .mobile-community-content .chat-channel-desc {
+      font-size: 0.75rem;
+      display: none;
+    }
+
+    .mobile-community-content .chat-call-btn,
+    .mobile-community-content .chat-rules-btn {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+    }
+
+    .mobile-community-content .chat-back-btn {
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      min-height: 32px;
+    }
+
+    /* Hide Tidio chat widget when mobile community overlay is active */
+    body.mobile-community-active #tidio-chat,
+    body.mobile-community-active #tidio-chat-iframe,
+    body.mobile-community-active [id^="tidio"],
+    body.mobile-community-active iframe[src*="tidio"],
+    body.mobile-community-active iframe[title*="chat"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Hide desktop chat back button by default */
+    .chat-back-btn {
+      display: none;
+    }
+
+    /* ========== END MOBILE COMMUNITY OVERLAY ========== */
+
+    /* Mobile improvements (non-community specific) */
     @media (max-width: 768px) {
-      .education-subtab-content#communityContent {
-        position: relative;
-        height: 100%;
-        overflow: hidden;
-      }
-
-      .education-chat {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 100%;
-        overflow: hidden;
-      }
-
-      .channel-sidebar {
-        position: absolute;
+      /* Members panel - full screen overlay on mobile */
+      .members-panel {
+        position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         width: 100%;
-        min-width: 100%;
         height: 100%;
-        z-index: 10;
-        transform: translateX(0);
-        transition: transform 0.3s ease;
-        overflow-y: auto;
+        height: 100dvh;
+        z-index: 1000;
+        border-left: none;
         background: #111;
       }
 
-      .chat-area {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 5;
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
+      .members-panel-close {
+        width: 44px;
+        height: 44px;
       }
 
-      /* When chat is active on mobile */
-      .education-chat.mobile-chat-active .channel-sidebar {
-        transform: translateX(-100%);
+      /* Giphy modal - responsive grid */
+      .giphy-results {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        padding: 0 16px 16px;
       }
 
-      .education-chat.mobile-chat-active .chat-area {
-        transform: translateX(0);
+      .giphy-modal-content {
+        width: 95%;
+        max-height: 85vh;
+        max-height: 85dvh;
       }
 
-      .chat-back-btn {
-        display: block;
+      .giphy-modal-close {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
+    }
 
-      .chat-header {
-        padding: 12px 16px;
-      }
-
-      .chat-header-actions {
-        gap: 4px;
+    /* Very small screens - single column Giphy */
+    @media (max-width: 480px) {
+      .giphy-results {
+        grid-template-columns: 1fr;
       }
 
       .chat-call-btn,
       .chat-rules-btn {
-        padding: 6px 10px;
+        padding: 8px 10px;
         font-size: 0.8rem;
       }
 
-      .chat-input-area {
-        padding: 12px;
-        gap: 8px;
-      }
-
-      .chat-send-btn {
-        padding: 10px 16px;
-      }
-
-      .channel-online {
-        border-top: 1px solid #2a2a2a;
-        padding: 12px 16px;
+      .chat-header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
     }
 
@@ -5862,7 +6018,7 @@
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.85);
-      z-index: 10000;
+      z-index: 10002;
       justify-content: center;
       align-items: center;
       padding: 20px;
@@ -18853,6 +19009,12 @@
         // Load policies for admin grid
         loadPolicies();
       }
+
+      // Check mobile overlay after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        console.log('📱 showMemberContent: Checking mobile overlay after content shown');
+        checkMobileCommunityOverlay();
+      }, 200);
     }
 
     function connectToChat(user) {
@@ -19023,10 +19185,107 @@
       chatSocket.emit('join_channel', { channelId: channel.id });
     }
 
-    // Mobile chat functions (Discord-like behavior)
+    // ========== MOBILE COMMUNITY OVERLAY FUNCTIONS ==========
+    let communityOriginalParent = null;
+    let isMobileCommunityOverlayOpen = false;
+
+    // Open the mobile community overlay
+    function openMobileCommunityOverlay() {
+      console.log('📱 openMobileCommunityOverlay called, width:', window.innerWidth);
+
+      if (window.innerWidth > 768) {
+        console.log('📱 Skipping - not mobile (width > 768)');
+        return;
+      }
+
+      const overlay = document.getElementById('mobileCommunityOverlay');
+      const overlayContent = document.getElementById('mobileCommunityContent');
+      const educationChat = document.getElementById('educationChat');
+
+      console.log('📱 Elements found:', { overlay: !!overlay, overlayContent: !!overlayContent, educationChat: !!educationChat });
+
+      if (!overlay || !overlayContent || !educationChat) {
+        console.log('📱 Missing elements, aborting');
+        return;
+      }
+
+      // Remember original parent
+      communityOriginalParent = educationChat.parentElement;
+
+      // Move chat into overlay
+      overlayContent.appendChild(educationChat);
+
+      // Show overlay
+      overlay.classList.add('active');
+      isMobileCommunityOverlayOpen = true;
+
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+
+      // Hide Tidio chat widget
+      document.body.classList.add('mobile-community-active');
+      hideTidioWidget();
+    }
+
+    // Hide/show Tidio widget
+    function hideTidioWidget() {
+      // Tidio creates various elements - try to hide them all
+      const tidioElements = document.querySelectorAll('#tidio-chat, #tidio-chat-iframe, [id^="tidio"], iframe[src*="tidio"]');
+      tidioElements.forEach(el => {
+        el.style.display = 'none';
+        el.style.visibility = 'hidden';
+      });
+      // Also try using Tidio's API if available
+      if (window.tidioChatApi) {
+        window.tidioChatApi.hide();
+      }
+    }
+
+    function showTidioWidget() {
+      const tidioElements = document.querySelectorAll('#tidio-chat, #tidio-chat-iframe, [id^="tidio"], iframe[src*="tidio"]');
+      tidioElements.forEach(el => {
+        el.style.display = '';
+        el.style.visibility = '';
+      });
+      // Also try using Tidio's API if available
+      if (window.tidioChatApi) {
+        window.tidioChatApi.show();
+      }
+    }
+
+    // Close the mobile community overlay
+    function closeMobileCommunityOverlay() {
+      const overlay = document.getElementById('mobileCommunityOverlay');
+      const educationChat = document.getElementById('educationChat');
+
+      if (!overlay) return;
+
+      // Move chat back to original location
+      if (communityOriginalParent && educationChat) {
+        communityOriginalParent.appendChild(educationChat);
+      }
+
+      // Hide overlay
+      overlay.classList.remove('active');
+      isMobileCommunityOverlayOpen = false;
+
+      // Reset chat state
+      if (educationChat) {
+        educationChat.classList.remove('mobile-chat-active');
+      }
+
+      // Restore body scroll
+      document.body.style.overflow = '';
+
+      // Show Tidio chat widget again
+      document.body.classList.remove('mobile-community-active');
+      showTidioWidget();
+    }
+
+    // Mobile chat functions (slide between channel list and chat)
     function openMobileChat() {
       const chatContainer = document.getElementById('educationChat');
-      if (chatContainer && window.innerWidth <= 768) {
+      if (chatContainer) {
         chatContainer.classList.add('mobile-chat-active');
       }
     }
@@ -19036,6 +19295,109 @@
       if (chatContainer) {
         chatContainer.classList.remove('mobile-chat-active');
       }
+    }
+
+    // Check if we should open overlay when community tab is shown
+    function checkMobileCommunityOverlay() {
+      const communityContent = document.getElementById('communityContent');
+      const educationMemberContent = document.getElementById('educationMemberContent');
+      const isMobile = window.innerWidth <= 768;
+
+      const isCommunityTabActive = communityContent && communityContent.classList.contains('active');
+      const isEducationVisible = educationMemberContent && educationMemberContent.style.display !== 'none';
+
+      console.log('🔍 checkMobileCommunityOverlay:', {
+        isCommunityTabActive,
+        isEducationVisible,
+        isMobile,
+        isMobileCommunityOverlayOpen,
+        windowWidth: window.innerWidth,
+        educationDisplay: educationMemberContent?.style.display
+      });
+
+      if (isCommunityTabActive && isEducationVisible && isMobile && !isMobileCommunityOverlayOpen) {
+        console.log('📱 Opening mobile community overlay');
+        openMobileCommunityOverlay();
+      } else if ((!isCommunityTabActive || !isEducationVisible || !isMobile) && isMobileCommunityOverlayOpen) {
+        console.log('📱 Closing mobile community overlay');
+        closeMobileCommunityOverlay();
+      }
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile && isMobileCommunityOverlayOpen) {
+        closeMobileCommunityOverlay();
+      } else if (isMobile && !isMobileCommunityOverlayOpen) {
+        // Check if we should open overlay on resize to mobile
+        checkMobileCommunityOverlay();
+      }
+    });
+
+    // Mobile keyboard handling - adjust chat when keyboard opens/closes
+    function initMobileKeyboardHandling() {
+      if (!window.visualViewport) return;
+
+      const chatInputArea = document.querySelector('.chat-input-area');
+      const chatMessages = document.querySelector('.chat-messages');
+      const chatContainer = document.getElementById('educationChat');
+
+      if (!chatInputArea || !chatContainer) return;
+
+      let initialViewportHeight = window.visualViewport.height;
+
+      window.visualViewport.addEventListener('resize', () => {
+        if (window.innerWidth > 768) return; // Only on mobile
+
+        const currentHeight = window.visualViewport.height;
+        const keyboardHeight = initialViewportHeight - currentHeight;
+
+        if (keyboardHeight > 100) {
+          // Keyboard is open
+          chatContainer.style.height = `${currentHeight}px`;
+          chatInputArea.style.paddingBottom = '12px';
+
+          // Scroll messages to bottom when keyboard opens
+          if (chatMessages) {
+            setTimeout(() => {
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+          }
+        } else {
+          // Keyboard is closed
+          chatContainer.style.height = '';
+          chatInputArea.style.paddingBottom = '';
+        }
+      });
+
+      // Also handle scroll when focusing on input
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.addEventListener('focus', () => {
+          if (window.innerWidth <= 768 && chatMessages) {
+            setTimeout(() => {
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 300);
+          }
+        });
+      }
+    }
+
+    // Initialize keyboard handling when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMobileKeyboardHandling);
+
+      // Also check for mobile overlay after a delay on page load
+      // This catches cases where the community tab was saved and restored
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          console.log('📱 DOMContentLoaded: Checking mobile overlay');
+          checkMobileCommunityOverlay();
+        }, 500);
+      });
+    } else {
+      initMobileKeyboardHandling();
     }
 
     function renderMessages(messages) {
@@ -19756,6 +20118,9 @@
       // Update content visibility
       document.querySelectorAll('.education-subtab-content').forEach(content => content.classList.remove('active'));
       document.getElementById(tab + 'Content').classList.add('active');
+
+      // Check if we need to open/close mobile community overlay
+      checkMobileCommunityOverlay();
 
       // Hide all education admin buttons first
       const adminResourcesBtn = document.getElementById('adminResourcesBtn');
@@ -23035,6 +23400,17 @@
     };
 
   </script>
+
+  <!-- Mobile Community Overlay (for mobile full-screen chat) -->
+  <div id="mobileCommunityOverlay" class="mobile-community-overlay">
+    <div class="mobile-community-header">
+      <button class="mobile-community-close" onclick="closeMobileCommunityOverlay()">← Back</button>
+      <span class="mobile-community-title">Community</span>
+    </div>
+    <div class="mobile-community-content" id="mobileCommunityContent">
+      <!-- Community chat will be moved here on mobile -->
+    </div>
+  </div>
 
   <!-- Tidio Chat Widget -->
   <script src="//code.tidio.co/fnunrrlpajmwhyf4q88ygib7zm84nlih.js" async></script>
