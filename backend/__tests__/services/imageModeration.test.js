@@ -17,6 +17,10 @@ jest.mock('@aws-sdk/client-rekognition', () => ({
   RecognizeCelebritiesCommand: jest.fn().mockImplementation((params) => ({
     type: 'RecognizeCelebritiesCommand',
     params
+  })),
+  DetectFacesCommand: jest.fn().mockImplementation((params) => ({
+    type: 'DetectFacesCommand',
+    params
   }))
 }));
 
@@ -78,10 +82,11 @@ describe('Image Moderation Service', () => {
 
   describe('screenImage', () => {
     it('should return approved when no issues detected', async () => {
-      // Mock celebrity detection - no celebrities
+      // Mock celebrity detection - no celebrities, no moderation labels, no minor faces
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data')
@@ -103,7 +108,8 @@ describe('Image Moderation Service', () => {
             Urls: ['https://example.com/celeb']
           }]
         })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [{ AgeRange: { Low: 25, High: 35 }, Confidence: 99 }] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data')
@@ -126,7 +132,8 @@ describe('Image Moderation Service', () => {
             Urls: []
           }]
         })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data')
@@ -147,7 +154,8 @@ describe('Image Moderation Service', () => {
             Confidence: 85,
             TaxonomyLevel: 2
           }]
-        });
+        })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data')
@@ -158,10 +166,71 @@ describe('Image Moderation Service', () => {
       expect(result.reasons.some(r => r.includes('minor'))).toBe(true);
     });
 
+    it('should reject when face detected with estimated age under 18', async () => {
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 8, High: 14 },
+            Confidence: 99
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(false);
+      expect(result.hasMinor).toBe(true);
+      expect(result.reasons.some(r => r.includes('minor') && r.includes('8-14'))).toBe(true);
+    });
+
+    it('should reject when any face is under 18 even if others are adults', async () => {
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [
+            { AgeRange: { Low: 25, High: 35 }, Confidence: 99 },
+            { AgeRange: { Low: 10, High: 16 }, Confidence: 99 }
+          ]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(false);
+      expect(result.hasMinor).toBe(true);
+      expect(result.faceDetails.faceCount).toBe(2);
+      expect(result.faceDetails.minorFaces).toHaveLength(1);
+    });
+
+    it('should approve when face age range HIGH is 18 or above', async () => {
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 16, High: 22 },
+            Confidence: 99
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(true);
+      expect(result.hasMinor).toBe(false);
+    });
+
     it('should handle base64 input with data URL prefix', async () => {
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -174,7 +243,8 @@ describe('Image Moderation Service', () => {
     it('should handle base64 input without data URL prefix', async () => {
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -184,7 +254,9 @@ describe('Image Moderation Service', () => {
     });
 
     it('should skip celebrity check when disabled', async () => {
-      mockSend.mockResolvedValue({ ModerationLabels: [] });
+      mockSend
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data'),
@@ -192,12 +264,14 @@ describe('Image Moderation Service', () => {
       );
 
       expect(result.approved).toBe(true);
-      // Should only call moderation labels, not celebrities
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      // Should call moderation labels + face detection, not celebrities
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
 
     it('should skip moderation check when disabled', async () => {
-      mockSend.mockResolvedValue({ CelebrityFaces: [] });
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data'),
@@ -205,7 +279,8 @@ describe('Image Moderation Service', () => {
       );
 
       expect(result.approved).toBe(true);
-      expect(mockSend).toHaveBeenCalledTimes(1);
+      // Should call celebrities + face detection, not moderation labels
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
 
     it('should use custom confidence thresholds', async () => {
@@ -218,7 +293,8 @@ describe('Image Moderation Service', () => {
             Urls: []
           }]
         })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImage(
         Buffer.from('fake-image-data'),
@@ -265,7 +341,8 @@ describe('Image Moderation Service', () => {
               ParentName: 'Person',
               Confidence: 80
             }]
-          });
+          })
+          .mockResolvedValueOnce({ FaceDetails: [] });
 
         const result = await imageModeration.screenImage(Buffer.from('fake'));
         expect(result.hasMinor).toBe(true);
@@ -283,7 +360,7 @@ describe('Image Moderation Service', () => {
 
     it('should return approved when all images pass', async () => {
       mockSend
-        .mockResolvedValue({ CelebrityFaces: [], ModerationLabels: [] });
+        .mockResolvedValue({ CelebrityFaces: [], ModerationLabels: [], FaceDetails: [] });
 
       const result = await imageModeration.screenImages([
         Buffer.from('image1'),
@@ -297,7 +374,8 @@ describe('Image Moderation Service', () => {
       // First image passes
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       // Second image fails
       mockSend
@@ -309,7 +387,8 @@ describe('Image Moderation Service', () => {
             Urls: []
           }]
         })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [{ AgeRange: { Low: 25, High: 35 }, Confidence: 99 }] });
 
       const result = await imageModeration.screenImages([
         Buffer.from('image1'),
@@ -324,7 +403,7 @@ describe('Image Moderation Service', () => {
 
     it('should skip null/empty entries in array', async () => {
       mockSend
-        .mockResolvedValue({ CelebrityFaces: [], ModerationLabels: [] });
+        .mockResolvedValue({ CelebrityFaces: [], ModerationLabels: [], FaceDetails: [] });
 
       const result = await imageModeration.screenImages([
         null,
@@ -373,7 +452,8 @@ describe('Image Moderation Service', () => {
 
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
-        .mockResolvedValueOnce({ ModerationLabels: [] });
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({ FaceDetails: [] });
 
       const result = await imageModeration.screenImageFromUrl('https://example.com/image.jpg');
 

@@ -5,9 +5,12 @@
  * - Content moderation (to detect minors/inappropriate content)
  */
 
-const { RekognitionClient, DetectModerationLabelsCommand, RecognizeCelebritiesCommand } = require('@aws-sdk/client-rekognition');
+const { RekognitionClient, DetectModerationLabelsCommand, RecognizeCelebritiesCommand, DetectFacesCommand } = require('@aws-sdk/client-rekognition');
 const sharp = require('sharp');
 const { logger } = require('./logger');
+
+// Age threshold - flag any face estimated to be under this age
+const MINOR_AGE_THRESHOLD = 18;
 
 // Initialize Rekognition client
 let rekognitionClient = null;
@@ -114,7 +117,8 @@ async function screenImage(image, options = {}) {
     hasMinor: false,
     reasons: [],
     celebrities: [],
-    moderationLabels: []
+    moderationLabels: [],
+    faceDetails: null
   };
 
   try {
@@ -129,12 +133,19 @@ async function screenImage(image, options = {}) {
       checks.push(detectModerationLabels(client, imageBuffer, moderationConfidenceThreshold));
     }
 
+    // ALWAYS check for faces/age to detect minors
+    checks.push(detectFaces(client, imageBuffer));
+
     const results = await Promise.all(checks);
 
+    // Calculate result indices based on which checks were enabled
+    let currentIndex = 0;
+
     // Process celebrity results
-    if (checkCelebrities && results[0]) {
-      const celebrityResult = results[0];
-      if (celebrityResult.celebrities.length > 0) {
+    if (checkCelebrities) {
+      const celebrityResult = results[currentIndex];
+      currentIndex++;
+      if (celebrityResult && celebrityResult.celebrities.length > 0) {
         result.hasCelebrity = true;
         result.celebrities = celebrityResult.celebrities;
         result.approved = false;
@@ -143,20 +154,39 @@ async function screenImage(image, options = {}) {
     }
 
     // Process moderation results
-    const moderationIndex = checkCelebrities ? 1 : 0;
-    if (checkModeration && results[moderationIndex]) {
-      const moderationResult = results[moderationIndex];
-      result.moderationLabels = moderationResult.labels;
+    if (checkModeration) {
+      const moderationResult = results[currentIndex];
+      currentIndex++;
+      if (moderationResult) {
+        result.moderationLabels = moderationResult.labels;
 
-      // Check for content suggesting minors
-      const minorLabels = moderationResult.labels.filter(label =>
-        isMinorRelatedLabel(label.name, label.parentName)
-      );
+        // Check for content suggesting minors via labels
+        const minorLabels = moderationResult.labels.filter(label =>
+          isMinorRelatedLabel(label.name, label.parentName)
+        );
 
-      if (minorLabels.length > 0) {
+        if (minorLabels.length > 0) {
+          result.hasMinor = true;
+          result.approved = false;
+          result.reasons.push(`Content involving minors detected: ${minorLabels.map(l => l.name).join(', ')}`);
+        }
+      }
+    }
+
+    // Process face detection results - CRITICAL for detecting minors
+    const faceResult = results[currentIndex];
+    if (faceResult) {
+      result.faceDetails = faceResult;
+
+      if (faceResult.hasMinor) {
         result.hasMinor = true;
         result.approved = false;
-        result.reasons.push(`Content involving minors detected: ${minorLabels.map(l => l.name).join(', ')}`);
+
+        // Build descriptive message about detected minor faces
+        const minorAges = faceResult.minorFaces.map(f =>
+          `${f.ageRange.Low}-${f.ageRange.High} years`
+        ).join(', ');
+        result.reasons.push(`Person appearing to be a minor detected (estimated age: ${minorAges}). Images containing minors are not allowed.`);
       }
     }
 
@@ -164,6 +194,7 @@ async function screenImage(image, options = {}) {
       approved: result.approved,
       hasCelebrity: result.hasCelebrity,
       hasMinor: result.hasMinor,
+      faceCount: faceResult?.faceCount || 0,
       celebrityCount: result.celebrities.length,
       labelCount: result.moderationLabels.length
     });
@@ -223,6 +254,43 @@ async function detectModerationLabels(client, imageBuffer, confidenceThreshold) 
   }));
 
   return { labels };
+}
+
+/**
+ * Detect faces in an image and estimate ages
+ * Used to flag images containing minors
+ */
+async function detectFaces(client, imageBuffer) {
+  const command = new DetectFacesCommand({
+    Image: {
+      Bytes: imageBuffer
+    },
+    Attributes: ['AGE_RANGE']
+  });
+
+  const response = await client.send(command);
+
+  const faces = (response.FaceDetails || []).map(face => ({
+    ageRange: face.AgeRange,
+    confidence: face.Confidence
+  }));
+
+  // Check if any face appears to be a minor
+  const minorFaces = faces.filter(face => {
+    if (face.ageRange) {
+      // Flag if the HIGH end of the age range is under the threshold
+      // This is conservative - if Rekognition thinks someone COULD be under 18, we flag
+      return face.ageRange.High < MINOR_AGE_THRESHOLD;
+    }
+    return false;
+  });
+
+  return {
+    faces,
+    hasMinor: minorFaces.length > 0,
+    minorFaces,
+    faceCount: faces.length
+  };
 }
 
 /**
