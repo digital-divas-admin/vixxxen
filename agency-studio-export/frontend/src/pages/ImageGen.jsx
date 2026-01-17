@@ -3,8 +3,8 @@
  * Generate images with Seedream and Nano Banana Pro
  */
 
-import { useState } from 'react';
-import { Image, Loader2, Download, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Image, Loader2, Download, Zap, Trash2 } from 'lucide-react';
 import { Layout, PageHeader, Card } from '../components/layout/Layout';
 import { Button } from '../components/common/Button';
 import { Input, Textarea } from '../components/common/Input';
@@ -31,7 +31,20 @@ export function ImageGenPage() {
   const [numOutputs, setNumOutputs] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState(() => {
+    // Load persisted images from localStorage on init
+    try {
+      const saved = localStorage.getItem('agency-studio-images');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist images to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('agency-studio-images', JSON.stringify(images));
+  }, [images]);
 
   const selectedModel = MODELS.find(m => m.id === model);
   const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio);
@@ -45,7 +58,6 @@ export function ImageGenPage() {
 
     setError('');
     setLoading(true);
-    setImages([]);
 
     try {
       const endpoint = model === 'seedream' ? '/api/generate/seedream' : '/api/generate/nano-banana';
@@ -78,13 +90,33 @@ export function ImageGenPage() {
         throw new Error(data.error || 'Generation failed');
       }
 
-      setImages(data.images || []);
+      // Create image objects with metadata and prepend to existing images
+      const newImages = (data.images || []).map((url, idx) => ({
+        id: `${Date.now()}-${idx}`,
+        url,
+        prompt,
+        model: selectedModel.name,
+        aspectRatio,
+        createdAt: new Date().toISOString(),
+      }));
+
+      setImages(prev => [...newImages, ...prev]);
       refreshCredits();
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearImages = () => {
+    if (confirm('Clear all generated images?')) {
+      setImages([]);
+    }
+  };
+
+  const deleteImage = (id) => {
+    setImages(prev => prev.filter(img => img.id !== id));
   };
 
   const downloadImage = async (imageUrl, index) => {
@@ -235,29 +267,50 @@ export function ImageGenPage() {
           )}
 
           {images.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {images.map((image, index) => (
-                <Card key={index} className="p-2">
-                  <div className="relative group">
-                    <img
-                      src={image}
-                      alt={`Generated ${index + 1}`}
-                      className="w-full rounded-lg"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => downloadImage(image, index)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
+            <>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-text-muted">{images.length} image{images.length !== 1 ? 's' : ''} generated</p>
+                <Button variant="ghost" size="sm" onClick={clearImages}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {images.map((image) => (
+                  <Card key={image.id} className="p-2">
+                    <div className="relative group">
+                      <img
+                        src={image.url}
+                        alt={image.prompt}
+                        className="w-full rounded-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => downloadImage(image.url, image.id)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteImage(image.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white text-xs truncate">{image.prompt}</p>
+                        <p className="text-white/60 text-xs">{image.model}</p>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
 
           {!loading && images.length === 0 && (
