@@ -418,7 +418,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 /**
  * GET /api/user-images/:id/data
  * Get the actual image data (base64) for use in generation
- * Only returns data for approved images
+ * Only returns data for approved images (unless allowPending=true for preview)
  */
 router.get('/:id/data', requireAuth, async (req, res) => {
   try {
@@ -428,6 +428,7 @@ router.get('/:id/data', requireAuth, async (req, res) => {
 
     const userId = req.userId;
     const imageId = req.params.id;
+    const allowPending = req.query.allowPending === 'true';
 
     // Get the image record
     const { data: image, error: fetchError } = await supabase
@@ -441,8 +442,13 @@ router.get('/:id/data', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Only allow approved images
-    if (!['auto_approved', 'approved'].includes(image.status)) {
+    // Check status - allow pending images only for preview (not for generation use)
+    const allowedStatuses = ['auto_approved', 'approved'];
+    if (allowPending) {
+      allowedStatuses.push('pending_review');
+    }
+
+    if (!allowedStatuses.includes(image.status)) {
       return res.status(403).json({
         error: 'Image not approved',
         status: image.status,

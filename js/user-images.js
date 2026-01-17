@@ -52,11 +52,19 @@ function showModerationModal(errorResponse, imageData = null) {
 
   // Show image preview if available
   const flaggedPreview = document.getElementById('flaggedImagePreview');
-  if (flaggedPreview && imageData) {
-    flaggedPreview.innerHTML = `<img src="${imageData}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;">`;
-    flaggedPreview.style.display = 'block';
-  } else if (flaggedPreview) {
-    flaggedPreview.style.display = 'none';
+  if (flaggedPreview) {
+    if (imageData) {
+      // Use provided image data
+      flaggedPreview.innerHTML = `<img src="${imageData}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;">`;
+      flaggedPreview.style.display = 'block';
+    } else if (errorResponse.savedImageIds?.length > 0) {
+      // Try to load from saved image
+      flaggedPreview.innerHTML = '<div style="color: #888; padding: 20px;">Loading preview...</div>';
+      flaggedPreview.style.display = 'block';
+      loadFlaggedImagePreview(errorResponse.savedImageIds[0], flaggedPreview);
+    } else {
+      flaggedPreview.style.display = 'none';
+    }
   }
 
   // Show/hide appeal section and button
@@ -195,6 +203,39 @@ async function submitModerationAppeal() {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Submit Appeal';
     }
+  }
+}
+
+/**
+ * Load the preview image for a flagged image from the saved image ID
+ */
+async function loadFlaggedImagePreview(imageId, container) {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      container.innerHTML = '<div style="color: #888; padding: 20px;">Preview not available</div>';
+      return;
+    }
+
+    // Fetch the image data
+    const response = await fetch(`${API_BASE_URL}/api/user-images/${imageId}/data?allowPending=true`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.dataUrl) {
+        container.innerHTML = `<img src="${data.dataUrl}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;">`;
+        return;
+      }
+    }
+
+    container.innerHTML = '<div style="color: #888; padding: 20px;">Preview not available</div>';
+  } catch (error) {
+    console.error('Failed to load flagged image preview:', error);
+    container.innerHTML = '<div style="color: #888; padding: 20px;">Preview not available</div>';
   }
 }
 

@@ -28,6 +28,14 @@ jest.mock('../../services/logger', () => ({
   }
 }));
 
+// Mock sharp for image conversion
+jest.mock('sharp', () => {
+  return jest.fn().mockImplementation(() => ({
+    jpeg: jest.fn().mockReturnThis(),
+    toBuffer: jest.fn().mockResolvedValue(Buffer.from('mock-converted-image'))
+  }));
+});
+
 jest.mock('node-fetch', () => jest.fn());
 
 // Store original env

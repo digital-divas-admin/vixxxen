@@ -6,6 +6,7 @@
  */
 
 const { RekognitionClient, DetectModerationLabelsCommand, RecognizeCelebritiesCommand } = require('@aws-sdk/client-rekognition');
+const sharp = require('sharp');
 const { logger } = require('./logger');
 
 // Initialize Rekognition client
@@ -87,6 +88,24 @@ async function screenImage(image, options = {}) {
     imageBuffer = Buffer.from(base64Data, 'base64');
   } else {
     imageBuffer = image;
+  }
+
+  // Convert to JPEG for AWS Rekognition compatibility
+  // Rekognition only supports JPEG and PNG, not WebP or other formats
+  try {
+    imageBuffer = await sharp(imageBuffer)
+      .jpeg({ quality: 90 })
+      .toBuffer();
+  } catch (conversionError) {
+    logger.error('Image conversion failed', { error: conversionError.message });
+    return {
+      approved: false,
+      hasCelebrity: false,
+      hasMinor: false,
+      reasons: ['Image format not supported - please use JPEG or PNG'],
+      celebrities: [],
+      moderationLabels: []
+    };
   }
 
   const result = {
