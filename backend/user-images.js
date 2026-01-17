@@ -209,7 +209,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     let query = supabase
       .from('user_images')
-      .select('id, filename, status, created_at, appeal_submitted_at, celebrity_confidence, minor_confidence', { count: 'exact' })
+      .select('id, filename, storage_path, status, created_at, appeal_submitted_at, celebrity_confidence, minor_confidence', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -224,10 +224,9 @@ router.get('/', requireAuth, async (req, res) => {
 
     // Get signed URLs for all images
     const imagesWithUrls = await Promise.all(images.map(async (image) => {
-      const storagePath = `${userId}/${image.id}.${image.filename?.split('.').pop() || 'jpg'}`;
       const { data: urlData } = await supabase.storage
         .from('user-images')
-        .createSignedUrl(storagePath, 3600);
+        .createSignedUrl(image.storage_path, 3600);
 
       return {
         ...image,
