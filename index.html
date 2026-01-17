@@ -5606,35 +5606,32 @@
     /* Mobile Discord-like Chat Layout - ONLY when community tab is active */
     @media (max-width: 768px) {
       /* Only apply fixed layout when community content is active */
-      .education-subtab-content#communityContent.active {
-        position: relative;
-        /* Use dvh for dynamic viewport height (accounts for mobile browser chrome) */
-        height: calc(100vh - 100px);
-        height: calc(100dvh - 100px);
+      body.community-active #communityContent {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
         overflow: hidden;
+        /* Use dvh for dynamic viewport height (accounts for mobile browser chrome) */
+        max-height: calc(100vh - 100px);
+        max-height: calc(100dvh - 100px);
       }
 
-      /* Only apply absolute positioning when community is active */
-      #communityContent.active .education-chat {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 100%;
+      /* Chat container fills the space */
+      body.community-active .education-chat {
+        flex: 1;
+        display: flex;
+        position: relative;
         overflow: hidden;
+        padding-bottom: 0;
         /* Account for safe areas on notched devices */
         padding-bottom: env(safe-area-inset-bottom, 0);
       }
 
-      #communityContent.active .channel-sidebar {
+      body.community-active .channel-sidebar {
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
         width: 100%;
-        min-width: 100%;
         height: 100%;
         z-index: 10;
         transform: translateX(0);
@@ -5645,12 +5642,10 @@
         -webkit-overflow-scrolling: touch;
       }
 
-      #communityContent.active .chat-area {
+      body.community-active .chat-area {
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
         width: 100%;
         height: 100%;
         z-index: 5;
