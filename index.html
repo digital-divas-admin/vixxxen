@@ -5603,31 +5603,29 @@
       color: var(--text-primary);
     }
 
-    /* Mobile Discord-like Chat Layout - ONLY when community tab is active */
+    /* Mobile Discord-like Chat Layout */
     @media (max-width: 768px) {
-      /* Only apply fixed layout when community content is active */
-      body.community-active #communityContent {
+      /* Community content container */
+      #communityContent {
         flex: 1;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        /* Use dvh for dynamic viewport height (accounts for mobile browser chrome) */
         max-height: calc(100vh - 100px);
         max-height: calc(100dvh - 100px);
       }
 
       /* Chat container fills the space */
-      body.community-active .education-chat {
+      #communityContent .education-chat {
         flex: 1;
         display: flex;
         position: relative;
         overflow: hidden;
         padding-bottom: 0;
-        /* Account for safe areas on notched devices */
         padding-bottom: env(safe-area-inset-bottom, 0);
       }
 
-      body.community-active .channel-sidebar {
+      #communityContent .channel-sidebar {
         position: absolute !important;
         top: 0;
         left: 0;
@@ -5643,11 +5641,10 @@
         overflow-y: auto;
         background: #111;
         border-right: none;
-        /* Smooth scrolling on iOS */
         -webkit-overflow-scrolling: touch;
       }
 
-      body.community-active .chat-area {
+      #communityContent .chat-area {
         position: absolute !important;
         top: 0;
         left: 0;
