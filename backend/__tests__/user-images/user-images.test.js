@@ -30,6 +30,15 @@ jest.mock('../../services/imageModeration', () => ({
   isEnabled: jest.fn()
 }));
 
+// Mock email module
+const mockSendImageApprovedEmail = jest.fn().mockResolvedValue({ success: true });
+const mockSendImageRejectedEmail = jest.fn().mockResolvedValue({ success: true });
+
+jest.mock('../../email', () => ({
+  sendImageApprovedEmail: mockSendImageApprovedEmail,
+  sendImageRejectedEmail: mockSendImageRejectedEmail
+}));
+
 // Mock auth middleware to set userId
 jest.mock('../../middleware/auth', () => ({
   requireAuth: (req, res, next) => {
@@ -153,6 +162,49 @@ describe('User Images API', () => {
         .get('/api/user-images?status=pending_review')
         .set('Authorization', 'Bearer valid-token')
         .expect(200);
+    });
+
+    it('should return review_notes for rejected images', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockReturnValue({
+              range: jest.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'rejected-image',
+                    filename: 'test.png',
+                    status: 'rejected',
+                    storage_path: 'user-123/test.png',
+                    created_at: '2024-01-01T00:00:00Z',
+                    review_notes: 'Image contains celebrity face',
+                    reviewed_at: '2024-01-02T00:00:00Z',
+                    appeal_submitted_at: null
+                  }
+                ],
+                error: null,
+                count: 1
+              })
+            })
+          })
+        })
+      });
+
+      mockSupabase.storage.from.mockReturnValue({
+        createSignedUrl: jest.fn().mockResolvedValue({
+          data: { signedUrl: 'https://storage.example.com/signed-url' }
+        })
+      });
+
+      const response = await request(app)
+        .get('/api/user-images')
+        .set('Authorization', 'Bearer valid-token')
+        .expect(200);
+
+      expect(response.body.images).toHaveLength(1);
+      expect(response.body.images[0].review_notes).toBe('Image contains celebrity face');
+      expect(response.body.images[0].reviewed_at).toBe('2024-01-02T00:00:00Z');
+      expect(response.body.images[0].canUse).toBe(false);
     });
   });
 
@@ -569,42 +621,48 @@ describe('Admin Endpoints', () => {
     });
 
     it('should return pending images for admin', async () => {
-      // Mock isAdmin check
+      const pendingImages = [{
+        id: 'pending-image',
+        user_id: 'user-1',
+        status: 'pending_review',
+        appeal_submitted_at: '2024-01-01T00:00:00Z',
+        storage_path: 'user-1/image.png'
+      }];
+
+      // Create a chainable mock that resolves at the end
+      const createChainableMock = (resolveValue) => {
+        const chainable = {};
+        const methods = ['select', 'eq', 'order', 'range', 'not', 'is', 'in', 'single'];
+        methods.forEach(method => {
+          chainable[method] = jest.fn().mockReturnValue(chainable);
+        });
+        // Make it thenable (Promise-like)
+        chainable.then = (resolve) => resolve(resolveValue);
+        return chainable;
+      };
+
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'profiles') {
+          // Return different mocks based on the query type
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({
-                  data: { role: 'admin' },
+            select: jest.fn().mockImplementation(() => {
+              return {
+                eq: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({
+                    data: { role: 'admin' },
+                    error: null
+                  })
+                }),
+                in: jest.fn().mockResolvedValue({
+                  data: [{ id: 'user-1', email: 'user@example.com', display_name: 'User' }],
                   error: null
                 })
-              })
+              };
             })
           };
         }
-        // user_images table query
-        return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                order: jest.fn().mockReturnValue({
-                  range: jest.fn().mockResolvedValue({
-                    data: [{
-                      id: 'pending-image',
-                      user_id: 'user-1',
-                      status: 'pending_review',
-                      appeal_submitted_at: '2024-01-01T00:00:00Z',
-                      storage_path: 'user-1/image.png'
-                    }],
-                    error: null,
-                    count: 1
-                  })
-                })
-              })
-            })
-          })
-        };
+        // user_images table - create fully chainable mock
+        return createChainableMock({ data: pendingImages, error: null, count: 1 });
       });
 
       mockSupabase.storage.from.mockReturnValue({
@@ -620,6 +678,7 @@ describe('Admin Endpoints', () => {
 
       expect(response.body.images).toHaveLength(1);
       expect(response.body.images[0].storage_path).toBeUndefined(); // Should not expose storage path
+      expect(response.body.images[0].user_email).toBe('user@example.com'); // Should include user email
     });
   });
 
@@ -785,31 +844,72 @@ describe('Admin Endpoints', () => {
     });
 
     it('should bulk approve images', async () => {
+      // Create fully chainable mock that handles all query patterns
+      const createUserImagesMock = () => {
+        const result = {
+          data: [{ id: 'image-1' }, { id: 'image-2' }],
+          error: null
+        };
+        const selectResult = {
+          data: [
+            { id: 'image-1', user_id: 'user-1' },
+            { id: 'image-2', user_id: 'user-2' }
+          ],
+          error: null
+        };
+
+        // Create a chainable mock
+        const chain = {
+          select: jest.fn().mockReturnThis(),
+          update: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockImplementation(() => ({
+            ...chain,
+            then: (resolve) => resolve(selectResult)
+          })),
+          then: (resolve) => resolve(result)
+        };
+
+        // Override select to handle getting images for email
+        chain.select = jest.fn().mockImplementation(() => ({
+          in: jest.fn().mockImplementation(() => ({
+            eq: jest.fn().mockResolvedValue(selectResult)
+          }))
+        }));
+
+        // Override update
+        chain.update = jest.fn().mockImplementation(() => ({
+          in: jest.fn().mockImplementation(() => ({
+            eq: jest.fn().mockImplementation(() => ({
+              select: jest.fn().mockResolvedValue(result)
+            }))
+          }))
+        }));
+
+        return chain;
+      };
+
       mockSupabase.from.mockImplementation((table) => {
         if (table === 'profiles') {
           return {
-            select: jest.fn().mockReturnValue({
+            select: jest.fn().mockImplementation(() => ({
               eq: jest.fn().mockReturnValue({
                 single: jest.fn().mockResolvedValue({
                   data: { role: 'admin' },
                   error: null
                 })
+              }),
+              in: jest.fn().mockResolvedValue({
+                data: [
+                  { id: 'user-1', email: 'user1@example.com', display_name: 'User 1' },
+                  { id: 'user-2', email: 'user2@example.com', display_name: 'User 2' }
+                ],
+                error: null
               })
-            })
+            }))
           };
         }
-        return {
-          update: jest.fn().mockReturnValue({
-            in: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                select: jest.fn().mockResolvedValue({
-                  data: [{ id: 'image-1' }, { id: 'image-2' }],
-                  error: null
-                })
-              })
-            })
-          })
-        };
+        return createUserImagesMock();
       });
 
       const response = await request(app)
@@ -818,11 +918,20 @@ describe('Admin Endpoints', () => {
         .send({
           imageIds: ['image-1', 'image-2'],
           decision: 'approved'
-        })
-        .expect(200);
+        });
 
+      // Debug: log response if not 200
+      if (response.status !== 200) {
+        console.log('Response status:', response.status);
+        console.log('Response body:', response.body);
+      }
+
+      expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.updatedCount).toBe(2);
+
+      // Verify email functions were called
+      expect(mockSendImageApprovedEmail).toHaveBeenCalled();
     });
   });
 });
