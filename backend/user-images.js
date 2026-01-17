@@ -502,7 +502,7 @@ router.get('/admin/queue', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    const { limit = 50, offset = 0, hasAppeal } = req.query;
+    const { limit = 50, offset = 0, hasAppeal, flagType } = req.query;
 
     let query = supabase
       .from('user_images')
@@ -525,11 +525,18 @@ router.get('/admin/queue', requireAuth, async (req, res) => {
       query = query.is('appeal_submitted_at', null);
     }
 
+    // Filter by flag type
+    if (flagType === 'celebrity') {
+      query = query.not('celebrity_confidence', 'is', null);
+    } else if (flagType === 'minor') {
+      query = query.not('minor_confidence', 'is', null);
+    }
+
     const { data: images, error, count } = await query;
 
     if (error) throw error;
 
-    // Get signed URLs for preview
+    // Get signed URLs for preview and flatten user data
     const imagesWithUrls = await Promise.all(images.map(async (image) => {
       const { data: urlData } = await supabase.storage
         .from('user-images')
@@ -538,6 +545,9 @@ router.get('/admin/queue', requireAuth, async (req, res) => {
       return {
         ...image,
         url: urlData?.signedUrl,
+        user_email: image.user?.email || null,
+        user_display_name: image.user?.display_name || null,
+        user: undefined, // Remove nested user object
         storage_path: undefined // Don't expose storage path to client
       };
     }));
