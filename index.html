@@ -5794,6 +5794,32 @@
       }
     }
 
+    /* Hide footer and chat widgets when community section is visible on mobile */
+    @media (max-width: 768px) {
+      /* Hide when community subtab content is active (display: block means it's visible) */
+      body:has(#communityContent[style*="display: block"]) .site-footer,
+      body:has(#communityContent[style*="display: block"]) #crisp-chatbox,
+      body:has(#communityContent[style*="display: block"]) [class*="crisp"],
+      body:has(#communityContent[style*="display: block"]) [id*="tawk"],
+      body:has(#communityContent[style*="display: block"]) .intercom-lightweight-app,
+      body:has(#communityContent[style*="display: block"]) [class*="chat-widget"],
+      body:has(#communityContent[style*="display: block"]) iframe[title*="chat" i],
+      body:has(#communityContent[style*="display: block"]) iframe[title*="Chat" i],
+      /* Also hide when body has community-active class (JS fallback) */
+      body.community-active .site-footer,
+      body.community-active #crisp-chatbox,
+      body.community-active [class*="crisp"],
+      body.community-active [id*="tawk"],
+      body.community-active .intercom-lightweight-app,
+      body.community-active [class*="chat-widget"],
+      body.community-active iframe[title*="chat" i],
+      body.community-active iframe[title*="Chat" i] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+      }
+    }
+
     /* Giphy Modal */
     .giphy-modal {
       position: fixed;
@@ -19914,6 +19940,13 @@
       // Update content visibility
       document.querySelectorAll('.education-subtab-content').forEach(content => content.classList.remove('active'));
       document.getElementById(tab + 'Content').classList.add('active');
+
+      // Toggle body class for community section (hides footer on mobile)
+      if (tab === 'community' && window.innerWidth <= 768) {
+        document.body.classList.add('community-active');
+      } else {
+        document.body.classList.remove('community-active');
+      }
 
       // Hide all education admin buttons first
       const adminResourcesBtn = document.getElementById('adminResourcesBtn');
