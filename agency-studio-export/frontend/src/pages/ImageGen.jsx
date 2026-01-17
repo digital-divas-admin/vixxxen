@@ -17,10 +17,10 @@ const MODELS = [
 ];
 
 const ASPECT_RATIOS = [
-  { id: '1:1', label: '1:1 Square', width: 1024, height: 1024 },
-  { id: '16:9', label: '16:9 Landscape', width: 1920, height: 1080 },
-  { id: '9:16', label: '9:16 Portrait', width: 1080, height: 1920 },
-  { id: '4:3', label: '4:3 Standard', width: 1440, height: 1080 },
+  { id: '1:1', label: '1:1 Square', width: 2048, height: 2048 },
+  { id: '16:9', label: '16:9 Landscape', width: 2560, height: 1440 },
+  { id: '9:16', label: '9:16 Portrait', width: 1440, height: 2560 },
+  { id: '4:3', label: '4:3 Standard', width: 2240, height: 1680 },
 ];
 
 export function ImageGenPage() {
