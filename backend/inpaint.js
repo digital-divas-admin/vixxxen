@@ -492,7 +492,6 @@ router.post('/inpaint-sfw', async (req, res) => {
     // Screen uploaded image for celebrities and minors
     // Skip if image came from library (already approved)
     const isFromLibrary = isLibraryImageId(image);
-    const userId = req.userId;
 
     logger.info('Inpaint SFW moderation check', {
       isFromLibrary,
