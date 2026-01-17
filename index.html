@@ -1244,6 +1244,14 @@
       background: var(--bg-hover);
     }
 
+    .reference-upload.drag-over,
+    .inpaint-upload-placeholder.drag-over {
+      border-color: var(--accent-primary);
+      background: rgba(255, 46, 187, 0.15);
+      box-shadow: 0 0 20px rgba(255, 46, 187, 0.3);
+      transform: scale(1.02);
+    }
+
     .reference-upload-icon {
       font-size: 2rem;
       margin-bottom: 8px;
@@ -4860,6 +4868,8 @@
       cursor: pointer;
       padding: 60px;
       transition: all 0.2s;
+      border: 2px dashed transparent;
+      border-radius: 8px;
     }
 
     .inpaint-upload-placeholder:hover {
@@ -8123,6 +8133,7 @@
           <div class="reference-upload" onclick="document.getElementById('fileInput').click()">
             <div class="reference-upload-icon">📸</div>
             <div class="reference-upload-text">Click to upload reference images</div>
+            <div class="reference-upload-hint">or drag and drop</div>
           </div>
           <div id="referenceGrid" class="reference-grid"></div>
         </div>
@@ -8325,6 +8336,7 @@
             <div class="reference-upload" onclick="document.getElementById('videoStartImageInput').click()">
               <div class="reference-upload-icon">📸</div>
               <div class="reference-upload-text">Click to upload start frame</div>
+              <div class="reference-upload-hint">or drag and drop</div>
             </div>
             <div id="videoStartImagePreview" class="reference-grid"></div>
           </div>
@@ -8336,6 +8348,7 @@
             <div class="reference-upload" onclick="document.getElementById('veoLastFrameInput').click()">
               <div class="reference-upload-icon">🎞️</div>
               <div class="reference-upload-text">Click to upload ending frame</div>
+              <div class="reference-upload-hint">or drag and drop</div>
             </div>
             <div id="veoLastFramePreview" class="reference-grid"></div>
           </div>
@@ -8545,6 +8558,7 @@
             <div class="reference-upload" onclick="document.getElementById('editSourceImageInput').click()" id="editImageUploadArea">
               <div class="reference-upload-icon">🖼️</div>
               <div class="reference-upload-text">Click to upload image</div>
+              <div class="reference-upload-hint">or drag and drop</div>
             </div>
 
             <!-- Image Preview (for Background Remover) -->
@@ -12993,6 +13007,100 @@
       // Update button cost display
       updateVideoGenerateButtonCost();
     }
+
+    // ===============================================
+    // Drag and Drop Upload Functionality
+    // ===============================================
+
+    /**
+     * Setup drag-and-drop functionality for an upload zone
+     * @param {string} dropZoneId - ID of the element to make droppable (can be null if dropZone element is passed)
+     * @param {string} fileInputId - ID of the hidden file input
+     * @param {Function} handleUpload - Function to call with the files (receives a fake event with files)
+     * @param {HTMLElement} dropZone - Optional: direct element reference instead of ID
+     */
+    function setupDropZone(dropZoneId, fileInputId, handleUpload, dropZone = null) {
+      const zone = dropZone || document.getElementById(dropZoneId);
+      const fileInput = document.getElementById(fileInputId);
+
+      if (!zone) {
+        console.warn(`Drop zone not found: ${dropZoneId}`);
+        return;
+      }
+
+      // Prevent default drag behaviors on the zone
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, false);
+      });
+
+      // Highlight drop zone when dragging over
+      ['dragenter', 'dragover'].forEach(eventName => {
+        zone.addEventListener(eventName, () => {
+          zone.classList.add('drag-over');
+        }, false);
+      });
+
+      // Remove highlight when leaving or dropping
+      ['dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, () => {
+          zone.classList.remove('drag-over');
+        }, false);
+      });
+
+      // Handle dropped files
+      zone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          // Filter for image files only
+          const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+          if (imageFiles.length === 0) {
+            showError('Please drop image files only');
+            return;
+          }
+
+          // Create a fake event object to pass to existing handlers
+          const fakeEvent = {
+            target: {
+              files: imageFiles,
+              value: ''
+            }
+          };
+          handleUpload(fakeEvent);
+        }
+      }, false);
+    }
+
+    // Initialize all drop zones after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      // Reference images upload (Image tab)
+      const refUpload = document.querySelector('#referenceSection .reference-upload');
+      if (refUpload) {
+        setupDropZone(null, 'fileInput', handleFileUpload, refUpload);
+      }
+
+      // Video start frame upload
+      const videoStartUpload = document.querySelector('#videoStartImageSection .reference-upload');
+      if (videoStartUpload) {
+        setupDropZone(null, 'videoStartImageInput', handleVideoStartImageUpload, videoStartUpload);
+      }
+
+      // Veo last frame upload
+      const veoLastFrameUpload = document.querySelector('#veoLastFrameSection .reference-upload');
+      if (veoLastFrameUpload) {
+        setupDropZone(null, 'veoLastFrameInput', handleVeoLastFrameUpload, veoLastFrameUpload);
+      }
+
+      // Edit source image upload
+      setupDropZone('editImageUploadArea', 'editSourceImageInput', handleEditSourceImageUpload);
+
+      // Inpaint image upload
+      setupDropZone('inpaintUploadPlaceholder', 'inpaintImageInput', handleInpaintImageUpload);
+
+      console.log('Drag-and-drop upload zones initialized');
+    });
 
     function handleFileUpload(event) {
       // Require login for uploads
