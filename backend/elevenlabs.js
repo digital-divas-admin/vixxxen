@@ -4,6 +4,7 @@ const multer = require('multer');
 const FormData = require('form-data');
 const fetch = require('node-fetch');
 const { logger, logGeneration } = require('./services/logger');
+const { RequestQueue, createFetchWithRetry } = require('./services/rateLimitService');
 
 // Configure multer for file uploads
 const upload = multer({
@@ -13,6 +14,20 @@ const upload = multer({
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_BASE_URL = 'https://api.elevenlabs.io/v1';
+
+// Create request queue for ElevenLabs API calls - 1 second minimum between requests
+// ElevenLabs has strict rate limits, especially on voice cloning
+const elevenLabsQueue = new RequestQueue(1000, 'ElevenLabs');
+
+// Create fetchWithRetry configured for ElevenLabs
+// Using improved settings: 5 retries, 3s initial backoff (ElevenLabs is faster), 60s max, with jitter
+const fetchWithRetry = createFetchWithRetry({
+  maxRetries: 5,
+  initialBackoffMs: 3000,
+  maxBackoffMs: 60000,
+  jitterFactor: 0.3,
+  name: 'ElevenLabs'
+});
 
 // Text-to-Speech endpoint
 router.post('/tts', async (req, res) => {
@@ -33,28 +48,38 @@ router.post('/tts', async (req, res) => {
       requestId: req.id
     });
 
-    const response = await fetch(`${ELEVENLABS_BASE_URL}/text-to-speech/${voiceId}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': ELEVENLABS_API_KEY
-      },
-      body: JSON.stringify({
-        text,
-        model_id: model_id || 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: stability || 0.5,
-          similarity_boost: similarity_boost || 0.75,
-          style: style || 0,
-          use_speaker_boost: true
-        }
+    console.log(`   📋 Adding TTS request to queue (queue size: ${elevenLabsQueue.size})...`);
+
+    const response = await elevenLabsQueue.add(() =>
+      fetchWithRetry(`${ELEVENLABS_BASE_URL}/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY
+        },
+        body: JSON.stringify({
+          text,
+          model_id: model_id || 'eleven_multilingual_v2',
+          voice_settings: {
+            stability: stability || 0.5,
+            similarity_boost: similarity_boost || 0.75,
+            style: style || 0,
+            use_speaker_boost: true
+          }
+        })
       })
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       logger.error('ElevenLabs TTS error', { error: errorData, requestId: req.id });
+
+      // Handle specific error types
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded - please wait 30-60 seconds and try again');
+      }
+
       throw new Error(errorData.detail?.message || errorData.error || 'TTS generation failed');
     }
 
@@ -78,6 +103,16 @@ router.post('/tts', async (req, res) => {
 
   } catch (error) {
     logger.error('TTS Error', { error: error.message, requestId: req.id });
+
+    // Handle rate limit errors
+    if (error.message?.includes('429') || error.message?.includes('rate') || error.message?.includes('Rate limit')) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: 'The audio service is experiencing high demand. Please wait 30-60 seconds and try again.',
+        retryAfter: 30
+      });
+    }
+
     res.status(500).json({ error: error.message || 'Failed to generate audio' });
   }
 });
@@ -111,18 +146,28 @@ router.post('/clone', upload.single('audio'), async (req, res) => {
       contentType: audioFile.mimetype
     });
 
-    const response = await fetch(`${ELEVENLABS_BASE_URL}/voices/add`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-        ...formData.getHeaders()
-      },
-      body: formData
-    });
+    console.log(`   📋 Adding voice clone request to queue (queue size: ${elevenLabsQueue.size})...`);
+
+    const response = await elevenLabsQueue.add(() =>
+      fetchWithRetry(`${ELEVENLABS_BASE_URL}/voices/add`, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
+          ...formData.getHeaders()
+        },
+        body: formData
+      })
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       logger.error('ElevenLabs clone error', { error: errorData, requestId: req.id });
+
+      // Handle specific error types
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded - please wait 30-60 seconds and try again');
+      }
+
       throw new Error(errorData.detail?.message || errorData.error || 'Voice cloning failed');
     }
 
@@ -140,6 +185,16 @@ router.post('/clone', upload.single('audio'), async (req, res) => {
 
   } catch (error) {
     logger.error('Voice Clone Error', { error: error.message, requestId: req.id });
+
+    // Handle rate limit errors
+    if (error.message?.includes('429') || error.message?.includes('rate') || error.message?.includes('Rate limit')) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: 'The voice cloning service is experiencing high demand. Please wait 30-60 seconds and try again.',
+        retryAfter: 30
+      });
+    }
+
     res.status(500).json({ error: error.message || 'Failed to clone voice' });
   }
 });
@@ -151,13 +206,19 @@ router.get('/voices', async (req, res) => {
       return res.status(500).json({ error: 'ElevenLabs API key not configured' });
     }
 
-    const response = await fetch(`${ELEVENLABS_BASE_URL}/voices`, {
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY
-      }
-    });
+    // Voice listing uses queue but with lower priority since it's read-only
+    const response = await elevenLabsQueue.add(() =>
+      fetchWithRetry(`${ELEVENLABS_BASE_URL}/voices`, {
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY
+        }
+      })
+    );
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded - please wait and try again');
+      }
       throw new Error('Failed to fetch voices');
     }
 
@@ -175,6 +236,16 @@ router.get('/voices', async (req, res) => {
 
   } catch (error) {
     logger.error('Get Voices Error', { error: error.message, requestId: req.id });
+
+    // Handle rate limit errors
+    if (error.message?.includes('429') || error.message?.includes('rate') || error.message?.includes('Rate limit')) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: 'Please wait a moment and try again.',
+        retryAfter: 10
+      });
+    }
+
     res.status(500).json({ error: error.message || 'Failed to fetch voices' });
   }
 });
