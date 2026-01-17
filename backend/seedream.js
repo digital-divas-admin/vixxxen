@@ -4,7 +4,7 @@ const { compressImages } = require('./services/imageCompression');
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
-const { processImageInputs } = require('./services/userImageService');
+const { processImageInputs, screenAndSaveImages } = require('./services/userImageService');
 
 const router = express.Router();
 
@@ -174,17 +174,40 @@ router.post('/generate', async (req, res) => {
     // Screen reference images for celebrities and minors before processing
     // Skip if all images came from library (already approved)
     const hasRawImages = (referenceImages || []).some(img => !img.match(/^[0-9a-f-]{36}$/i));
+    const userId = req.userId;
+
     if (hasReferenceImage && hasRawImages && isModerationEnabled()) {
-      const moderationResult = await screenImages(processedReferenceImages);
+      logger.info('Running moderation on Seedream reference images', {
+        imageCount: processedReferenceImages.length,
+        userId: userId || 'anonymous',
+        requestId: req.id
+      });
+
+      // Use screenAndSaveImages to auto-save rejected images to library
+      const moderationResult = await screenAndSaveImages(processedReferenceImages, userId);
+
       if (!moderationResult.approved) {
         logger.warn('Reference images rejected by moderation', {
           reasons: moderationResult.reasons,
+          savedImageIds: moderationResult.savedImageIds,
+          failedCount: moderationResult.failedCount,
           requestId: req.id
         });
+
+        let message = `${moderationResult.failedCount} of ${moderationResult.totalCount} reference image(s) were flagged by content moderation.`;
+        if (moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0) {
+          message += ' The flagged images have been saved to your library. You can appeal in your Image Library if you believe they were flagged in error.';
+        }
+
         return res.status(400).json({
           error: 'Reference image rejected by content moderation',
           reasons: moderationResult.reasons,
-          message: 'One or more reference images contain content that is not allowed (celebrity or minor detected).'
+          message,
+          failedIndex: moderationResult.failedIndex,
+          failedCount: moderationResult.failedCount,
+          totalCount: moderationResult.totalCount,
+          savedImageIds: moderationResult.savedImageIds,
+          canAppeal: moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0
         });
       }
     }

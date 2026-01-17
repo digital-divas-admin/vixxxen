@@ -4,7 +4,7 @@ const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter')
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
-const { processImageInputs, isLibraryImageId } = require('./services/userImageService');
+const { processImageInputs, isLibraryImageId, screenAndSaveImages } = require('./services/userImageService');
 
 // RunPod Configuration (shared with qwen.js)
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -492,19 +492,57 @@ router.post('/inpaint-sfw', async (req, res) => {
     // Screen uploaded image for celebrities and minors
     // Skip if image came from library (already approved)
     const isFromLibrary = isLibraryImageId(image);
+    const userId = req.userId;
+
+    logger.info('Inpaint SFW moderation check', {
+      isFromLibrary,
+      isModerationEnabled: isModerationEnabled(),
+      hasProcessedImage: !!processedImage,
+      imageLength: processedImage ? processedImage.length : 0,
+      userId: userId || 'anonymous',
+      requestId: req.id
+    });
+
     if (!isFromLibrary && isModerationEnabled()) {
-      const moderationResult = await screenImages([processedImage]);
+      logger.info('Running moderation on inpaint SFW image', { requestId: req.id });
+
+      // Use screenAndSaveImages to auto-save rejected images to library
+      const moderationResult = await screenAndSaveImages([processedImage], userId);
+
+      logger.info('Moderation result for inpaint SFW', {
+        approved: moderationResult.approved,
+        reasons: moderationResult.reasons,
+        skipped: moderationResult.skipped,
+        savedImageIds: moderationResult.savedImageIds,
+        requestId: req.id
+      });
+
       if (!moderationResult.approved) {
-        logger.warn('Inpaint image rejected by moderation', {
+        logger.warn('Inpaint SFW image rejected by moderation', {
           reasons: moderationResult.reasons,
+          savedImageIds: moderationResult.savedImageIds,
           requestId: req.id
         });
+
+        // Build user-friendly message
+        let message = 'The uploaded image was flagged by content moderation.';
+        if (moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0) {
+          message += ' The image has been saved to your library. You can appeal this decision in your Image Library if you believe it was flagged in error.';
+        }
+
         return res.status(400).json({
           error: 'Image rejected by content moderation',
           reasons: moderationResult.reasons,
-          message: 'The uploaded image contains content that is not allowed (celebrity or minor detected).'
+          message,
+          savedImageIds: moderationResult.savedImageIds,
+          canAppeal: moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0
         });
       }
+    } else {
+      logger.info('Inpaint SFW moderation skipped', {
+        reason: isFromLibrary ? 'image from library' : 'moderation not enabled',
+        requestId: req.id
+      });
     }
 
     logGeneration('inpaint-sfw', 'started', {
@@ -616,19 +654,53 @@ router.post('/inpaint-nsfw', async (req, res) => {
     // Screen uploaded image for celebrities and minors
     // Skip if image came from library (already approved)
     const isFromLibrary = isLibraryImageId(image);
+
+    logger.info('Inpaint NSFW moderation check', {
+      isFromLibrary,
+      isModerationEnabled: isModerationEnabled(),
+      hasProcessedImage: !!processedImage,
+      userId: userId || 'anonymous',
+      requestId: req.id
+    });
+
     if (!isFromLibrary && isModerationEnabled()) {
-      const moderationResult = await screenImages([processedImage]);
+      logger.info('Running moderation on inpaint NSFW image', { requestId: req.id });
+
+      // Use screenAndSaveImages to auto-save rejected images to library
+      const moderationResult = await screenAndSaveImages([processedImage], userId);
+
+      logger.info('Moderation result for inpaint NSFW', {
+        approved: moderationResult.approved,
+        reasons: moderationResult.reasons,
+        savedImageIds: moderationResult.savedImageIds,
+        requestId: req.id
+      });
+
       if (!moderationResult.approved) {
-        logger.warn('Inpaint image rejected by moderation', {
+        logger.warn('Inpaint NSFW image rejected by moderation', {
           reasons: moderationResult.reasons,
+          savedImageIds: moderationResult.savedImageIds,
           requestId: req.id
         });
+
+        let message = 'The uploaded image was flagged by content moderation.';
+        if (moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0) {
+          message += ' The image has been saved to your library. You can appeal this decision in your Image Library if you believe it was flagged in error.';
+        }
+
         return res.status(400).json({
           error: 'Image rejected by content moderation',
           reasons: moderationResult.reasons,
-          message: 'The uploaded image contains content that is not allowed (celebrity or minor detected).'
+          message,
+          savedImageIds: moderationResult.savedImageIds,
+          canAppeal: moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0
         });
       }
+    } else {
+      logger.info('Inpaint NSFW moderation skipped', {
+        reason: isFromLibrary ? 'image from library' : 'moderation not enabled',
+        requestId: req.id
+      });
     }
 
     logGeneration('inpaint-nsfw', 'started', {

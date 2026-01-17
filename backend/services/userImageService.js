@@ -5,6 +5,14 @@
 
 const { supabase } = require('./supabase');
 const { logger } = require('./logger');
+const crypto = require('crypto');
+
+// Moderation thresholds - same as user-images.js
+const MODERATION_THRESHOLDS = {
+  CELEBRITY_HARD_FLAG: 95,
+  CELEBRITY_SOFT_FLAG: 85,
+  MINOR_HARD_FLAG: 75
+};
 
 /**
  * Resolve library image IDs to base64 data URLs
@@ -167,8 +175,264 @@ async function processImageInputs(images, userId) {
   return { success: true, images: processedImages };
 }
 
+/**
+ * Save an image to the user's library with moderation result
+ * Used when an image is rejected during generation - saves it for appeal
+ *
+ * @param {string} base64Image - The image as base64 (with or without data URL prefix)
+ * @param {string} userId - User ID
+ * @param {Object} moderationResult - Result from screenImage
+ * @returns {Promise<{success: boolean, imageId?: string, error?: string}>}
+ */
+async function saveToLibrary(base64Image, userId, moderationResult = null) {
+  if (!supabase) {
+    return { success: false, error: 'Database not configured' };
+  }
+
+  if (!userId) {
+    return { success: false, error: 'User ID required' };
+  }
+
+  try {
+    // Parse base64 and determine mime type
+    let base64Data = base64Image;
+    let mimeType = 'image/png';
+
+    if (base64Image.startsWith('data:')) {
+      const matches = base64Image.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        mimeType = matches[1];
+        base64Data = matches[2];
+      }
+    }
+
+    // Convert to buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+    const fileSize = buffer.length;
+
+    // Generate unique filename
+    const ext = mimeType.split('/')[1] || 'png';
+    const filename = `${crypto.randomUUID()}.${ext}`;
+    const storagePath = `${userId}/${filename}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from('user-images')
+      .upload(storagePath, buffer, {
+        contentType: mimeType,
+        upsert: false
+      });
+
+    if (uploadError) {
+      logger.error('Failed to upload image to storage', { error: uploadError.message, userId });
+      return { success: false, error: 'Failed to upload image' };
+    }
+
+    // Determine status based on moderation result
+    let status = 'auto_approved';
+    let celebrityConfidence = null;
+    let minorConfidence = null;
+    let moderationFlags = null;
+
+    if (moderationResult) {
+      // Extract confidence scores
+      if (moderationResult.celebrities && moderationResult.celebrities.length > 0) {
+        celebrityConfidence = Math.max(...moderationResult.celebrities.map(c => c.confidence));
+      }
+
+      // Look for minor-related labels
+      if (moderationResult.moderationLabels) {
+        const minorLabels = moderationResult.moderationLabels.filter(l =>
+          isMinorRelatedLabel(l.name, l.parentName)
+        );
+        if (minorLabels.length > 0) {
+          minorConfidence = Math.max(...minorLabels.map(l => l.confidence));
+        }
+      }
+
+      moderationFlags = {
+        celebrities: moderationResult.celebrities || [],
+        labels: moderationResult.moderationLabels || [],
+        reasons: moderationResult.reasons || []
+      };
+
+      // Determine status based on thresholds
+      if (celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_HARD_FLAG ||
+          minorConfidence >= MODERATION_THRESHOLDS.MINOR_HARD_FLAG) {
+        status = 'pending_review';
+      } else if (celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_SOFT_FLAG) {
+        // Soft flag - auto-approve but log
+        status = 'auto_approved';
+        logger.info('Image soft-flagged but auto-approved', {
+          celebrityConfidence,
+          userId
+        });
+      }
+    }
+
+    // Create database record
+    const { data: imageRecord, error: insertError } = await supabase
+      .from('user_images')
+      .insert({
+        user_id: userId,
+        storage_path: storagePath,
+        storage_bucket: 'user-images',
+        filename,
+        file_size: fileSize,
+        mime_type: mimeType,
+        status,
+        moderation_flags: moderationFlags,
+        celebrity_confidence: celebrityConfidence,
+        minor_confidence: minorConfidence
+      })
+      .select('id, status')
+      .single();
+
+    if (insertError) {
+      logger.error('Failed to create image record', { error: insertError.message, userId });
+      // Clean up uploaded file
+      await supabase.storage.from('user-images').remove([storagePath]);
+      return { success: false, error: 'Failed to save image record' };
+    }
+
+    logger.info('Image saved to library', {
+      imageId: imageRecord.id,
+      status: imageRecord.status,
+      userId
+    });
+
+    return {
+      success: true,
+      imageId: imageRecord.id,
+      status: imageRecord.status,
+      needsReview: status === 'pending_review'
+    };
+
+  } catch (error) {
+    logger.error('Error saving to library', { error: error.message, userId });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Check if a label indicates content involving minors
+ */
+function isMinorRelatedLabel(name, parentName) {
+  const minorIndicators = [
+    'child', 'minor', 'underage', 'infant', 'baby',
+    'toddler', 'teen', 'adolescent', 'youth', 'kid', 'pediatric'
+  ];
+
+  const lowerName = (name || '').toLowerCase();
+  const lowerParent = (parentName || '').toLowerCase();
+
+  return minorIndicators.some(indicator =>
+    lowerName.includes(indicator) || lowerParent.includes(indicator)
+  );
+}
+
+/**
+ * Screen images and auto-save rejected ones to library
+ * Returns detailed info about which images passed/failed
+ *
+ * @param {string[]} images - Array of base64 images
+ * @param {string} userId - User ID (required for saving to library)
+ * @param {Object} options - Screening options
+ * @returns {Promise<Object>}
+ */
+async function screenAndSaveImages(images, userId, options = {}) {
+  const { screenImages, isEnabled } = require('./imageModeration');
+
+  if (!isEnabled()) {
+    logger.warn('Moderation not enabled - skipping screening');
+    return { approved: true, images, skipped: true };
+  }
+
+  if (!images || images.length === 0) {
+    return { approved: true, images: [] };
+  }
+
+  const results = [];
+  const savedImages = [];
+  let allApproved = true;
+  let firstFailedIndex = null;
+
+  for (let i = 0; i < images.length; i++) {
+    const image = images[i];
+    if (!image) {
+      results.push({ index: i, approved: true, skipped: true });
+      continue;
+    }
+
+    // Screen this image
+    const { screenImage } = require('./imageModeration');
+    const moderationResult = await screenImage(image, options);
+
+    if (moderationResult.approved) {
+      results.push({
+        index: i,
+        approved: true,
+        moderationResult
+      });
+    } else {
+      allApproved = false;
+      if (firstFailedIndex === null) firstFailedIndex = i;
+
+      // Save to library for appeal (if user is authenticated)
+      let savedInfo = null;
+      if (userId) {
+        const saveResult = await saveToLibrary(image, userId, moderationResult);
+        if (saveResult.success) {
+          savedInfo = {
+            imageId: saveResult.imageId,
+            status: saveResult.status
+          };
+          savedImages.push(saveResult.imageId);
+        }
+      }
+
+      results.push({
+        index: i,
+        approved: false,
+        reasons: moderationResult.reasons,
+        hasCelebrity: moderationResult.hasCelebrity,
+        hasMinor: moderationResult.hasMinor,
+        savedToLibrary: savedInfo
+      });
+    }
+  }
+
+  if (allApproved) {
+    return { approved: true, images, results };
+  }
+
+  // Build helpful error message
+  const failedResults = results.filter(r => !r.approved);
+  const errorMessages = failedResults.map(r => {
+    const imgNum = r.index + 1;
+    const reasons = r.reasons.join(', ');
+    const savedMsg = r.savedToLibrary
+      ? ` (saved to library as ${r.savedToLibrary.imageId} - you can appeal)`
+      : '';
+    return `Image ${imgNum}: ${reasons}${savedMsg}`;
+  });
+
+  return {
+    approved: false,
+    failedIndex: firstFailedIndex,
+    failedCount: failedResults.length,
+    totalCount: images.length,
+    results,
+    savedImageIds: savedImages,
+    errorMessage: errorMessages.join('; '),
+    reasons: failedResults.flatMap(r => r.reasons)
+  };
+}
+
 module.exports = {
   resolveLibraryImages,
   isLibraryImageId,
-  processImageInputs
+  processImageInputs,
+  saveToLibrary,
+  screenAndSaveImages
 };

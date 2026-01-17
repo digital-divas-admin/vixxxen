@@ -3,7 +3,7 @@ const router = express.Router();
 const Replicate = require('replicate');
 const { logger, logGeneration } = require('./services/logger');
 const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
-const { processImageInputs } = require('./services/userImageService');
+const { processImageInputs, screenAndSaveImages } = require('./services/userImageService');
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_KEY,
@@ -65,18 +65,40 @@ router.post('/generate', async (req, res) => {
     // Screen uploaded images for celebrities and minors
     // Skip if all images came from library (already approved)
     const hasRawImages = images.some(img => !img.match(/^[0-9a-f-]{36}$/i));
+
     if (hasRawImages && isModerationEnabled()) {
-      const moderationResult = await screenImages(processedImages);
+      logger.info('Running moderation on Qwen image edit images', {
+        imageCount: processedImages.length,
+        userId: userId || 'anonymous',
+        requestId: req.id
+      });
+
+      // Use screenAndSaveImages to auto-save rejected images to library
+      const moderationResult = await screenAndSaveImages(processedImages, userId);
+
       if (!moderationResult.approved) {
         logger.warn('Image edit images rejected by moderation', {
           reasons: moderationResult.reasons,
+          savedImageIds: moderationResult.savedImageIds,
+          failedCount: moderationResult.failedCount,
           requestId: req.id
         });
+
+        let message = `${moderationResult.failedCount} of ${moderationResult.totalCount} image(s) were flagged by content moderation.`;
+        if (moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0) {
+          message += ' The flagged images have been saved to your library. You can appeal in your Image Library if you believe they were flagged in error.';
+        }
+
         return res.status(400).json({
           success: false,
           error: 'Image rejected by content moderation',
           reasons: moderationResult.reasons,
-          message: 'One or more uploaded images contain content that is not allowed (celebrity or minor detected).'
+          message,
+          failedIndex: moderationResult.failedIndex,
+          failedCount: moderationResult.failedCount,
+          totalCount: moderationResult.totalCount,
+          savedImageIds: moderationResult.savedImageIds,
+          canAppeal: moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0
         });
       }
     }
