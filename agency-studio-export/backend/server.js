@@ -21,6 +21,7 @@ const healthRoutes = require('./routes/health');
 const agencyRoutes = require('./routes/agency');
 const teamRoutes = require('./routes/team');
 const generationRoutes = require('./routes/generation');
+const galleryRoutes = require('./routes/gallery');
 
 // Validate environment on startup
 try {
@@ -138,6 +139,7 @@ app.use('/api', resolveAgency);
 // API routes
 app.use('/api/agency', agencyRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/gallery', galleryRoutes);
 
 // Generation routes
 app.use('/api/generate', generationLimiter, generationRoutes);

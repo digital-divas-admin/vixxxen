@@ -181,8 +181,8 @@ router.post('/', requireAuth, requireCredits('nanoBanana'), async (req, res) => 
     // Deduct credits
     await deductCredits(req);
 
-    // Log generation
-    await supabaseAdmin.from('generations').insert({
+    // Log generation and get the ID
+    const { data: generation } = await supabaseAdmin.from('generations').insert({
       agency_id: agency.id,
       user_id: agencyUser.id,
       type: 'image',
@@ -194,12 +194,31 @@ router.post('/', requireAuth, requireCredits('nanoBanana'), async (req, res) => 
       result_metadata: { imageCount: images.length },
       credits_cost: req.creditCost,
       completed_at: new Date().toISOString()
-    });
+    }).select('id').single();
+
+    // Save each image to gallery_items
+    const galleryItems = [];
+    for (let i = 0; i < images.length; i++) {
+      const { data: item } = await supabaseAdmin.from('gallery_items').insert({
+        agency_id: agency.id,
+        user_id: agencyUser.id,
+        generation_id: generation?.id,
+        title: prompt.substring(0, 100),
+        url: images[i],
+        type: 'image',
+        tags: ['nano-banana']
+      }).select().single();
+
+      if (item) {
+        galleryItems.push(item);
+      }
+    }
 
     res.json({
       success: true,
       model: 'nano-banana-pro',
       images,
+      galleryItems,
       warnings: warnings.length > 0 ? warnings : undefined,
       parameters: { prompt, aspectRatio, numOutputs },
       creditsUsed: req.creditCost,

@@ -3,13 +3,12 @@
  * Generate images with Seedream and Nano Banana Pro
  */
 
-import { useState, useEffect } from 'react';
-import { Image, Loader2, Download, Zap, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Image, Loader2, Download, Zap, Trash2, RefreshCw } from 'lucide-react';
 import { Layout, PageHeader, Card } from '../components/layout/Layout';
 import { Button } from '../components/common/Button';
-import { Input, Textarea } from '../components/common/Input';
+import { Textarea } from '../components/common/Input';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
 
 const MODELS = [
   { id: 'seedream', name: 'Seedream 4.5', credits: 10, description: 'High quality, supports NSFW' },
@@ -23,6 +22,16 @@ const ASPECT_RATIOS = [
   { id: '4:3', label: '4:3 Standard', width: 2240, height: 1680 },
 ];
 
+function getAuthToken() {
+  try {
+    const tokenData = localStorage.getItem('supabase.auth.token');
+    if (tokenData) {
+      return JSON.parse(tokenData).access_token;
+    }
+  } catch {}
+  return '';
+}
+
 export function ImageGenPage() {
   const { credits, refreshCredits } = useAuth();
   const [model, setModel] = useState('seedream');
@@ -30,25 +39,38 @@ export function ImageGenPage() {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [numOutputs, setNumOutputs] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadingGallery, setLoadingGallery] = useState(true);
   const [error, setError] = useState('');
-  const [images, setImages] = useState(() => {
-    // Load persisted images from localStorage on init
-    try {
-      const saved = localStorage.getItem('agency-studio-images');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Persist images to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('agency-studio-images', JSON.stringify(images));
-  }, [images]);
+  const [images, setImages] = useState([]);
 
   const selectedModel = MODELS.find(m => m.id === model);
   const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio);
   const totalCost = (selectedModel?.credits || 0) * numOutputs;
+
+  // Fetch gallery images from database
+  const fetchGallery = useCallback(async () => {
+    try {
+      const response = await fetch('/api/gallery?type=image&limit=100', {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setImages(data.items || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch gallery:', err);
+    } finally {
+      setLoadingGallery(false);
+    }
+  }, []);
+
+  // Load gallery on mount
+  useEffect(() => {
+    fetchGallery();
+  }, [fetchGallery]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -79,7 +101,7 @@ export function ImageGenPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token') ? JSON.parse(localStorage.getItem('supabase.auth.token')).access_token : ''}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
         },
         body: JSON.stringify(body),
       });
@@ -90,17 +112,8 @@ export function ImageGenPage() {
         throw new Error(data.error || 'Generation failed');
       }
 
-      // Create image objects with metadata and prepend to existing images
-      const newImages = (data.images || []).map((url, idx) => ({
-        id: `${Date.now()}-${idx}`,
-        url,
-        prompt,
-        model: selectedModel.name,
-        aspectRatio,
-        createdAt: new Date().toISOString(),
-      }));
-
-      setImages(prev => [...newImages, ...prev]);
+      // Refresh gallery from database to get the new images
+      await fetchGallery();
       refreshCredits();
     } catch (err) {
       setError(err.message);
@@ -109,24 +122,52 @@ export function ImageGenPage() {
     }
   };
 
-  const clearImages = () => {
-    if (confirm('Clear all generated images?')) {
-      setImages([]);
+  const clearImages = async () => {
+    if (!confirm('Clear all generated images? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/gallery', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (response.ok) {
+        setImages([]);
+      }
+    } catch (err) {
+      console.error('Failed to clear gallery:', err);
     }
   };
 
-  const deleteImage = (id) => {
-    setImages(prev => prev.filter(img => img.id !== id));
+  const deleteImage = async (id) => {
+    try {
+      const response = await fetch(`/api/gallery/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (response.ok) {
+        setImages(prev => prev.filter(img => img.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete image:', err);
+    }
   };
 
-  const downloadImage = async (imageUrl, index) => {
+  const downloadImage = async (imageUrl, id) => {
     try {
       const response = await fetch(imageUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `generated-${Date.now()}-${index}.png`;
+      a.download = `generated-${id}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -269,11 +310,17 @@ export function ImageGenPage() {
           {images.length > 0 && (
             <>
               <div className="flex justify-between items-center">
-                <p className="text-sm text-text-muted">{images.length} image{images.length !== 1 ? 's' : ''} generated</p>
-                <Button variant="ghost" size="sm" onClick={clearImages}>
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Clear All
-                </Button>
+                <p className="text-sm text-text-muted">{images.length} image{images.length !== 1 ? 's' : ''} in gallery</p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={fetchGallery}>
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Refresh
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={clearImages}>
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {images.map((image) => (
@@ -281,7 +328,7 @@ export function ImageGenPage() {
                     <div className="relative group">
                       <img
                         src={image.url}
-                        alt={image.prompt}
+                        alt={image.title || 'Generated image'}
                         className="w-full rounded-lg"
                       />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
@@ -303,8 +350,8 @@ export function ImageGenPage() {
                         </Button>
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white text-xs truncate">{image.prompt}</p>
-                        <p className="text-white/60 text-xs">{image.model}</p>
+                        <p className="text-white text-xs truncate">{image.title}</p>
+                        <p className="text-white/60 text-xs">{image.tags?.join(', ')}</p>
                       </div>
                     </div>
                   </Card>
@@ -313,7 +360,7 @@ export function ImageGenPage() {
             </>
           )}
 
-          {!loading && images.length === 0 && (
+          {!loading && !loadingGallery && images.length === 0 && (
             <Card>
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Image className="h-12 w-12 text-text-muted mb-4" />
@@ -321,6 +368,15 @@ export function ImageGenPage() {
                 <p className="text-sm text-text-muted mt-1">
                   Enter a prompt and click Generate to get started
                 </p>
+              </div>
+            </Card>
+          )}
+
+          {loadingGallery && !loading && (
+            <Card>
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-text-muted">Loading gallery...</p>
               </div>
             </Card>
           )}

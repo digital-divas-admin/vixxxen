@@ -321,8 +321,8 @@ router.post('/', requireAuth, requireCredits('seedream'), async (req, res) => {
     // Deduct credits
     await deductCredits(req);
 
-    // Log generation to database
-    await supabaseAdmin.from('generations').insert({
+    // Log generation to database and get the ID
+    const { data: generation } = await supabaseAdmin.from('generations').insert({
       agency_id: agency.id,
       user_id: agencyUser.id,
       type: 'image',
@@ -334,12 +334,31 @@ router.post('/', requireAuth, requireCredits('seedream'), async (req, res) => {
       result_metadata: { imageCount: images.length },
       credits_cost: req.creditCost,
       completed_at: new Date().toISOString()
-    });
+    }).select('id').single();
+
+    // Save each image to gallery_items
+    const galleryItems = [];
+    for (let i = 0; i < images.length; i++) {
+      const { data: item } = await supabaseAdmin.from('gallery_items').insert({
+        agency_id: agency.id,
+        user_id: agencyUser.id,
+        generation_id: generation?.id,
+        title: prompt.substring(0, 100),
+        url: images[i],
+        type: 'image',
+        tags: ['seedream']
+      }).select().single();
+
+      if (item) {
+        galleryItems.push(item);
+      }
+    }
 
     res.json({
       success: true,
       model: 'seedream-4.5',
       images,
+      galleryItems,
       parameters: {
         prompt,
         width: validatedWidth,
