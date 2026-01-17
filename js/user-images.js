@@ -320,7 +320,8 @@ function getLibStatusClass(status) {
 }
 
 function getLibStatusLabel(status) {
-  if (status === 'auto_approved' || status === 'approved') return 'OK';
+  if (status === 'auto_approved') return 'Auto ✓';
+  if (status === 'approved') return 'Approved';
   if (status === 'pending_review') return 'Pending';
   if (status === 'rejected') return 'Rejected';
   return status;
