@@ -5605,8 +5605,8 @@
 
     /* Mobile Discord-like Chat Layout */
     @media (max-width: 768px) {
-      /* Community content container */
-      #communityContent {
+      /* Community content container - only when active */
+      #communityContent.active {
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -5616,7 +5616,7 @@
       }
 
       /* Chat container fills the space */
-      #communityContent .education-chat {
+      #communityContent.active .education-chat {
         flex: 1;
         display: flex;
         position: relative;
@@ -5625,7 +5625,7 @@
         padding-bottom: env(safe-area-inset-bottom, 0);
       }
 
-      #communityContent .channel-sidebar {
+      #communityContent.active .channel-sidebar {
         position: absolute !important;
         top: 0;
         left: 0;
@@ -5644,7 +5644,7 @@
         -webkit-overflow-scrolling: touch;
       }
 
-      #communityContent .chat-area {
+      #communityContent.active .chat-area {
         position: absolute !important;
         top: 0;
         left: 0;
@@ -5660,11 +5660,11 @@
       }
 
       /* When chat is active on mobile - needs higher specificity */
-      #communityContent .education-chat.mobile-chat-active .channel-sidebar {
+      #communityContent.active .education-chat.mobile-chat-active .channel-sidebar {
         transform: translateX(-100%) !important;
       }
 
-      #communityContent .education-chat.mobile-chat-active .chat-area {
+      #communityContent.active .education-chat.mobile-chat-active .chat-area {
         transform: translateX(0) !important;
       }
 
@@ -19168,10 +19168,14 @@
     // Update body class for community section (hides footer/widgets on mobile)
     function updateCommunityActiveClass() {
       const communityContent = document.getElementById('communityContent');
-      const isActive = communityContent && communityContent.classList.contains('active');
+      const educationMemberContent = document.getElementById('educationMemberContent');
+
+      // Check if community tab is active AND education section is visible
+      const isCommunityTabActive = communityContent && communityContent.classList.contains('active');
+      const isEducationVisible = educationMemberContent && educationMemberContent.style.display !== 'none';
       const isMobile = window.innerWidth <= 768;
 
-      if (isActive && isMobile) {
+      if (isCommunityTabActive && isEducationVisible && isMobile) {
         document.body.classList.add('community-active');
       } else {
         document.body.classList.remove('community-active');
