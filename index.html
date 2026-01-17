@@ -5607,7 +5607,9 @@
     @media (max-width: 768px) {
       .education-subtab-content#communityContent {
         position: relative;
-        height: 100%;
+        /* Use dvh for dynamic viewport height (accounts for mobile browser chrome) */
+        height: calc(100vh - 100px);
+        height: calc(100dvh - 100px);
         overflow: hidden;
       }
 
@@ -5619,6 +5621,8 @@
         bottom: 0;
         height: 100%;
         overflow: hidden;
+        /* Account for safe areas on notched devices */
+        padding-bottom: env(safe-area-inset-bottom, 0);
       }
 
       .channel-sidebar {
@@ -5635,6 +5639,8 @@
         transition: transform 0.3s ease;
         overflow-y: auto;
         background: #111;
+        /* Smooth scrolling on iOS */
+        -webkit-overflow-scrolling: touch;
       }
 
       .chat-area {
@@ -5648,6 +5654,8 @@
         z-index: 5;
         transform: translateX(100%);
         transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
       }
 
       /* When chat is active on mobile */
@@ -5665,30 +5673,124 @@
 
       .chat-header {
         padding: 12px 16px;
+        flex-shrink: 0;
       }
 
       .chat-header-actions {
-        gap: 4px;
+        gap: 6px;
       }
 
+      /* Improved touch targets - minimum 44px */
       .chat-call-btn,
       .chat-rules-btn {
-        padding: 6px 10px;
-        font-size: 0.8rem;
+        padding: 10px 14px;
+        font-size: 0.85rem;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
+      /* Chat messages area - flexible height */
+      .chat-messages {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Chat input area - sticky at bottom */
       .chat-input-area {
         padding: 12px;
         gap: 8px;
+        flex-shrink: 0;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+        background: #111;
+      }
+
+      /* Improved touch targets for media buttons */
+      .chat-media-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .chat-send-btn {
-        padding: 10px 16px;
+        padding: 12px 18px;
+        min-height: 44px;
       }
 
       .channel-online {
         border-top: 1px solid #2a2a2a;
         padding: 12px 16px;
+      }
+
+      /* Channel items - better touch targets */
+      .channel-item {
+        padding: 12px 14px;
+        min-height: 44px;
+      }
+
+      /* Members panel - full screen overlay on mobile */
+      .members-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        z-index: 1000;
+        border-left: none;
+        background: #111;
+      }
+
+      .members-panel-close {
+        width: 44px;
+        height: 44px;
+      }
+
+      /* Giphy modal - responsive grid */
+      .giphy-results {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        padding: 0 16px 16px;
+      }
+
+      .giphy-modal-content {
+        width: 95%;
+        max-height: 85vh;
+        max-height: 85dvh;
+      }
+
+      .giphy-modal-close {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+
+    /* Very small screens - single column Giphy */
+    @media (max-width: 480px) {
+      .giphy-results {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-call-btn,
+      .chat-rules-btn {
+        padding: 8px 10px;
+        font-size: 0.8rem;
+      }
+
+      .chat-header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
     }
 
@@ -19036,6 +19138,62 @@
       if (chatContainer) {
         chatContainer.classList.remove('mobile-chat-active');
       }
+    }
+
+    // Mobile keyboard handling - adjust chat when keyboard opens/closes
+    function initMobileKeyboardHandling() {
+      if (!window.visualViewport) return;
+
+      const chatInputArea = document.querySelector('.chat-input-area');
+      const chatMessages = document.querySelector('.chat-messages');
+      const chatContainer = document.getElementById('educationChat');
+
+      if (!chatInputArea || !chatContainer) return;
+
+      let initialViewportHeight = window.visualViewport.height;
+
+      window.visualViewport.addEventListener('resize', () => {
+        if (window.innerWidth > 768) return; // Only on mobile
+
+        const currentHeight = window.visualViewport.height;
+        const keyboardHeight = initialViewportHeight - currentHeight;
+
+        if (keyboardHeight > 100) {
+          // Keyboard is open
+          chatContainer.style.height = `${currentHeight}px`;
+          chatInputArea.style.paddingBottom = '12px';
+
+          // Scroll messages to bottom when keyboard opens
+          if (chatMessages) {
+            setTimeout(() => {
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+          }
+        } else {
+          // Keyboard is closed
+          chatContainer.style.height = '';
+          chatInputArea.style.paddingBottom = '';
+        }
+      });
+
+      // Also handle scroll when focusing on input
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.addEventListener('focus', () => {
+          if (window.innerWidth <= 768 && chatMessages) {
+            setTimeout(() => {
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 300);
+          }
+        });
+      }
+    }
+
+    // Initialize keyboard handling when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMobileKeyboardHandling);
+    } else {
+      initMobileKeyboardHandling();
     }
 
     function renderMessages(messages) {
