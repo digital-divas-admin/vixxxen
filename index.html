@@ -5338,8 +5338,20 @@
 
     /* Mobile Discord-like Chat Layout */
     @media (max-width: 768px) {
-      .education-chat {
+      .education-subtab-content#communityContent {
         position: relative;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .education-chat {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100%;
+        overflow: hidden;
       }
 
       .channel-sidebar {
@@ -5350,9 +5362,12 @@
         bottom: 0;
         width: 100%;
         min-width: 100%;
+        height: 100%;
         z-index: 10;
         transform: translateX(0);
         transition: transform 0.3s ease;
+        overflow-y: auto;
+        background: #111;
       }
 
       .chat-area {
@@ -5361,6 +5376,8 @@
         left: 0;
         right: 0;
         bottom: 0;
+        width: 100%;
+        height: 100%;
         z-index: 5;
         transform: translateX(100%);
         transition: transform 0.3s ease;
