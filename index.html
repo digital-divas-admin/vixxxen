@@ -18951,6 +18951,12 @@
         // Load policies for admin grid
         loadPolicies();
       }
+
+      // Check mobile overlay after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        console.log('📱 showMemberContent: Checking mobile overlay after content shown');
+        checkMobileCommunityOverlay();
+      }, 200);
     }
 
     function connectToChat(user) {
@@ -19127,13 +19133,23 @@
 
     // Open the mobile community overlay
     function openMobileCommunityOverlay() {
-      if (window.innerWidth > 768) return; // Only on mobile
+      console.log('📱 openMobileCommunityOverlay called, width:', window.innerWidth);
+
+      if (window.innerWidth > 768) {
+        console.log('📱 Skipping - not mobile (width > 768)');
+        return;
+      }
 
       const overlay = document.getElementById('mobileCommunityOverlay');
       const overlayContent = document.getElementById('mobileCommunityContent');
       const educationChat = document.getElementById('educationChat');
 
-      if (!overlay || !overlayContent || !educationChat) return;
+      console.log('📱 Elements found:', { overlay: !!overlay, overlayContent: !!overlayContent, educationChat: !!educationChat });
+
+      if (!overlay || !overlayContent || !educationChat) {
+        console.log('📱 Missing elements, aborting');
+        return;
+      }
 
       // Remember original parent
       communityOriginalParent = educationChat.parentElement;
@@ -19198,9 +19214,20 @@
       const isCommunityTabActive = communityContent && communityContent.classList.contains('active');
       const isEducationVisible = educationMemberContent && educationMemberContent.style.display !== 'none';
 
+      console.log('🔍 checkMobileCommunityOverlay:', {
+        isCommunityTabActive,
+        isEducationVisible,
+        isMobile,
+        isMobileCommunityOverlayOpen,
+        windowWidth: window.innerWidth,
+        educationDisplay: educationMemberContent?.style.display
+      });
+
       if (isCommunityTabActive && isEducationVisible && isMobile && !isMobileCommunityOverlayOpen) {
+        console.log('📱 Opening mobile community overlay');
         openMobileCommunityOverlay();
       } else if ((!isCommunityTabActive || !isEducationVisible || !isMobile) && isMobileCommunityOverlayOpen) {
+        console.log('📱 Closing mobile community overlay');
         closeMobileCommunityOverlay();
       }
     }
@@ -19210,6 +19237,9 @@
       const isMobile = window.innerWidth <= 768;
       if (!isMobile && isMobileCommunityOverlayOpen) {
         closeMobileCommunityOverlay();
+      } else if (isMobile && !isMobileCommunityOverlayOpen) {
+        // Check if we should open overlay on resize to mobile
+        checkMobileCommunityOverlay();
       }
     });
 
@@ -19265,6 +19295,15 @@
     // Initialize keyboard handling when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initMobileKeyboardHandling);
+
+      // Also check for mobile overlay after a delay on page load
+      // This catches cases where the community tab was saved and restored
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          console.log('📱 DOMContentLoaded: Checking mobile overlay');
+          checkMobileCommunityOverlay();
+        }, 500);
+      });
     } else {
       initMobileKeyboardHandling();
     }
