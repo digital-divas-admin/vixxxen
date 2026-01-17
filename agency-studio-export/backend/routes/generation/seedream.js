@@ -228,8 +228,9 @@ router.post('/', requireAuth, requireCredits('seedream'), async (req, res) => {
     const result = await response.json();
     const images = [];
 
-    // Extract images from response
+    // Extract images from response - handle all possible formats
     if (result.data && result.data.outputs) {
+      // Sync mode - images directly in response
       for (const output of result.data.outputs) {
         if (typeof output === 'string') {
           images.push(output);
@@ -240,15 +241,56 @@ router.post('/', requireAuth, requireCredits('seedream'), async (req, res) => {
         }
       }
     } else if (result.data && result.data.url) {
+      // Single image URL
       images.push(result.data.url);
+    } else if (result.data && result.data.base64) {
+      // Single base64 image
+      images.push(`data:image/png;base64,${result.data.base64}`);
+    } else if (result.outputs) {
+      // Alternative format - outputs at root level
+      for (const output of result.outputs) {
+        if (typeof output === 'string') {
+          if (output.startsWith('http')) {
+            images.push(output);
+          } else {
+            images.push(`data:image/png;base64,${output}`);
+          }
+        } else if (output.url) {
+          images.push(output.url);
+        } else if (output.base64) {
+          images.push(`data:image/png;base64,${output.base64}`);
+        }
+      }
+    } else if (result.output) {
+      // Single output format
+      if (typeof result.output === 'string') {
+        if (result.output.startsWith('http')) {
+          images.push(result.output);
+        } else {
+          images.push(`data:image/png;base64,${result.output}`);
+        }
+      }
     } else if (result.id && !result.data) {
+      // Async mode - need to poll for result
+      logger.info(`Task submitted with ID: ${result.id}, polling for result...`);
       const taskResult = await pollForResult(result.id, config.wavespeed.apiKey);
+
       if (taskResult.outputs) {
         for (const output of taskResult.outputs) {
           if (typeof output === 'string') {
             images.push(output.startsWith('http') ? output : `data:image/png;base64,${output}`);
           } else if (output.url) {
             images.push(output.url);
+          } else if (output.base64) {
+            images.push(`data:image/png;base64,${output.base64}`);
+          }
+        }
+      } else if (taskResult.output) {
+        if (typeof taskResult.output === 'string') {
+          if (taskResult.output.startsWith('http')) {
+            images.push(taskResult.output);
+          } else {
+            images.push(`data:image/png;base64,${taskResult.output}`);
           }
         }
       }

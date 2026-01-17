@@ -134,28 +134,29 @@ router.post('/', requireAuth, requireCredits('nanoBanana'), async (req, res) => 
         const message = result.choices[0]?.message;
         let imageFound = false;
 
-        // Check message.images array
+        // Check message.images array - only take first image from each response
         if (message?.images && message.images.length > 0) {
-          message.images.forEach(image => {
-            const imageUrl = image.image_url?.url || image.url;
-            if (imageUrl) {
-              images.push(imageUrl);
-              imageFound = true;
-            }
-          });
+          const image = message.images[0]; // Only take first image
+          const imageUrl = image.image_url?.url || image.url;
+          if (imageUrl) {
+            images.push(imageUrl);
+            imageFound = true;
+          }
         }
 
-        // Check content as array
+        // Check content as array - only take first image found
         if (!imageFound && Array.isArray(message?.content)) {
           for (const part of message.content) {
             if (part.inline_data?.data) {
               const mimeType = part.inline_data.mime_type || 'image/png';
               images.push(`data:${mimeType};base64,${part.inline_data.data}`);
               imageFound = true;
+              break; // Only take first image
             }
             if (part.type === 'image_url' && part.image_url?.url) {
               images.push(part.image_url.url);
               imageFound = true;
+              break; // Only take first image
             }
           }
         }
