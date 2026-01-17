@@ -668,6 +668,17 @@ router.get('/membership/rules-status', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
 
+    // Check if user is admin - admins don't need to acknowledge rules
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profile?.role === 'admin') {
+      return res.json({ acknowledged: true });
+    }
+
     const { data: membership, error } = await supabase
       .from('memberships')
       .select('rules_acknowledged_at')
@@ -695,6 +706,18 @@ router.get('/membership/rules-status', requireAuth, async (req, res) => {
 router.post('/membership/acknowledge-rules', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
+
+    // Check if user is admin - admins can acknowledge without membership
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profile?.role === 'admin') {
+      logger.info('Admin acknowledged community rules', { userId: maskUserId(userId) });
+      return res.json({ success: true, acknowledged_at: new Date().toISOString() });
+    }
 
     // Update the user's active membership with acknowledgment timestamp
     const { data: membership, error: fetchError } = await supabase
