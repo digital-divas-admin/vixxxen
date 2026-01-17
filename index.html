@@ -5628,25 +5628,32 @@
       }
 
       body.community-active .channel-sidebar {
-        position: absolute;
+        position: absolute !important;
         top: 0;
         left: 0;
-        width: 100%;
+        right: 0;
+        bottom: 0;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
         height: 100%;
         z-index: 10;
         transform: translateX(0);
         transition: transform 0.3s ease;
         overflow-y: auto;
         background: #111;
+        border-right: none;
         /* Smooth scrolling on iOS */
         -webkit-overflow-scrolling: touch;
       }
 
       body.community-active .chat-area {
-        position: absolute;
+        position: absolute !important;
         top: 0;
         left: 0;
-        width: 100%;
+        right: 0;
+        bottom: 0;
+        width: 100% !important;
         height: 100%;
         z-index: 5;
         transform: translateX(100%);
@@ -5793,16 +5800,7 @@
 
     /* Hide footer and chat widgets when community section is visible on mobile */
     @media (max-width: 768px) {
-      /* Hide when community subtab content is active (display: block means it's visible) */
-      body:has(#communityContent[style*="display: block"]) .site-footer,
-      body:has(#communityContent[style*="display: block"]) #crisp-chatbox,
-      body:has(#communityContent[style*="display: block"]) [class*="crisp"],
-      body:has(#communityContent[style*="display: block"]) [id*="tawk"],
-      body:has(#communityContent[style*="display: block"]) .intercom-lightweight-app,
-      body:has(#communityContent[style*="display: block"]) [class*="chat-widget"],
-      body:has(#communityContent[style*="display: block"]) iframe[title*="chat" i],
-      body:has(#communityContent[style*="display: block"]) iframe[title*="Chat" i],
-      /* Also hide when body has community-active class (JS fallback) */
+      /* Hide when body has community-active class */
       body.community-active .site-footer,
       body.community-active #crisp-chatbox,
       body.community-active [class*="crisp"],
@@ -5810,10 +5808,17 @@
       body.community-active .intercom-lightweight-app,
       body.community-active [class*="chat-widget"],
       body.community-active iframe[title*="chat" i],
-      body.community-active iframe[title*="Chat" i] {
+      body.community-active iframe[title*="Chat" i],
+      /* Tidio chat widget */
+      body.community-active #tidio-chat,
+      body.community-active #tidio-chat-iframe,
+      body.community-active [class*="tidio"],
+      body.community-active iframe[src*="tidio"],
+      body.community-active div[style*="tidio"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
+        pointer-events: none !important;
       }
     }
 
