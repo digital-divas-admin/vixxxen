@@ -3740,16 +3740,17 @@
       height: 100%;
       background: #0a0a0a;
       padding-bottom: 50px; /* Account for fixed footer */
-      overflow: hidden;
     }
 
     .channel-sidebar {
       width: 260px;
+      min-width: 260px;
       background: #111;
       border-right: 1px solid #2a2a2a;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-y: auto;
+      min-height: 0; /* Allow flexbox to shrink below content size */
     }
 
     .channel-header {
