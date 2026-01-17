@@ -1,26 +1,29 @@
 // ===========================================
-// IMAGE MODERATION MODAL FUNCTIONS
+// UNIFIED IMAGE LIBRARY MODAL
 // ===========================================
+// Handles both flagged image alerts and image library viewing
 // Depends on: config.js (currentUser, supabaseClient, API_BASE_URL)
-// Shows a popup when an image is flagged during generation
 
 // Store for pending flagged images
 let pendingFlaggedImages = [];
+let libraryModalFilter = 'all';
+let libraryModalImages = [];
+let currentModalView = 'library'; // 'library' or 'flagged'
 
 /**
- * Show the moderation modal when an image is flagged
- * Called from generation error handlers
+ * Show the modal in flagged image mode
+ * Called from generation error handlers when an image is rejected
  * @param {Object} errorResponse - The error response from the API
  * @param {string} imageData - The base64 image data (if available)
  */
 function showModerationModal(errorResponse, imageData = null) {
-  const modal = document.getElementById('moderationFlagModal');
+  const modal = document.getElementById('imageLibraryModal');
   if (!modal) {
-    console.error('Moderation modal not found');
+    console.error('Image library modal not found');
     return;
   }
 
-  // Store the image info
+  // Store the image info for appeal
   const flaggedInfo = {
     savedImageIds: errorResponse.savedImageIds || [],
     reasons: errorResponse.reasons || [],
@@ -28,13 +31,19 @@ function showModerationModal(errorResponse, imageData = null) {
     imageData: imageData
   };
   pendingFlaggedImages = [flaggedInfo];
+  currentModalView = 'flagged';
 
-  // Update modal content
-  const reasonsList = document.getElementById('flagReasonsList');
-  const flaggedPreview = document.getElementById('flaggedImagePreview');
-  const appealSection = document.getElementById('appealSection');
+  // Switch to flagged view
+  switchModalView('flagged');
+
+  // Update modal header
+  const title = document.getElementById('libraryModalTitle');
+  const header = document.getElementById('libraryModalHeader');
+  if (title) title.textContent = 'Image Flagged';
+  if (header) header.style.background = 'linear-gradient(135deg, #ff6b6b20, #ffa50020)';
 
   // Show reasons
+  const reasonsList = document.getElementById('flagReasonsList');
   if (reasonsList) {
     reasonsList.innerHTML = (errorResponse.reasons || ['Content flagged by moderation']).map(r =>
       `<li>${escapeHtml(r)}</li>`
@@ -42,20 +51,23 @@ function showModerationModal(errorResponse, imageData = null) {
   }
 
   // Show image preview if available
+  const flaggedPreview = document.getElementById('flaggedImagePreview');
   if (flaggedPreview && imageData) {
-    flaggedPreview.innerHTML = `<img src="${imageData}" alt="Flagged image">`;
+    flaggedPreview.innerHTML = `<img src="${imageData}" alt="Flagged image" style="max-width: 100%; max-height: 180px; border-radius: 8px;">`;
     flaggedPreview.style.display = 'block';
   } else if (flaggedPreview) {
     flaggedPreview.style.display = 'none';
   }
 
   // Show/hide appeal section and button
+  const appealSection = document.getElementById('appealSection');
   const submitAppealBtn = document.getElementById('submitAppealBtn');
   if (appealSection) {
     if (errorResponse.canAppeal && errorResponse.savedImageIds?.length > 0) {
       appealSection.style.display = 'block';
       if (submitAppealBtn) submitAppealBtn.style.display = 'inline-block';
-      document.getElementById('appealReasonInput').value = '';
+      const appealInput = document.getElementById('appealReasonInput');
+      if (appealInput) appealInput.value = '';
     } else {
       appealSection.style.display = 'none';
       if (submitAppealBtn) submitAppealBtn.style.display = 'none';
@@ -67,25 +79,77 @@ function showModerationModal(errorResponse, imageData = null) {
 }
 
 /**
- * Close the moderation modal
+ * Open the image library modal in library view
  */
-function closeModerationModal() {
-  const modal = document.getElementById('moderationFlagModal');
+function openImageLibraryModal() {
+  // Close user menu if open
+  const userMenu = document.getElementById('userMenu');
+  if (userMenu) userMenu.classList.remove('active');
+
+  const modal = document.getElementById('imageLibraryModal');
+  if (!modal) return;
+
+  currentModalView = 'library';
+
+  // Switch to library view
+  switchModalView('library');
+
+  // Reset header
+  const title = document.getElementById('libraryModalTitle');
+  const header = document.getElementById('libraryModalHeader');
+  if (title) title.textContent = 'My Images';
+  if (header) header.style.background = '';
+
+  // Hide appeal button in library view
+  const submitAppealBtn = document.getElementById('submitAppealBtn');
+  if (submitAppealBtn) submitAppealBtn.style.display = 'none';
+
+  // Show modal and load images
+  modal.classList.add('active');
+  loadLibraryModalImages();
+}
+
+/**
+ * Switch between flagged and library views within the modal
+ */
+function switchModalView(view) {
+  const flaggedView = document.getElementById('flaggedImageView');
+  const libraryView = document.getElementById('libraryGridView');
+
+  if (view === 'flagged') {
+    if (flaggedView) flaggedView.style.display = 'block';
+    if (libraryView) libraryView.style.display = 'none';
+  } else {
+    if (flaggedView) flaggedView.style.display = 'none';
+    if (libraryView) libraryView.style.display = 'block';
+  }
+}
+
+/**
+ * Close the image library modal
+ */
+function closeImageLibraryModal() {
+  const modal = document.getElementById('imageLibraryModal');
   if (modal) {
     modal.classList.remove('active');
   }
   pendingFlaggedImages = [];
 }
 
+// Alias for backwards compatibility
+function closeModerationModal() {
+  closeImageLibraryModal();
+}
+
 /**
- * Submit appeal from the moderation modal
+ * Submit appeal from the modal
  */
 async function submitModerationAppeal() {
   const reasonInput = document.getElementById('appealReasonInput');
   const reason = reasonInput?.value?.trim();
 
-  if (!reason) {
-    alert('Please explain why you believe this image should be approved');
+  if (!reason || reason.length < 10) {
+    alert('Please provide a reason for your appeal (at least 10 characters)');
     return;
   }
 
@@ -120,7 +184,7 @@ async function submitModerationAppeal() {
       throw new Error(data.error || 'Failed to submit appeal');
     }
 
-    closeModerationModal();
+    closeImageLibraryModal();
     showToast('Appeal submitted! We will review your image within 24-48 hours.');
 
   } catch (error) {
@@ -135,48 +199,6 @@ async function submitModerationAppeal() {
 }
 
 /**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-
-// ===========================================
-// IMAGE LIBRARY MODAL FUNCTIONS
-// ===========================================
-
-let libraryModalFilter = 'all';
-let libraryModalImages = [];
-
-/**
- * Open the image library modal
- */
-function openImageLibraryModal() {
-  // Close user menu
-  const userMenu = document.getElementById('userMenu');
-  if (userMenu) userMenu.classList.remove('active');
-
-  const modal = document.getElementById('imageLibraryModal');
-  if (modal) {
-    modal.classList.add('active');
-    loadLibraryModalImages();
-  }
-}
-
-/**
- * Close the image library modal
- */
-function closeImageLibraryModal() {
-  const modal = document.getElementById('imageLibraryModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-/**
  * Filter library modal images
  */
 function filterLibraryModal(status) {
@@ -186,7 +208,8 @@ function filterLibraryModal(status) {
   document.querySelectorAll('.lib-filter-btn').forEach(btn => {
     btn.classList.remove('active');
   });
-  document.querySelector(`.lib-filter-btn[data-filter="${status === 'pending_review' ? 'pending' : status}"]`)?.classList.add('active');
+  const filterValue = status === 'pending_review' ? 'pending' : status;
+  document.querySelector(`.lib-filter-btn[data-filter="${filterValue}"]`)?.classList.add('active');
 
   loadLibraryModalImages();
 }
@@ -208,7 +231,7 @@ async function loadLibraryModalImages() {
     }
 
     const statusParam = libraryModalFilter === 'all' ? '' : `?status=${libraryModalFilter}`;
-    const response = await fetch(`${API_BASE_URL}/api/user-images/list${statusParam}`, {
+    const response = await fetch(`${API_BASE_URL}/api/user-images${statusParam}`, {
       headers: {
         'Authorization': `Bearer ${session.access_token}`
       }
@@ -283,7 +306,14 @@ async function viewLibImage(imageId) {
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
 
-    if (!response.ok) throw new Error('Failed to load');
+    if (!response.ok) {
+      const errData = await response.json();
+      if (response.status === 403) {
+        alert(errData.message || 'This image is not approved for viewing');
+        return;
+      }
+      throw new Error('Failed to load');
+    }
 
     const data = await response.json();
     if (data.dataUrl) {
@@ -296,27 +326,35 @@ async function viewLibImage(imageId) {
 }
 
 /**
- * Appeal a library image
+ * Appeal a library image - switches modal to flagged/appeal mode
  */
 function appealLibImage(imageId) {
-  // Store the image ID and show the moderation modal in appeal mode
+  // Store the image ID for appeal submission
   pendingFlaggedImages = [{ savedImageIds: [imageId], canAppeal: true }];
 
-  const modal = document.getElementById('moderationFlagModal');
+  // Switch to flagged view within the same modal
+  switchModalView('flagged');
+
+  // Update header for appeal mode
+  const title = document.getElementById('libraryModalTitle');
+  const header = document.getElementById('libraryModalHeader');
+  if (title) title.textContent = 'Appeal Image';
+  if (header) header.style.background = 'linear-gradient(135deg, #ffa50020, #ff6b6b20)';
+
+  // Show appeal-specific content
   const reasonsList = document.getElementById('flagReasonsList');
+  if (reasonsList) reasonsList.innerHTML = '<li>Image is pending review</li>';
+
+  const flaggedPreview = document.getElementById('flaggedImagePreview');
+  if (flaggedPreview) flaggedPreview.style.display = 'none';
+
   const appealSection = document.getElementById('appealSection');
   const submitAppealBtn = document.getElementById('submitAppealBtn');
-  const flaggedPreview = document.getElementById('flaggedImagePreview');
-
-  if (reasonsList) reasonsList.innerHTML = '<li>Image pending review</li>';
-  if (flaggedPreview) flaggedPreview.style.display = 'none';
   if (appealSection) appealSection.style.display = 'block';
   if (submitAppealBtn) submitAppealBtn.style.display = 'inline-block';
-  document.getElementById('appealReasonInput').value = '';
 
-  // Close library modal and show appeal modal
-  closeImageLibraryModal();
-  modal.classList.add('active');
+  const appealInput = document.getElementById('appealReasonInput');
+  if (appealInput) appealInput.value = '';
 }
 
 /**
@@ -345,7 +383,18 @@ async function deleteLibImage(imageId) {
   }
 }
 
-// Simple toast notification
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Simple toast notification
+ */
 function showToast(message) {
   let toastContainer = document.getElementById('toastContainer');
   if (!toastContainer) {
@@ -355,7 +404,7 @@ function showToast(message) {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      z-index: 10000;
+      z-index: 30000;
     `;
     document.body.appendChild(toastContainer);
   }

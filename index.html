@@ -11140,66 +11140,59 @@
     </div>
     <!-- End Account Page Section -->
 
-    <!-- Image Moderation Flag Modal -->
-    <div class="modal-overlay" id="moderationFlagModal">
-      <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header" style="background: linear-gradient(135deg, #ff6b6b20, #ffa50020); border-bottom: 1px solid #ff6b6b40;">
-          <h2 style="color: #ff6b6b;">Image Flagged</h2>
-          <button class="modal-close" onclick="closeModerationModal()">&times;</button>
+    <!-- Unified Image Library Modal (handles both flagged images and library view) -->
+    <div class="modal-overlay" id="imageLibraryModal">
+      <div class="modal-content">
+        <div class="modal-header" id="libraryModalHeader">
+          <h2 id="libraryModalTitle">My Images</h2>
+          <button class="modal-close" onclick="closeImageLibraryModal()">&times;</button>
         </div>
         <div class="modal-body">
-          <!-- Flagged image preview -->
-          <div id="flaggedImagePreview" style="display: none; margin-bottom: 16px; text-align: center;">
-            <!-- Image inserted by JS -->
+          <!-- Flagged Image View (shown when image is flagged) -->
+          <div id="flaggedImageView" style="display: none;">
+            <div class="flagged-view-content">
+              <div class="flagged-icon">⚠️</div>
+              <p style="color: #ccc; margin-bottom: 12px;">
+                This image was flagged by our content moderation system:
+              </p>
+              <div class="flagged-reasons">
+                <ul id="flagReasonsList">
+                  <!-- Reasons inserted by JS -->
+                </ul>
+              </div>
+              <!-- Flagged image preview -->
+              <div id="flaggedImagePreview" style="display: none; margin: 16px 0; max-height: 200px; overflow: hidden; border-radius: 8px;">
+                <!-- Image inserted by JS -->
+              </div>
+              <!-- Appeal form -->
+              <div id="appealSection" class="appeal-form" style="display: none;">
+                <p style="color: #888; font-size: 0.9rem; margin-bottom: 12px;">
+                  If you believe this was flagged in error, you can submit an appeal. We'll review it within 24-48 hours.
+                </p>
+                <label>Why should this image be approved?</label>
+                <textarea id="appealReasonInput" rows="3" placeholder="Explain why you think this image should be approved..."></textarea>
+              </div>
+            </div>
           </div>
 
-          <p style="margin-bottom: 12px; color: #ccc;">
-            This image was flagged by our content moderation system:
-          </p>
-
-          <ul id="flagReasonsList" style="margin: 0 0 20px 20px; color: #ff6b6b;">
-            <!-- Reasons inserted by JS -->
-          </ul>
-
-          <!-- Appeal section -->
-          <div id="appealSection" style="display: none; border-top: 1px solid #333; padding-top: 16px; margin-top: 16px;">
-            <p style="margin-bottom: 12px; color: #888; font-size: 0.9rem;">
-              If you believe this was flagged in error, you can submit an appeal. We'll review it within 24-48 hours.
-            </p>
-            <div class="account-field">
-              <label class="account-label">Why should this image be approved?</label>
-              <textarea id="appealReasonInput" class="account-input" rows="3"
-                placeholder="Explain why you think this image should be approved..."></textarea>
+          <!-- Library View (shown when viewing image library) -->
+          <div id="libraryGridView">
+            <!-- Filter tabs -->
+            <div class="library-modal-filters">
+              <button class="lib-filter-btn active" data-filter="all" onclick="filterLibraryModal('all')">All</button>
+              <button class="lib-filter-btn" data-filter="approved" onclick="filterLibraryModal('approved')">Approved</button>
+              <button class="lib-filter-btn" data-filter="pending" onclick="filterLibraryModal('pending_review')">Pending</button>
+              <button class="lib-filter-btn" data-filter="rejected" onclick="filterLibraryModal('rejected')">Rejected</button>
+            </div>
+            <!-- Image grid -->
+            <div id="libraryModalGrid" class="library-modal-grid">
+              <div class="library-modal-loading">Loading...</div>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="account-btn secondary" onclick="closeModerationModal()">Close</button>
+        <div class="modal-footer" id="libraryModalFooter">
+          <button class="account-btn secondary" onclick="closeImageLibraryModal()">Close</button>
           <button class="account-btn primary" id="submitAppealBtn" onclick="submitModerationAppeal()" style="display: none;">Submit Appeal</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Image Library Modal -->
-    <div class="modal-overlay" id="imageLibraryModal">
-      <div class="modal-content" style="max-width: 800px; max-height: 80vh;">
-        <div class="modal-header">
-          <h2>My Images</h2>
-          <button class="modal-close" onclick="closeImageLibraryModal()">&times;</button>
-        </div>
-        <div class="modal-body" style="overflow-y: auto; max-height: calc(80vh - 120px);">
-          <!-- Filter tabs -->
-          <div class="library-modal-filters">
-            <button class="lib-filter-btn active" data-filter="all" onclick="filterLibraryModal('all')">All</button>
-            <button class="lib-filter-btn" data-filter="approved" onclick="filterLibraryModal('approved')">Approved</button>
-            <button class="lib-filter-btn" data-filter="pending" onclick="filterLibraryModal('pending_review')">Pending</button>
-            <button class="lib-filter-btn" data-filter="rejected" onclick="filterLibraryModal('rejected')">Rejected</button>
-          </div>
-
-          <!-- Image grid -->
-          <div id="libraryModalGrid" class="library-modal-grid">
-            <div class="library-modal-loading">Loading...</div>
-          </div>
         </div>
       </div>
     </div>
