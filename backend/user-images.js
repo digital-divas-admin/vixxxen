@@ -510,8 +510,7 @@ router.get('/admin/queue', requireAuth, async (req, res) => {
         id, user_id, filename, status, moderation_flags,
         celebrity_confidence, minor_confidence,
         appeal_reason, appeal_submitted_at,
-        created_at, storage_path,
-        user:profiles!user_id(id, email, display_name)
+        created_at, storage_path
       `, { count: 'exact' })
       .eq('status', 'pending_review')
       .order('appeal_submitted_at', { ascending: true, nullsFirst: false })
@@ -536,18 +535,38 @@ router.get('/admin/queue', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
-    // Get signed URLs for preview and flatten user data
+    // Handle empty results
+    if (!images || images.length === 0) {
+      return res.json({
+        images: [],
+        total: 0,
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      });
+    }
+
+    // Batch fetch user profiles
+    const userIds = [...new Set(images.map(img => img.user_id).filter(Boolean))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, display_name')
+      .in('id', userIds);
+
+    const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+    // Get signed URLs for preview and add user data
     const imagesWithUrls = await Promise.all(images.map(async (image) => {
       const { data: urlData } = await supabase.storage
         .from('user-images')
         .createSignedUrl(image.storage_path, 3600);
 
+      const profile = profileMap.get(image.user_id);
+
       return {
         ...image,
         url: urlData?.signedUrl,
-        user_email: image.user?.email || null,
-        user_display_name: image.user?.display_name || null,
-        user: undefined, // Remove nested user object
+        user_email: profile?.email || null,
+        user_display_name: profile?.display_name || null,
         storage_path: undefined // Don't expose storage path to client
       };
     }));
