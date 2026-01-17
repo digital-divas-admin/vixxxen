@@ -265,8 +265,10 @@ describe('User Image Service', () => {
       });
 
       const moderationResult = {
+        approved: false,  // Image was rejected by moderation
         celebrities: [{ name: 'Famous Person', confidence: 98 }],
-        moderationLabels: []
+        moderationLabels: [],
+        reasons: ['Celebrity detected']
       };
 
       const result = await saveToLibrary('data:image/png;base64,abc123', 'user-123', moderationResult);
@@ -294,8 +296,10 @@ describe('User Image Service', () => {
       });
 
       const moderationResult = {
+        approved: false,  // Image was rejected by moderation
         celebrities: [],
-        moderationLabels: [{ name: 'Child', parentName: 'Person', confidence: 80 }]
+        moderationLabels: [{ name: 'Child', parentName: 'Person', confidence: 80 }],
+        reasons: ['Minor-related content detected']
       };
 
       const result = await saveToLibrary('data:image/png;base64,abc123', 'user-123', moderationResult);

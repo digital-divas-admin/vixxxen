@@ -256,14 +256,13 @@ async function saveToLibrary(base64Image, userId, moderationResult = null) {
         reasons: moderationResult.reasons || []
       };
 
-      // Determine status based on thresholds
-      if (celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_HARD_FLAG ||
-          minorConfidence >= MODERATION_THRESHOLDS.MINOR_HARD_FLAG) {
+      // If moderation rejected the image, ALWAYS set to pending_review
+      // This ensures rejected images can't be used until manually approved
+      if (moderationResult.approved === false) {
         status = 'pending_review';
       } else if (celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_SOFT_FLAG) {
-        // Soft flag - auto-approve but log
-        status = 'auto_approved';
-        logger.info('Image soft-flagged but auto-approved', {
+        // Soft flag passed moderation but log it
+        logger.info('Image soft-flagged but passed moderation', {
           celebrityConfidence,
           userId
         });
