@@ -3,6 +3,8 @@ const { compressImages } = require('./services/imageCompression');
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { RequestQueue, createFetchWithRetry } = require('./services/rateLimitService');
+const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
+const { processImageInputs, screenAndSaveImages } = require('./services/userImageService');
 
 const router = express.Router();
 
@@ -64,10 +66,68 @@ router.post('/generate', async (req, res) => {
       });
     }
 
+    // Process reference images (resolve library IDs to base64)
+    let processedReferenceImages = referenceImages || [];
+    if (processedReferenceImages.length > 0) {
+      const userId = req.userId;
+      if (userId) {
+        const imageResult = await processImageInputs(processedReferenceImages, userId);
+        if (!imageResult.success) {
+          return res.status(400).json({
+            error: 'Failed to process reference images',
+            message: imageResult.error,
+            failedIds: imageResult.failedIds
+          });
+        }
+        processedReferenceImages = imageResult.images;
+      }
+    }
+
+    // Screen reference images for celebrities and minors before processing
+    // Skip if all images came from library (already approved)
+    const hasRawImages = (referenceImages || []).some(img => !img.match(/^[0-9a-f-]{36}$/i));
+    const userId = req.userId;
+
+    if (processedReferenceImages.length > 0 && hasRawImages && isModerationEnabled()) {
+      logger.info('Running moderation on Nano Banana reference images', {
+        imageCount: processedReferenceImages.length,
+        userId: userId || 'anonymous',
+        requestId: req.id
+      });
+
+      // Use screenAndSaveImages to auto-save rejected images to library
+      const moderationResult = await screenAndSaveImages(processedReferenceImages, userId);
+
+      if (!moderationResult.approved) {
+        logger.warn('Reference images rejected by moderation', {
+          reasons: moderationResult.reasons,
+          savedImageIds: moderationResult.savedImageIds,
+          failedCount: moderationResult.failedCount,
+          requestId: req.id
+        });
+
+        let message = `${moderationResult.failedCount} of ${moderationResult.totalCount} reference image(s) were flagged by content moderation.`;
+        if (moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0) {
+          message += ' The flagged images have been saved to your library. You can appeal in your Image Library if you believe they were flagged in error.';
+        }
+
+        return res.status(400).json({
+          error: 'Reference image rejected by content moderation',
+          reasons: moderationResult.reasons,
+          message,
+          failedIndex: moderationResult.failedIndex,
+          failedCount: moderationResult.failedCount,
+          totalCount: moderationResult.totalCount,
+          savedImageIds: moderationResult.savedImageIds,
+          canAppeal: moderationResult.savedImageIds && moderationResult.savedImageIds.length > 0
+        });
+      }
+    }
+
     logGeneration('nano-banana', 'started', {
       numOutputs,
       aspectRatio,
-      referenceImages: referenceImages.length,
+      referenceImages: processedReferenceImages.length,
       requestId: req.id
     });
 
@@ -75,13 +135,13 @@ router.post('/generate', async (req, res) => {
     analytics.generation.started('nano-banana', {
       num_outputs: numOutputs,
       aspect_ratio: aspectRatio,
-      reference_images: referenceImages.length
+      reference_images: processedReferenceImages.length
     }, req);
 
     // Compress reference images to avoid API size limits
     let compressedReferenceImages = [];
-    if (referenceImages && referenceImages.length > 0) {
-      compressedReferenceImages = await compressImages(referenceImages, {
+    if (processedReferenceImages && processedReferenceImages.length > 0) {
+      compressedReferenceImages = await compressImages(processedReferenceImages, {
         maxDimension: 1536,
         quality: 80
       });

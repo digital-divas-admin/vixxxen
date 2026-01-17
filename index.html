@@ -3235,6 +3235,263 @@
       }
     }
 
+    /* Image Moderation Queue Styles */
+    .mod-filter-btn {
+      padding: 8px 16px;
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 20px;
+      color: #888;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mod-filter-btn:hover {
+      color: #fff;
+      border-color: #555;
+    }
+
+    .mod-filter-btn.active {
+      background: rgba(255, 165, 0, 0.15);
+      border-color: #ffa500;
+      color: #ffa500;
+    }
+
+    .mod-bulk-btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mod-bulk-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .mod-bulk-btn.approve {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+
+    .mod-bulk-btn.approve:not(:disabled):hover {
+      background: rgba(74, 222, 128, 0.25);
+    }
+
+    .mod-bulk-btn.reject {
+      background: rgba(255, 68, 68, 0.15);
+      color: #ff4444;
+      border: 1px solid rgba(255, 68, 68, 0.3);
+    }
+
+    .mod-bulk-btn.reject:not(:disabled):hover {
+      background: rgba(255, 68, 68, 0.25);
+    }
+
+    .moderation-queue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .moderation-loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+
+    .mod-queue-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .mod-queue-card:hover {
+      border-color: #444;
+    }
+
+    .mod-queue-card.selected {
+      border-color: #ff2ebb;
+      box-shadow: 0 0 0 2px rgba(255, 46, 187, 0.2);
+    }
+
+    .mod-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .mod-card-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #ff2ebb;
+    }
+
+    .mod-card-user {
+      flex: 1;
+      font-size: 0.85rem;
+      color: #888;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mod-card-date {
+      font-size: 0.75rem;
+      color: #666;
+    }
+
+    .mod-card-image {
+      position: relative;
+      aspect-ratio: 1;
+      background: #111;
+      cursor: pointer;
+    }
+
+    .mod-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .mod-card-flags {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mod-flag-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .mod-flag-badge.celebrity {
+      background: rgba(255, 165, 0, 0.9);
+      color: #000;
+    }
+
+    .mod-flag-badge.minor {
+      background: rgba(255, 68, 68, 0.9);
+      color: #fff;
+    }
+
+    .mod-card-appeal {
+      padding: 12px;
+      background: rgba(255, 46, 187, 0.05);
+      border-top: 1px solid rgba(255, 46, 187, 0.2);
+    }
+
+    .mod-card-appeal-label {
+      font-size: 0.75rem;
+      color: #ff2ebb;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .mod-card-appeal-text {
+      font-size: 0.85rem;
+      color: #ccc;
+      line-height: 1.4;
+      max-height: 60px;
+      overflow-y: auto;
+    }
+
+    .mod-card-body {
+      padding: 12px;
+    }
+
+    .mod-card-reasons {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    .mod-card-reasons ul {
+      margin: 4px 0 0 16px;
+      padding: 0;
+    }
+
+    .mod-card-reasons li {
+      margin-bottom: 2px;
+    }
+
+    .mod-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mod-action-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mod-action-btn.approve {
+      background: #4ade80;
+      color: #000;
+    }
+
+    .mod-action-btn.approve:hover {
+      background: #22c55e;
+    }
+
+    .mod-action-btn.reject {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    .mod-action-btn.reject:hover {
+      background: #dc2626;
+    }
+
+    .mod-page-btn {
+      padding: 8px 16px;
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mod-page-btn:hover:not(:disabled) {
+      color: #fff;
+      border-color: #555;
+    }
+
+    .mod-page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .mod-page-info {
+      padding: 8px 16px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+
     .policy-admin-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
@@ -6571,6 +6828,7 @@
 
     /* Failed placeholder */
     .output-placeholder-failed {
+      position: relative;
       width: 100%;
       aspect-ratio: 1;
       display: flex;
@@ -6582,6 +6840,29 @@
       color: #ff6666;
       padding: 20px;
       text-align: center;
+    }
+
+    .failed-dismiss-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 68, 68, 0.2);
+      color: #ff6666;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .failed-dismiss-btn:hover {
+      background: rgba(255, 68, 68, 0.5);
+      color: #fff;
     }
 
     .failed-icon {
@@ -7626,6 +7907,126 @@
       overflow-y: auto;
     }
 
+    /* Moderation Modal Styles */
+    #flaggedImagePreview img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      border: 2px solid #ff6b6b40;
+    }
+
+    #flagReasonsList li {
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    /* Image Library Modal */
+    .library-modal-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .lib-filter-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: transparent;
+      color: #888;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lib-filter-btn:hover {
+      border-color: #555;
+      color: #fff;
+    }
+
+    .lib-filter-btn.active {
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .library-modal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .library-modal-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #111;
+      border: 2px solid #333;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .library-modal-item:hover {
+      border-color: #555;
+      transform: scale(1.02);
+    }
+
+    .library-modal-item.status-approved { border-color: #4ade8060; }
+    .library-modal-item.status-pending { border-color: #fbbf2460; }
+    .library-modal-item.status-rejected { border-color: #f8717160; }
+
+    .library-modal-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .library-item-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .library-item-badge.approved {
+      background: #4ade8030;
+      color: #4ade80;
+    }
+
+    .library-item-badge.pending {
+      background: #fbbf2430;
+      color: #fbbf24;
+    }
+
+    .library-item-badge.rejected {
+      background: #f8717130;
+      color: #f87171;
+    }
+
+    .library-modal-loading,
+    .library-modal-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+
+    /* Toast Animation */
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+
     /* Billing Page Specific Styles */
     .payment-method-display {
       margin-bottom: 16px;
@@ -8055,6 +8456,7 @@
 
       <button class="user-menu-btn primary" onclick="openSubscriptionPage()">💳 Upgrade Plan</button>
       <button class="user-menu-btn" onclick="openAccountPage()">Manage Account</button>
+      <button class="user-menu-btn" onclick="openImageLibraryModal()">My Images</button>
       <button class="user-menu-btn" onclick="openBillingPage()">Billing</button>
       <button class="user-menu-btn" onclick="handleLogout()">Logout</button>
     </div>
@@ -9259,6 +9661,11 @@
                     <span>Reports</span>
                     <span class="admin-nav-badge" id="adminReportsBadge" style="display: none;">0</span>
                   </div>
+                  <div class="admin-nav-item" onclick="switchAdminSection('image-moderation')" data-section="image-moderation">
+                    <span class="admin-nav-icon">🖼️</span>
+                    <span>Image Moderation</span>
+                    <span class="admin-nav-badge" id="imageModerationBadge" style="display: none;">0</span>
+                  </div>
                   <div class="admin-nav-item" onclick="switchAdminSection('policies')" data-section="policies">
                     <span class="admin-nav-icon">📜</span>
                     <span>Policies</span>
@@ -9690,6 +10097,76 @@
                 </div>
                 </div>
                 <!-- End Reports Section -->
+
+                <!-- Image Moderation Section -->
+                <div class="admin-section" id="adminImageModerationSection">
+                  <div class="admin-section-header">
+                    <h2 class="admin-section-title">Image Moderation Queue</h2>
+                    <p class="admin-section-subtitle">Review flagged images and user appeals</p>
+                  </div>
+
+                  <!-- Stats Row -->
+                  <div class="moderation-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(255, 165, 0, 0.1), rgba(255, 165, 0, 0.05)); border: 1px solid rgba(255, 165, 0, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                      <div style="font-size: 1.3rem; margin-bottom: 8px;">⏳</div>
+                      <div class="report-stat-value" id="modStatPending" style="font-size: 2rem; font-weight: 700; color: #ffa500;">0</div>
+                      <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Pending Review</div>
+                    </div>
+                    <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(255, 46, 187, 0.1), rgba(255, 46, 187, 0.05)); border: 1px solid rgba(255, 46, 187, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                      <div style="font-size: 1.3rem; margin-bottom: 8px;">📝</div>
+                      <div class="report-stat-value" id="modStatAppeals" style="font-size: 2rem; font-weight: 700; color: #ff2ebb;">0</div>
+                      <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">With Appeals</div>
+                    </div>
+                    <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.05)); border: 1px solid rgba(74, 222, 128, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                      <div style="font-size: 1.3rem; margin-bottom: 8px;">✅</div>
+                      <div class="report-stat-value" id="modStatApproved" style="font-size: 2rem; font-weight: 700; color: #4ade80;">0</div>
+                      <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Approved (Manual)</div>
+                    </div>
+                    <div class="report-stat-card" style="background: linear-gradient(135deg, rgba(255, 68, 68, 0.1), rgba(255, 68, 68, 0.05)); border: 1px solid rgba(255, 68, 68, 0.2); padding: 20px; border-radius: 16px; text-align: center;">
+                      <div style="font-size: 1.3rem; margin-bottom: 8px;">❌</div>
+                      <div class="report-stat-value" id="modStatRejected" style="font-size: 2rem; font-weight: 700; color: #ff4444;">0</div>
+                      <div class="report-stat-label" style="color: #888; font-size: 0.85rem; font-weight: 500;">Rejected (Total)</div>
+                    </div>
+                  </div>
+
+                  <!-- Filter and Bulk Actions -->
+                  <div class="moderation-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                    <div class="moderation-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      <button class="mod-filter-btn active" data-filter="all" onclick="filterModerationQueue('all')">All Pending</button>
+                      <button class="mod-filter-btn" data-filter="appeals" onclick="filterModerationQueue('appeals')">With Appeals</button>
+                      <button class="mod-filter-btn" data-filter="celebrity" onclick="filterModerationQueue('celebrity')">Celebrity Flags</button>
+                      <button class="mod-filter-btn" data-filter="minor" onclick="filterModerationQueue('minor')">Minor Flags</button>
+                    </div>
+                    <div class="moderation-bulk-actions" style="display: flex; gap: 8px;">
+                      <button class="mod-bulk-btn approve" onclick="bulkApproveModerationImages()" disabled id="bulkApproveBtn">
+                        ✅ Approve Selected (<span id="selectedCount">0</span>)
+                      </button>
+                      <button class="mod-bulk-btn reject" onclick="bulkRejectModerationImages()" disabled id="bulkRejectBtn">
+                        ❌ Reject Selected
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Queue Grid -->
+                  <div class="moderation-queue-grid" id="moderationQueueGrid">
+                    <div class="moderation-loading">Loading moderation queue...</div>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div class="moderation-empty-state" id="moderationEmptyState" style="display: none; text-align: center; padding: 60px 20px; background: linear-gradient(135deg, rgba(74, 222, 128, 0.05), rgba(74, 222, 128, 0.02)); border: 1px solid rgba(74, 222, 128, 0.15); border-radius: 16px;">
+                    <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
+                    <div style="font-size: 1.3rem; font-weight: 600; color: #4ade80; margin-bottom: 8px;">Queue Clear!</div>
+                    <div style="color: #888; font-size: 0.95rem;">No images pending review at this time.</div>
+                  </div>
+
+                  <!-- Pagination -->
+                  <div class="moderation-pagination" id="moderationPagination" style="display: none; justify-content: center; gap: 8px; margin-top: 20px;">
+                    <button class="mod-page-btn" onclick="loadModerationQueue(moderationCurrentPage - 1)" id="modPrevBtn">← Previous</button>
+                    <span class="mod-page-info" id="modPageInfo">Page 1 of 1</span>
+                    <button class="mod-page-btn" onclick="loadModerationQueue(moderationCurrentPage + 1)" id="modNextBtn">Next →</button>
+                  </div>
+                </div>
+                <!-- End Image Moderation Section -->
 
                 <!-- Policies Section -->
                 <div class="admin-section" id="adminPoliciesSection">
@@ -10982,6 +11459,63 @@
     </div>
     <!-- End Account Page Section -->
 
+    <!-- Unified Image Library Modal (handles both flagged images and library view) -->
+    <div class="modal-overlay" id="imageLibraryModal">
+      <div class="modal-content">
+        <div class="modal-header" id="libraryModalHeader">
+          <h2 id="libraryModalTitle">My Images</h2>
+          <button class="modal-close" onclick="closeImageLibraryModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Flagged Image View (shown when image is flagged) -->
+          <div id="flaggedImageView" style="display: none;">
+            <div class="flagged-view-content">
+              <div class="flagged-icon">⚠️</div>
+              <p style="color: #ccc; margin-bottom: 12px;">
+                This image was flagged by our content moderation system:
+              </p>
+              <div class="flagged-reasons">
+                <ul id="flagReasonsList">
+                  <!-- Reasons inserted by JS -->
+                </ul>
+              </div>
+              <!-- Flagged image preview -->
+              <div id="flaggedImagePreview" style="display: none; margin: 16px 0; max-height: 200px; overflow: hidden; border-radius: 8px;">
+                <!-- Image inserted by JS -->
+              </div>
+              <!-- Appeal form -->
+              <div id="appealSection" class="appeal-form" style="display: none;">
+                <p style="color: #888; font-size: 0.9rem; margin-bottom: 12px;">
+                  If you believe this was flagged in error, you can submit an appeal. We'll review it within 24-48 hours.
+                </p>
+                <label>Why should this image be approved?</label>
+                <textarea id="appealReasonInput" rows="3" placeholder="Explain why you think this image should be approved..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Library View (shown when viewing image library) -->
+          <div id="libraryGridView">
+            <!-- Filter tabs -->
+            <div class="library-modal-filters">
+              <button class="lib-filter-btn active" data-filter="all" onclick="filterLibraryModal('all')">All</button>
+              <button class="lib-filter-btn" data-filter="approved" onclick="filterLibraryModal('approved')">Approved</button>
+              <button class="lib-filter-btn" data-filter="pending" onclick="filterLibraryModal('pending_review')">Pending</button>
+              <button class="lib-filter-btn" data-filter="rejected" onclick="filterLibraryModal('rejected')">Rejected</button>
+            </div>
+            <!-- Image grid -->
+            <div id="libraryModalGrid" class="library-modal-grid">
+              <div class="library-modal-loading">Loading...</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" id="libraryModalFooter">
+          <button class="account-btn secondary" onclick="closeImageLibraryModal()">Close</button>
+          <button class="account-btn primary" id="submitAppealBtn" onclick="submitModerationAppeal()" style="display: none;">Submit Appeal</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Billing Page Section -->
     <div class="tab-section" id="billingSection">
       <div class="account-page">
@@ -11306,6 +11840,7 @@
   <script src="js/modals.js?v=20260115"></script>
   <script src="js/bulk-selection.js?v=20260115"></script>
   <script src="js/account-page.js?v=20260115"></script>
+  <script src="js/user-images.js?v=20260117"></script>
   <script src="js/billing-page.js?v=20260115"></script>
   <script src="js/delete-functions.js?v=20260115"></script>
   <script src="js/onboarding-wizard.js?v=20260115"></script>
@@ -13608,6 +14143,7 @@
     function updateVideoPlaceholderWithError(placeholder, errorMessage) {
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
+          <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Video generation failed'}</div>
         </div>
@@ -14522,6 +15058,7 @@
     function updateEditPlaceholderWithError(placeholder, errorMessage) {
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
+          <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Object removal failed'}</div>
         </div>
@@ -15061,6 +15598,12 @@
 
             if (!response.ok) {
               console.error(`Generation ${i + 1} failed:`, data.error);
+
+              // Check for moderation error - show modal if image was saved for appeal
+              if (data.canAppeal && data.savedImageIds?.length > 0) {
+                showModerationModal(data, imageBase64);
+              }
+
               continue;
             }
 
@@ -15600,6 +16143,12 @@
 
           if (!submitResponse.ok) {
             const errorData = await submitResponse.json().catch(() => ({}));
+
+            // Check for moderation error - show modal if image was saved for appeal
+            if (errorData.canAppeal && errorData.savedImageIds?.length > 0) {
+              showModerationModal(errorData);
+            }
+
             throw new Error(errorData.error || 'Failed to submit job to ComfyUI');
           }
 
@@ -15961,6 +16510,14 @@
           if (data.code === 'CONTENT_FILTER' && data.suggestion === 'seedream') {
             throw new Error('🚫 Content blocked by Nano Banana\'s safety filter. Switch to Seedream for this type of content.');
           }
+
+          // Check for moderation error - show modal if image was saved for appeal
+          if (data.canAppeal && data.savedImageIds?.length > 0) {
+            // Get the first reference image to show in the modal (if available)
+            const imagePreview = referenceImages.length > 0 ? referenceImages[0].dataUrl : null;
+            showModerationModal(data, imagePreview);
+          }
+
           throw new Error(data.message || data.error || 'Generation failed');
         }
 
@@ -16065,6 +16622,7 @@
     function updatePlaceholderWithError(placeholder, errorMessage) {
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
+          <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Generation failed'}</div>
         </div>
@@ -19252,6 +19810,7 @@
         'analytics': 'adminAnalyticsSection',
         'gpu': 'adminGpuSection',
         'reports': 'adminReportsSection',
+        'image-moderation': 'adminImageModerationSection',
         'policies': 'adminPoliciesSection',
         'content-filter': 'adminContentFilterSection',
         'characters': 'adminCharactersSection',
@@ -19274,6 +19833,9 @@
       } else if (section === 'reports') {
         loadAdminReports();
         updateReportsBadge();
+      } else if (section === 'image-moderation') {
+        loadModerationQueue();
+        loadModerationStats();
       } else if (section === 'policies') {
         renderPoliciesAdminGrid();
       } else if (section === 'content-filter') {
@@ -19314,6 +19876,303 @@
         } else {
           badge.style.display = 'none';
         }
+      }
+    }
+
+    // ==================== IMAGE MODERATION QUEUE FUNCTIONS ====================
+
+    let moderationQueueData = [];
+    let moderationCurrentPage = 1;
+    let moderationPageSize = 20;
+    let moderationFilter = 'all';
+    let selectedModerationImages = new Set();
+
+    async function loadModerationStats() {
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/user-images/admin/stats`);
+        if (!response.ok) throw new Error('Failed to load stats');
+
+        const data = await response.json();
+        const stats = data.stats || data;
+
+        document.getElementById('modStatPending').textContent = stats.pending_review || 0;
+        document.getElementById('modStatAppeals').textContent = stats.pending_with_appeal || 0;
+        document.getElementById('modStatApproved').textContent = stats.approved || 0;
+        document.getElementById('modStatRejected').textContent = stats.rejected || 0;
+
+        // Update badge
+        const badge = document.getElementById('imageModerationBadge');
+        if (badge) {
+          const pendingCount = stats.pending_review || 0;
+          if (pendingCount > 0) {
+            badge.textContent = pendingCount;
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load moderation stats:', error);
+      }
+    }
+
+    async function loadModerationQueue(page = 1) {
+      moderationCurrentPage = page;
+      const grid = document.getElementById('moderationQueueGrid');
+      const emptyState = document.getElementById('moderationEmptyState');
+      const pagination = document.getElementById('moderationPagination');
+
+      grid.innerHTML = '<div class="moderation-loading">Loading moderation queue...</div>';
+      emptyState.style.display = 'none';
+
+      try {
+        let url = `${API_BASE_URL}/api/user-images/admin/queue?limit=${moderationPageSize}&offset=${(page - 1) * moderationPageSize}`;
+
+        if (moderationFilter === 'appeals') {
+          url += '&hasAppeal=true';
+        } else if (moderationFilter === 'celebrity') {
+          url += '&flagType=celebrity';
+        } else if (moderationFilter === 'minor') {
+          url += '&flagType=minor';
+        }
+
+        const response = await authFetch(url);
+        if (!response.ok) throw new Error('Failed to load queue');
+
+        const data = await response.json();
+        moderationQueueData = data.images || [];
+
+        if (moderationQueueData.length === 0) {
+          grid.innerHTML = '';
+          emptyState.style.display = 'block';
+          pagination.style.display = 'none';
+          return;
+        }
+
+        renderModerationQueue();
+
+        // Update pagination
+        const totalPages = Math.ceil((data.total || 0) / moderationPageSize);
+        if (totalPages > 1) {
+          pagination.style.display = 'flex';
+          document.getElementById('modPageInfo').textContent = `Page ${page} of ${totalPages}`;
+          document.getElementById('modPrevBtn').disabled = page <= 1;
+          document.getElementById('modNextBtn').disabled = page >= totalPages;
+        } else {
+          pagination.style.display = 'none';
+        }
+
+      } catch (error) {
+        console.error('Failed to load moderation queue:', error);
+        grid.innerHTML = `<div class="moderation-loading" style="color: #ff4444;">Failed to load queue: ${error.message}</div>`;
+      }
+    }
+
+    function renderModerationQueue() {
+      const grid = document.getElementById('moderationQueueGrid');
+
+      grid.innerHTML = moderationQueueData.map(image => {
+        const isSelected = selectedModerationImages.has(image.id);
+        const hasAppeal = image.appeal_submitted_at && image.appeal_reason;
+        const celebrityConfidence = image.celebrity_confidence;
+        const minorConfidence = image.minor_confidence;
+
+        // Parse moderation flags
+        let flagReasons = [];
+        if (image.moderation_flags?.reasons) {
+          flagReasons = image.moderation_flags.reasons;
+        }
+
+        const dateStr = new Date(image.created_at).toLocaleDateString();
+
+        return `
+          <div class="mod-queue-card ${isSelected ? 'selected' : ''}" data-id="${image.id}">
+            <div class="mod-card-header">
+              <input type="checkbox" class="mod-card-checkbox"
+                ${isSelected ? 'checked' : ''}
+                onchange="toggleModerationSelection('${image.id}', this.checked)">
+              <span class="mod-card-user" title="${image.user_id}">${image.user_email || image.user_id?.substring(0, 8) + '...'}</span>
+              <span class="mod-card-date">${dateStr}</span>
+            </div>
+            <div class="mod-card-image" onclick="viewModerationImage('${image.id}')">
+              <img src="${image.url || ''}" alt="Pending image" loading="lazy">
+              <div class="mod-card-flags">
+                ${celebrityConfidence ? `<span class="mod-flag-badge celebrity">Celebrity ${Math.round(celebrityConfidence)}%</span>` : ''}
+                ${minorConfidence ? `<span class="mod-flag-badge minor">Minor ${Math.round(minorConfidence)}%</span>` : ''}
+              </div>
+            </div>
+            ${hasAppeal ? `
+              <div class="mod-card-appeal">
+                <div class="mod-card-appeal-label">📝 User Appeal:</div>
+                <div class="mod-card-appeal-text">${escapeHtml(image.appeal_reason)}</div>
+              </div>
+            ` : ''}
+            <div class="mod-card-body">
+              ${flagReasons.length > 0 ? `
+                <div class="mod-card-reasons">
+                  <strong>Flagged for:</strong>
+                  <ul>${flagReasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+                </div>
+              ` : ''}
+              <div class="mod-card-actions">
+                <button class="mod-action-btn approve" onclick="approveModerationImage('${image.id}')">✅ Approve</button>
+                <button class="mod-action-btn reject" onclick="rejectModerationImage('${image.id}')">❌ Reject</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function filterModerationQueue(filter) {
+      moderationFilter = filter;
+      selectedModerationImages.clear();
+      updateBulkActionButtons();
+
+      // Update filter buttons
+      document.querySelectorAll('.mod-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === filter) {
+          btn.classList.add('active');
+        }
+      });
+
+      loadModerationQueue(1);
+    }
+
+    function toggleModerationSelection(imageId, selected) {
+      if (selected) {
+        selectedModerationImages.add(imageId);
+      } else {
+        selectedModerationImages.delete(imageId);
+      }
+
+      // Update card visual
+      const card = document.querySelector(`.mod-queue-card[data-id="${imageId}"]`);
+      if (card) {
+        card.classList.toggle('selected', selected);
+      }
+
+      updateBulkActionButtons();
+    }
+
+    function updateBulkActionButtons() {
+      const count = selectedModerationImages.size;
+      document.getElementById('selectedCount').textContent = count;
+      document.getElementById('bulkApproveBtn').disabled = count === 0;
+      document.getElementById('bulkRejectBtn').disabled = count === 0;
+    }
+
+    async function approveModerationImage(imageId) {
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/user-images/admin/${imageId}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ decision: 'approved' })
+        });
+
+        if (!response.ok) throw new Error('Failed to approve');
+
+        showToast('Image approved');
+        loadModerationQueue(moderationCurrentPage);
+        loadModerationStats();
+      } catch (error) {
+        console.error('Approve failed:', error);
+        alert(`Failed to approve: ${error.message}`);
+      }
+    }
+
+    async function rejectModerationImage(imageId) {
+      const reason = prompt('Optional: Reason for rejection');
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/user-images/admin/${imageId}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ decision: 'rejected', notes: reason || '' })
+        });
+
+        if (!response.ok) throw new Error('Failed to reject');
+
+        showToast('Image rejected');
+        loadModerationQueue(moderationCurrentPage);
+        loadModerationStats();
+      } catch (error) {
+        console.error('Reject failed:', error);
+        alert(`Failed to reject: ${error.message}`);
+      }
+    }
+
+    async function bulkApproveModerationImages() {
+      if (selectedModerationImages.size === 0) return;
+
+      const imageIds = Array.from(selectedModerationImages);
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/user-images/admin/bulk-review`, {
+          method: 'POST',
+          body: JSON.stringify({ imageIds, decision: 'approved' })
+        });
+
+        if (!response.ok) throw new Error('Failed to bulk approve');
+
+        const data = await response.json();
+        showToast(`Approved ${data.updatedCount} images`);
+
+        selectedModerationImages.clear();
+        updateBulkActionButtons();
+        loadModerationQueue(moderationCurrentPage);
+        loadModerationStats();
+      } catch (error) {
+        console.error('Bulk approve failed:', error);
+        alert(`Failed to bulk approve: ${error.message}`);
+      }
+    }
+
+    async function bulkRejectModerationImages() {
+      if (selectedModerationImages.size === 0) return;
+
+      const reason = prompt('Optional: Reason for rejection');
+      const imageIds = Array.from(selectedModerationImages);
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/user-images/admin/bulk-review`, {
+          method: 'POST',
+          body: JSON.stringify({ imageIds, decision: 'rejected', notes: reason || '' })
+        });
+
+        if (!response.ok) throw new Error('Failed to bulk reject');
+
+        const data = await response.json();
+        showToast(`Rejected ${data.updatedCount} images`);
+
+        selectedModerationImages.clear();
+        updateBulkActionButtons();
+        loadModerationQueue(moderationCurrentPage);
+        loadModerationStats();
+      } catch (error) {
+        console.error('Bulk reject failed:', error);
+        alert(`Failed to bulk reject: ${error.message}`);
+      }
+    }
+
+    function viewModerationImage(imageId) {
+      const image = moderationQueueData.find(img => img.id === imageId);
+      if (image && image.url) {
+        const win = window.open();
+        win.document.write(`
+          <html>
+            <head><title>Moderation Review - ${imageId}</title></head>
+            <body style="margin:0; background:#111; display:flex; justify-content:center; align-items:center; min-height:100vh;">
+              <img src="${image.url}" style="max-width:95vw; max-height:95vh; object-fit:contain;">
+            </body>
+          </html>
+        `);
       }
     }
 

@@ -379,6 +379,135 @@ async function sendExpirationReminderEmail(email, name, tier, expiresAt) {
 }
 
 /**
+ * Send image approved notification email
+ */
+async function sendImageApprovedEmail(email, name) {
+  const displayName = name || email.split('@')[0];
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-size: 24px; color: ${BRAND.text};">
+      ✅ Your Image Has Been Approved!
+    </h2>
+
+    <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: ${BRAND.text};">
+      Hey ${displayName}, great news! Your uploaded image has been reviewed and approved by our moderation team.
+    </p>
+
+    <div style="background: linear-gradient(135deg, #4ade8022, #22c55e22); border-radius: 12px; padding: 20px; margin: 25px 0;">
+      <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #4ade80;">
+        🎨 Ready to Use
+      </h3>
+      <p style="margin: 0; font-size: 15px; color: ${BRAND.text};">
+        Your image is now available in your Image Library and can be used as a reference for AI generation, inpainting, and editing.
+      </p>
+    </div>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td align="center" style="padding-top: 10px;">
+          <a href="${process.env.FRONTEND_URL || 'https://vixxxen.com'}"
+             style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, ${BRAND.primary}, ${BRAND.secondary}); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            Open Image Library
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 30px 0 0 0; font-size: 14px; color: ${BRAND.textMuted};">
+      Thank you for using Vixxxen responsibly!
+    </p>
+  `;
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_CONFIG.from,
+      to: email,
+      replyTo: EMAIL_CONFIG.replyTo,
+      subject: '✅ Your image has been approved!',
+      html: emailTemplate('Image Approved', content),
+    });
+
+    if (error) {
+      logger.error('Failed to send image approved email', { error: error.message, email: maskEmail(email) });
+      return { success: false, error };
+    }
+
+    logger.info('Image approved email sent', { email: maskEmail(email) });
+    return { success: true, data };
+  } catch (err) {
+    logger.error('Error sending image approved email', { error: err.message, email: maskEmail(email) });
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Send image rejected notification email
+ */
+async function sendImageRejectedEmail(email, name, reason) {
+  const displayName = name || email.split('@')[0];
+  const rejectionReason = reason || 'The image did not meet our content guidelines.';
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-size: 24px; color: ${BRAND.text};">
+      Image Review Update
+    </h2>
+
+    <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: ${BRAND.text};">
+      Hey ${displayName}, we've reviewed your uploaded image and unfortunately it could not be approved.
+    </p>
+
+    <div style="background: linear-gradient(135deg, #ff444422, #ef444422); border-radius: 12px; padding: 20px; margin: 25px 0;">
+      <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #ff6b6b;">
+        📋 Reason
+      </h3>
+      <p style="margin: 0; font-size: 15px; color: ${BRAND.text};">
+        ${rejectionReason}
+      </p>
+    </div>
+
+    <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: ${BRAND.text};">
+      You're welcome to upload a different image that follows our content guidelines. We appreciate your understanding and cooperation in keeping Vixxxen a safe platform.
+    </p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td align="center" style="padding-top: 10px;">
+          <a href="${process.env.FRONTEND_URL || 'https://vixxxen.com'}"
+             style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, ${BRAND.primary}, ${BRAND.secondary}); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+            Try Another Image
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 30px 0 0 0; font-size: 14px; color: ${BRAND.textMuted};">
+      If you believe this was a mistake, please reply to this email.
+    </p>
+  `;
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_CONFIG.from,
+      to: email,
+      replyTo: EMAIL_CONFIG.replyTo,
+      subject: 'Image Review Update',
+      html: emailTemplate('Image Review', content),
+    });
+
+    if (error) {
+      logger.error('Failed to send image rejected email', { error: error.message, email: maskEmail(email) });
+      return { success: false, error };
+    }
+
+    logger.info('Image rejected email sent', { email: maskEmail(email) });
+    return { success: true, data };
+  } catch (err) {
+    logger.error('Error sending image rejected email', { error: err.message, email: maskEmail(email) });
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Check if email service is configured
  */
 function isEmailConfigured() {
@@ -390,5 +519,7 @@ module.exports = {
   sendSubscriptionEmail,
   sendPaymentReceiptEmail,
   sendExpirationReminderEmail,
+  sendImageApprovedEmail,
+  sendImageRejectedEmail,
   isEmailConfigured,
 };
