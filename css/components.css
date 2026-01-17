@@ -1116,6 +1116,97 @@
   opacity: 0.8;
 }
 
+/* Library item wrapper for click handling */
+.lib-image-wrapper {
+  position: relative;
+  aspect-ratio: 1;
+  cursor: pointer;
+}
+
+.lib-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Rejection notes display */
+.lib-rejection-notes {
+  background: linear-gradient(135deg, #ff444420, #ff666620);
+  border: 1px solid #ff444440;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0 4px 0;
+  font-size: 0.75rem;
+  color: #ff6b6b;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-height: 50px;
+  overflow: hidden;
+}
+
+.lib-rejection-notes .rejection-icon {
+  flex-shrink: 0;
+}
+
+.lib-rejection-notes .rejection-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+/* Use image action buttons */
+.lib-use-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.lib-use-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1a1a2e, #16162a);
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lib-use-btn:hover {
+  border-color: #ff2ebb;
+  background: linear-gradient(135deg, #ff2ebb20, #9d4edd20);
+  transform: translateY(-1px);
+}
+
+.lib-use-btn span {
+  font-size: 0.85rem;
+}
+
+/* Updated library modal item layout */
+.library-modal-item {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: auto;
+  min-height: 180px;
+}
+
+.library-modal-item.status-approved .lib-use-actions {
+  display: grid;
+}
+
+.library-modal-item:not(.status-approved) .lib-use-actions {
+  display: none;
+}
+
 .library-modal-loading,
 .library-modal-empty {
   text-align: center;

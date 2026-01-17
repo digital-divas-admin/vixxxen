@@ -11,6 +11,7 @@ const { supabase } = require('./services/supabase');
 const { requireAuth } = require('./middleware/auth');
 const { logger } = require('./services/logger');
 const { screenImage, isEnabled: isModerationEnabled } = require('./services/imageModeration');
+const { sendImageApprovedEmail, sendImageRejectedEmail } = require('./email');
 
 // Configure multer for memory storage
 const upload = multer({
@@ -209,7 +210,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     let query = supabase
       .from('user_images')
-      .select('id, filename, storage_path, status, created_at, appeal_submitted_at, celebrity_confidence, minor_confidence', { count: 'exact' })
+      .select('id, filename, storage_path, status, created_at, appeal_submitted_at, celebrity_confidence, minor_confidence, review_notes, reviewed_at', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -733,7 +734,25 @@ router.post('/admin/:id/review', requireAuth, async (req, res) => {
       userId: image.user_id
     });
 
-    // TODO: Send notification to user (email or in-app)
+    // Send email notification to user
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, display_name')
+        .eq('id', image.user_id)
+        .single();
+
+      if (profile?.email) {
+        if (decision === 'approved') {
+          await sendImageApprovedEmail(profile.email, profile.display_name);
+        } else {
+          await sendImageRejectedEmail(profile.email, profile.display_name, notes);
+        }
+      }
+    } catch (emailError) {
+      // Don't fail the request if email fails
+      logger.error('Failed to send review notification email', { error: emailError.message, userId: image.user_id });
+    }
 
     res.json({
       success: true,
@@ -784,6 +803,13 @@ router.post('/admin/bulk-review', requireAuth, async (req, res) => {
       expiresAt = expiry.toISOString();
     }
 
+    // Get user IDs before update for email notifications
+    const { data: imagesToUpdate } = await supabase
+      .from('user_images')
+      .select('id, user_id')
+      .in('id', imageIds)
+      .eq('status', 'pending_review');
+
     // Update all images
     const { data: updated, error: updateError } = await supabase
       .from('user_images')
@@ -806,6 +832,34 @@ router.post('/admin/bulk-review', requireAuth, async (req, res) => {
       requested: imageIds.length,
       updated: updated?.length || 0
     });
+
+    // Send email notifications (non-blocking)
+    if (imagesToUpdate && imagesToUpdate.length > 0) {
+      const userIds = [...new Set(imagesToUpdate.map(img => img.user_id))];
+
+      // Fetch all user profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email, display_name')
+        .in('id', userIds);
+
+      // Send emails to each user (don't await, fire and forget)
+      if (profiles) {
+        for (const profile of profiles) {
+          if (profile.email) {
+            if (decision === 'approved') {
+              sendImageApprovedEmail(profile.email, profile.display_name).catch(err => {
+                logger.error('Failed to send bulk approved email', { error: err.message, userId: profile.id });
+              });
+            } else {
+              sendImageRejectedEmail(profile.email, profile.display_name, notes).catch(err => {
+                logger.error('Failed to send bulk rejected email', { error: err.message, userId: profile.id });
+              });
+            }
+          }
+        }
+      }
+    }
 
     res.json({
       success: true,

@@ -266,11 +266,43 @@ function renderLibraryModalGrid() {
     const statusClass = getLibStatusClass(img.status);
     const statusLabel = getLibStatusLabel(img.status);
     const canAppeal = img.status === 'pending_review' && !img.appeal_submitted_at;
+    const canUse = img.status === 'auto_approved' || img.status === 'approved';
+    const isRejected = img.status === 'rejected';
+
+    // Rejection notes display
+    const rejectionNotesHtml = isRejected && img.review_notes
+      ? `<div class="lib-rejection-notes" title="${escapeHtml(img.review_notes)}">
+           <span class="rejection-icon">📋</span>
+           <span class="rejection-text">${escapeHtml(img.review_notes)}</span>
+         </div>`
+      : '';
+
+    // Use image actions for approved images
+    const useActionsHtml = canUse
+      ? `<div class="lib-use-actions" onclick="event.stopPropagation()">
+           <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'seedream')" title="Use in Seedream 4.5">
+             <span>🎨</span> Seedream
+           </button>
+           <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'nanobanana')" title="Use in NanoBanana Pro">
+             <span>🍌</span> NanoBanana
+           </button>
+           <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'inpaint')" title="Use in Inpaint">
+             <span>🖌️</span> Inpaint
+           </button>
+           <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'edit')" title="Use in Edit">
+             <span>✂️</span> Edit
+           </button>
+         </div>`
+      : '';
 
     return `
-      <div class="library-modal-item ${statusClass}" onclick="viewLibImage('${img.id}')">
-        <img src="${img.thumbnail_url || img.url}" alt="Library image" loading="lazy">
-        <span class="library-item-badge ${statusClass.replace('status-', '')}">${statusLabel}</span>
+      <div class="library-modal-item ${statusClass}" data-id="${img.id}">
+        <div class="lib-image-wrapper" onclick="viewLibImage('${img.id}')">
+          <img src="${img.thumbnail_url || img.url}" alt="Library image" loading="lazy">
+          <span class="library-item-badge ${statusClass.replace('status-', '')}">${statusLabel}</span>
+        </div>
+        ${rejectionNotesHtml}
+        ${useActionsHtml}
         <div class="library-item-actions" onclick="event.stopPropagation()">
           ${canAppeal ? `<button class="lib-action-btn appeal" onclick="appealLibImage('${img.id}')">Appeal</button>` : ''}
           <button class="lib-action-btn delete" onclick="deleteLibImage('${img.id}')">Delete</button>
@@ -428,4 +460,202 @@ function showToast(message) {
     toast.style.animation = 'slideOut 0.3s ease';
     setTimeout(() => toast.remove(), 300);
   }, 3000);
+}
+
+/**
+ * Use a library image in a specific tool
+ * @param {string} imageId - The image ID
+ * @param {string} imageUrl - The signed URL of the image
+ * @param {string} tool - Which tool to use: 'seedream', 'nanobanana', 'inpaint', 'edit'
+ */
+async function useLibImageFor(imageId, imageUrl, tool) {
+  try {
+    // Close the library modal
+    closeImageLibraryModal();
+
+    // Show loading state
+    showToast(`Loading image for ${tool}...`);
+
+    // Fetch the actual image data
+    const response = await fetch(imageUrl);
+    if (!response.ok) throw new Error('Failed to fetch image');
+
+    const blob = await response.blob();
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const imageDataUrl = e.target.result;
+
+      switch (tool) {
+        case 'seedream':
+          // Set as reference image for Seedream
+          setReferenceImageForTool(imageDataUrl, 'seedream');
+          break;
+
+        case 'nanobanana':
+          // Set as reference image for NanoBanana Pro
+          setReferenceImageForTool(imageDataUrl, 'nanobanana');
+          break;
+
+        case 'inpaint':
+          // Load into inpaint canvas
+          loadImageForInpaint(imageDataUrl);
+          break;
+
+        case 'edit':
+          // Load into edit tab
+          loadImageForEdit(imageDataUrl);
+          break;
+
+        default:
+          console.error('Unknown tool:', tool);
+      }
+    };
+
+    reader.readAsDataURL(blob);
+
+  } catch (error) {
+    console.error('Failed to use image:', error);
+    showToast('Failed to load image');
+  }
+}
+
+/**
+ * Set a reference image for Seedream or NanoBanana Pro
+ */
+function setReferenceImageForTool(imageDataUrl, tool) {
+  // Switch to generate tab
+  const generateTab = document.querySelector('[data-tab="generate"]');
+  if (generateTab) generateTab.click();
+
+  // Find the reference image input and set it
+  // The exact implementation depends on how the tools handle reference images
+  if (tool === 'seedream') {
+    // Look for Seedream 4.5 reference input
+    const seedreamRefPreview = document.getElementById('referenceImagePreview');
+    const seedreamRefData = document.getElementById('referenceImageData');
+
+    if (seedreamRefPreview && seedreamRefData) {
+      seedreamRefPreview.innerHTML = `<img src="${imageDataUrl}" alt="Reference">`;
+      seedreamRefPreview.style.display = 'block';
+      seedreamRefData.value = imageDataUrl;
+      showToast('Image set as Seedream 4.5 reference');
+    } else {
+      // Try to find and set using a file input simulation
+      trySetReferenceImage(imageDataUrl, 'seedream');
+    }
+  } else if (tool === 'nanobanana') {
+    // Look for NanoBanana Pro reference input
+    const nanoRefPreview = document.getElementById('nanoReferencePreview');
+    const nanoRefData = document.getElementById('nanoReferenceData');
+
+    if (nanoRefPreview && nanoRefData) {
+      nanoRefPreview.innerHTML = `<img src="${imageDataUrl}" alt="Reference">`;
+      nanoRefPreview.style.display = 'block';
+      nanoRefData.value = imageDataUrl;
+      showToast('Image set as NanoBanana Pro reference');
+    } else {
+      trySetReferenceImage(imageDataUrl, 'nanobanana');
+    }
+  }
+}
+
+/**
+ * Try to set reference image using various methods
+ */
+function trySetReferenceImage(imageDataUrl, tool) {
+  // Store the image data globally so it can be picked up by the generation form
+  window.pendingReferenceImage = {
+    dataUrl: imageDataUrl,
+    tool: tool
+  };
+
+  // Try to find the upload zone and trigger it
+  const uploadZoneId = tool === 'seedream' ? 'seedreamReferenceZone' : 'nanoReferenceZone';
+  const uploadZone = document.getElementById(uploadZoneId);
+
+  if (uploadZone && typeof handleReferenceImageDrop === 'function') {
+    // Create a fake file-like object
+    const blob = dataURLtoBlob(imageDataUrl);
+    const file = new File([blob], 'reference.jpg', { type: 'image/jpeg' });
+
+    // Trigger the drop handler
+    handleReferenceImageDrop({ dataTransfer: { files: [file] } }, uploadZone);
+    showToast(`Image ready for ${tool === 'seedream' ? 'Seedream 4.5' : 'NanoBanana Pro'}`);
+  } else {
+    showToast('Please manually add the image as reference');
+  }
+}
+
+/**
+ * Load image for inpainting
+ */
+function loadImageForInpaint(imageDataUrl) {
+  // Switch to inpaint tab
+  const inpaintTab = document.querySelector('[data-tab="inpaint"]');
+  if (inpaintTab) inpaintTab.click();
+
+  // Try to load image into the inpaint canvas
+  const inpaintCanvas = document.getElementById('inpaintCanvas');
+  const inpaintSourceImage = document.getElementById('inpaintSourceImage');
+
+  if (inpaintSourceImage) {
+    inpaintSourceImage.src = imageDataUrl;
+    inpaintSourceImage.style.display = 'block';
+
+    // Store for later use
+    if (window.inpaintState) {
+      window.inpaintState.sourceImage = imageDataUrl;
+    }
+
+    showToast('Image loaded for inpainting');
+  } else if (typeof loadInpaintImage === 'function') {
+    loadInpaintImage(imageDataUrl);
+    showToast('Image loaded for inpainting');
+  } else {
+    // Fallback: store globally
+    window.pendingInpaintImage = imageDataUrl;
+    showToast('Image ready - click on inpaint canvas to load');
+  }
+}
+
+/**
+ * Load image for editing
+ */
+function loadImageForEdit(imageDataUrl) {
+  // Switch to edit tab
+  const editTab = document.querySelector('[data-tab="edit"]');
+  if (editTab) editTab.click();
+
+  // Try to load image into the edit canvas
+  const editCanvas = document.getElementById('editCanvas');
+  const editSourceImage = document.getElementById('editSourceImage');
+
+  if (editSourceImage) {
+    editSourceImage.src = imageDataUrl;
+    editSourceImage.style.display = 'block';
+    showToast('Image loaded for editing');
+  } else if (typeof loadEditImage === 'function') {
+    loadEditImage(imageDataUrl);
+    showToast('Image loaded for editing');
+  } else {
+    // Fallback: store globally
+    window.pendingEditImage = imageDataUrl;
+    showToast('Image ready - use in edit tab');
+  }
+}
+
+/**
+ * Convert data URL to Blob
+ */
+function dataURLtoBlob(dataUrl) {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
 }
