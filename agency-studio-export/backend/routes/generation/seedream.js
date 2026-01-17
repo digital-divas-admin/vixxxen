@@ -226,6 +226,10 @@ router.post('/', requireAuth, requireCredits('seedream'), async (req, res) => {
     }
 
     const result = await response.json();
+
+    // Debug log the full response
+    logger.info('WaveSpeed API response:', JSON.stringify(result, null, 2).substring(0, 2000));
+
     const images = [];
 
     // Extract images from response - handle all possible formats
