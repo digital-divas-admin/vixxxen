@@ -11,9 +11,65 @@ const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedre
 const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5/edit';
 const WAVESPEED_RESULT_URL = 'https://api.wavespeed.ai/api/v3/predictions';
 
-// Retry settings for rate limits
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 2000; // Start with 2 seconds
+// Retry settings for rate limits - increased for better rate limit handling
+const MAX_RETRIES = 5;
+const INITIAL_BACKOFF_MS = 5000; // Start with 5 seconds
+const MAX_BACKOFF_MS = 60000; // Cap at 60 seconds
+const JITTER_FACTOR = 0.3; // Add up to 30% random jitter
+
+// Request queue for serializing WaveSpeed API calls to avoid concurrent rate limits
+class RequestQueue {
+  constructor(minDelayMs = 1000) {
+    this.queue = [];
+    this.processing = false;
+    this.minDelayMs = minDelayMs;
+    this.lastRequestTime = 0;
+  }
+
+  async add(requestFn) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ requestFn, resolve, reject });
+      this.processQueue();
+    });
+  }
+
+  async processQueue() {
+    if (this.processing || this.queue.length === 0) return;
+
+    this.processing = true;
+
+    while (this.queue.length > 0) {
+      const { requestFn, resolve, reject } = this.queue.shift();
+
+      // Ensure minimum delay between requests
+      const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+      if (timeSinceLastRequest < this.minDelayMs) {
+        await new Promise(r => setTimeout(r, this.minDelayMs - timeSinceLastRequest));
+      }
+
+      try {
+        this.lastRequestTime = Date.now();
+        const result = await requestFn();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    }
+
+    this.processing = false;
+  }
+}
+
+// Shared request queue for all Seedream requests - 1.5 second minimum between requests
+const wavespeedQueue = new RequestQueue(1500);
+
+/**
+ * Add jitter to backoff to avoid thundering herd problem
+ */
+function addJitter(baseMs) {
+  const jitter = baseMs * JITTER_FACTOR * Math.random();
+  return Math.floor(baseMs + jitter);
+}
 
 /**
  * Helper function to make API request with retry logic for 429 errors
@@ -25,10 +81,11 @@ async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
     try {
       const response = await fetch(url, options);
 
-      // If we get a 429, retry with exponential backoff
+      // If we get a 429, retry with exponential backoff + jitter
       if (response.status === 429 && attempt < maxRetries) {
-        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
-        console.log(`   ⏳ Rate limited (429), retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        const baseBackoff = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
+        const backoffMs = addJitter(baseBackoff);
+        console.log(`   ⏳ Rate limited (429), retrying in ${(backoffMs / 1000).toFixed(1)}s... (attempt ${attempt + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, backoffMs));
         continue;
       }
@@ -37,8 +94,9 @@ async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
     } catch (error) {
       lastError = error;
       if (attempt < maxRetries) {
-        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
-        console.log(`   ⏳ Request failed, retrying in ${backoffMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+        const baseBackoff = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
+        const backoffMs = addJitter(baseBackoff);
+        console.log(`   ⏳ Request failed, retrying in ${(backoffMs / 1000).toFixed(1)}s... (attempt ${attempt + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
     }
@@ -156,15 +214,20 @@ router.post('/generate', async (req, res) => {
 
       console.log(`   Request body:`, JSON.stringify({ ...requestBody, images: requestBody.images ? `[${requestBody.images.length} base64 images]` : undefined }, null, 2));
 
-      // Make request to WaveSpeed API with retry logic for rate limits
-      const response = await fetchWithRetry(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // Make request to WaveSpeed API through the queue (serializes concurrent requests)
+      // This prevents multiple simultaneous requests from hitting rate limits
+      console.log(`   📋 Adding request to queue (queue size: ${wavespeedQueue.queue.length})...`);
+
+      const response = await wavespeedQueue.add(() =>
+        fetchWithRetry(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        })
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -324,7 +387,8 @@ router.post('/generate', async (req, res) => {
     if (error.message?.includes('rate') || error.message?.includes('429')) {
       return res.status(429).json({
         error: 'Rate limit exceeded',
-        message: 'Please try again later.'
+        message: 'The AI service is experiencing high demand. Please wait 30-60 seconds and try again.',
+        retryAfter: 30
       });
     }
 
