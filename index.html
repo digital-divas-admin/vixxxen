@@ -1244,6 +1244,14 @@
       background: var(--bg-hover);
     }
 
+    .reference-upload.drag-over,
+    .inpaint-upload-placeholder.drag-over {
+      border-color: var(--accent-primary);
+      background: rgba(255, 46, 187, 0.15);
+      box-shadow: 0 0 20px rgba(255, 46, 187, 0.3);
+      transform: scale(1.02);
+    }
+
     .reference-upload-icon {
       font-size: 2rem;
       margin-bottom: 8px;
@@ -3744,10 +3752,13 @@
 
     .channel-sidebar {
       width: 260px;
+      min-width: 260px;
+      height: 100%;
       background: #111;
       border-right: 1px solid #2a2a2a;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .channel-header {
@@ -3770,6 +3781,13 @@
 
     .channel-section {
       padding: 16px;
+      flex-shrink: 0;
+    }
+
+    .channel-section:first-of-type {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .channel-section-title {
@@ -4850,6 +4868,8 @@
       cursor: pointer;
       padding: 60px;
       transition: all 0.2s;
+      border: 2px dashed transparent;
+      border-radius: 8px;
     }
 
     .inpaint-upload-placeholder:hover {
@@ -5307,6 +5327,112 @@
       background: #2a2a2a;
       color: #fff;
       border-color: #3a3a3a;
+    }
+
+    /* Mobile Chat Back Button */
+    .chat-back-btn {
+      display: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-right: 12px;
+    }
+
+    .chat-back-btn:hover {
+      color: var(--text-primary);
+    }
+
+    /* Mobile Discord-like Chat Layout */
+    @media (max-width: 768px) {
+      .education-subtab-content#communityContent {
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .education-chat {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .channel-sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        min-width: 100%;
+        height: 100%;
+        z-index: 10;
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+        overflow-y: auto;
+        background: #111;
+      }
+
+      .chat-area {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 5;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+      }
+
+      /* When chat is active on mobile */
+      .education-chat.mobile-chat-active .channel-sidebar {
+        transform: translateX(-100%);
+      }
+
+      .education-chat.mobile-chat-active .chat-area {
+        transform: translateX(0);
+      }
+
+      .chat-back-btn {
+        display: block;
+      }
+
+      .chat-header {
+        padding: 12px 16px;
+      }
+
+      .chat-header-actions {
+        gap: 4px;
+      }
+
+      .chat-call-btn,
+      .chat-rules-btn {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+      }
+
+      .chat-input-area {
+        padding: 12px;
+        gap: 8px;
+      }
+
+      .chat-send-btn {
+        padding: 10px 16px;
+      }
+
+      .channel-online {
+        border-top: 1px solid #2a2a2a;
+        padding: 12px 16px;
+      }
     }
 
     /* Giphy Modal */
@@ -8007,6 +8133,7 @@
           <div class="reference-upload" onclick="document.getElementById('fileInput').click()">
             <div class="reference-upload-icon">📸</div>
             <div class="reference-upload-text">Click to upload reference images</div>
+            <div class="reference-upload-hint">or drag and drop</div>
           </div>
           <div id="referenceGrid" class="reference-grid"></div>
         </div>
@@ -8209,6 +8336,7 @@
             <div class="reference-upload" onclick="document.getElementById('videoStartImageInput').click()">
               <div class="reference-upload-icon">📸</div>
               <div class="reference-upload-text">Click to upload start frame</div>
+              <div class="reference-upload-hint">or drag and drop</div>
             </div>
             <div id="videoStartImagePreview" class="reference-grid"></div>
           </div>
@@ -8220,6 +8348,7 @@
             <div class="reference-upload" onclick="document.getElementById('veoLastFrameInput').click()">
               <div class="reference-upload-icon">🎞️</div>
               <div class="reference-upload-text">Click to upload ending frame</div>
+              <div class="reference-upload-hint">or drag and drop</div>
             </div>
             <div id="veoLastFramePreview" class="reference-grid"></div>
           </div>
@@ -8429,6 +8558,7 @@
             <div class="reference-upload" onclick="document.getElementById('editSourceImageInput').click()" id="editImageUploadArea">
               <div class="reference-upload-icon">🖼️</div>
               <div class="reference-upload-text">Click to upload image</div>
+              <div class="reference-upload-hint">or drag and drop</div>
             </div>
 
             <!-- Image Preview (for Background Remover) -->
@@ -8943,6 +9073,7 @@
           <!-- Chat Area -->
           <div class="chat-area">
             <div class="chat-header">
+              <button class="chat-back-btn" onclick="closeMobileChat()" title="Back to channels">←</button>
               <div class="chat-header-info">
                 <div class="chat-channel-name" id="chatChannelName"># supernova-general</div>
                 <div class="chat-channel-desc" id="chatChannelDesc">General chat for Supernova members</div>
@@ -12432,6 +12563,30 @@
           document.getElementById('ageVerifyBtn').disabled = !this.checked;
         });
       }
+
+      // Restore last active tab from localStorage
+      restoreLastActiveTab();
+    }
+
+    // Restore the last active tab from localStorage
+    function restoreLastActiveTab() {
+      const savedTab = localStorage.getItem('vixxxen_activeTab');
+      if (savedTab && savedTab !== 'image') {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          switchMainTab(savedTab);
+
+          // If education tab, also restore the subtab
+          if (savedTab === 'education') {
+            const savedSubtab = localStorage.getItem('vixxxen_educationSubtab');
+            if (savedSubtab) {
+              setTimeout(() => {
+                switchEducationSubtab(savedSubtab);
+              }, 100);
+            }
+          }
+        }, 50);
+      }
     }
 
     // Set content mode (called by toggle buttons)
@@ -12686,6 +12841,9 @@
       // Close mobile sidebar when switching tabs
       closeMobileSidebar();
 
+      // Save current tab to localStorage for persistence
+      localStorage.setItem('vixxxen_activeTab', tab);
+
       // Hide all tab sections
       document.querySelectorAll('.tab-section').forEach(section => {
         section.classList.remove('active');
@@ -12849,6 +13007,100 @@
       // Update button cost display
       updateVideoGenerateButtonCost();
     }
+
+    // ===============================================
+    // Drag and Drop Upload Functionality
+    // ===============================================
+
+    /**
+     * Setup drag-and-drop functionality for an upload zone
+     * @param {string} dropZoneId - ID of the element to make droppable (can be null if dropZone element is passed)
+     * @param {string} fileInputId - ID of the hidden file input
+     * @param {Function} handleUpload - Function to call with the files (receives a fake event with files)
+     * @param {HTMLElement} dropZone - Optional: direct element reference instead of ID
+     */
+    function setupDropZone(dropZoneId, fileInputId, handleUpload, dropZone = null) {
+      const zone = dropZone || document.getElementById(dropZoneId);
+      const fileInput = document.getElementById(fileInputId);
+
+      if (!zone) {
+        console.warn(`Drop zone not found: ${dropZoneId}`);
+        return;
+      }
+
+      // Prevent default drag behaviors on the zone
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, false);
+      });
+
+      // Highlight drop zone when dragging over
+      ['dragenter', 'dragover'].forEach(eventName => {
+        zone.addEventListener(eventName, () => {
+          zone.classList.add('drag-over');
+        }, false);
+      });
+
+      // Remove highlight when leaving or dropping
+      ['dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, () => {
+          zone.classList.remove('drag-over');
+        }, false);
+      });
+
+      // Handle dropped files
+      zone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          // Filter for image files only
+          const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+          if (imageFiles.length === 0) {
+            showError('Please drop image files only');
+            return;
+          }
+
+          // Create a fake event object to pass to existing handlers
+          const fakeEvent = {
+            target: {
+              files: imageFiles,
+              value: ''
+            }
+          };
+          handleUpload(fakeEvent);
+        }
+      }, false);
+    }
+
+    // Initialize all drop zones after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      // Reference images upload (Image tab)
+      const refUpload = document.querySelector('#referenceSection .reference-upload');
+      if (refUpload) {
+        setupDropZone(null, 'fileInput', handleFileUpload, refUpload);
+      }
+
+      // Video start frame upload
+      const videoStartUpload = document.querySelector('#videoStartImageSection .reference-upload');
+      if (videoStartUpload) {
+        setupDropZone(null, 'videoStartImageInput', handleVideoStartImageUpload, videoStartUpload);
+      }
+
+      // Veo last frame upload
+      const veoLastFrameUpload = document.querySelector('#veoLastFrameSection .reference-upload');
+      if (veoLastFrameUpload) {
+        setupDropZone(null, 'veoLastFrameInput', handleVeoLastFrameUpload, veoLastFrameUpload);
+      }
+
+      // Edit source image upload
+      setupDropZone('editImageUploadArea', 'editSourceImageInput', handleEditSourceImageUpload);
+
+      // Inpaint image upload
+      setupDropZone('inpaintUploadPlaceholder', 'inpaintImageInput', handleInpaintImageUpload);
+
+      console.log('Drag-and-drop upload zones initialized');
+    });
 
     function handleFileUpload(event) {
       // Require login for uploads
@@ -18128,6 +18380,22 @@
         console.log(data.displayName + ' left the channel');
       });
 
+      // Handle real-time profile updates from other users
+      chatSocket.on('user_profile_updated', (data) => {
+        console.log('User profile updated:', data.displayName);
+        // Update online users list if visible
+        const onlineUsersList = document.getElementById('onlineUsersList');
+        if (onlineUsersList) {
+          const userElements = onlineUsersList.querySelectorAll(`[data-user-id="${data.userId}"]`);
+          userElements.forEach(el => {
+            const nameEl = el.querySelector('.online-user-name');
+            if (nameEl) nameEl.textContent = data.displayName;
+            const avatarEl = el.querySelector('.online-user-avatar img');
+            if (avatarEl && data.avatar) avatarEl.src = data.avatar;
+          });
+        }
+      });
+
       chatSocket.on('error', (data) => {
         console.error('Chat error:', data.message);
         showError(data.message);
@@ -18164,13 +18432,18 @@
         }
       });
 
-      // Auto-join first channel if available
+      // Try to restore last visited channel, or auto-join first channel
       if (channels.length > 0) {
-        joinChannel(channels[0]);
+        const savedChannelId = localStorage.getItem('vixxxen_lastChannelId');
+        const savedChannel = savedChannelId ? channels.find(c => c.id === savedChannelId) : null;
+        joinChannel(savedChannel || channels[0]);
       }
     }
 
     function joinChannel(channel) {
+      // Save selected channel to localStorage for persistence
+      localStorage.setItem('vixxxen_lastChannelId', channel.id);
+
       // Update UI
       document.querySelectorAll('.channel-item').forEach(item => {
         item.classList.remove('active');
@@ -18185,8 +18458,26 @@
       const messagesContainer = document.getElementById('chatMessages');
       messagesContainer.innerHTML = '<div class="chat-loading">Loading messages...</div>';
 
+      // Show chat on mobile (Discord-like behavior)
+      openMobileChat();
+
       // Join via socket
       chatSocket.emit('join_channel', { channelId: channel.id });
+    }
+
+    // Mobile chat functions (Discord-like behavior)
+    function openMobileChat() {
+      const chatContainer = document.getElementById('educationChat');
+      if (chatContainer && window.innerWidth <= 768) {
+        chatContainer.classList.add('mobile-chat-active');
+      }
+    }
+
+    function closeMobileChat() {
+      const chatContainer = document.getElementById('educationChat');
+      if (chatContainer) {
+        chatContainer.classList.remove('mobile-chat-active');
+      }
     }
 
     function renderMessages(messages) {
@@ -18233,8 +18524,9 @@
       // Parse @mentions - match @username patterns
       formatted = formatted.replace(/@(\w+(?:\s+\w+)?)/g, (match, username) => {
         // Check if this is a mention of the current user
-        const isMentionMe = currentUser &&
-          currentUser.displayName?.toLowerCase() === username.toLowerCase();
+        const myDisplayName = currentUser?.display_name || currentUser?.full_name;
+        const isMentionMe = myDisplayName &&
+          myDisplayName.toLowerCase() === username.toLowerCase();
         return `<span class="mention${isMentionMe ? ' mention-me' : ''}">${match}</span>`;
       });
 
@@ -18243,8 +18535,9 @@
 
     // Check if message mentions the current user
     function messageContainsMention(content) {
-      if (!currentUser || !currentUser.displayName) return false;
-      const mentionPattern = new RegExp(`@${currentUser.displayName}\\b`, 'i');
+      const myDisplayName = currentUser?.display_name || currentUser?.full_name;
+      if (!myDisplayName) return false;
+      const mentionPattern = new RegExp(`@${myDisplayName}\\b`, 'i');
       return mentionPattern.test(content);
     }
 
@@ -18894,6 +19187,9 @@
           return; // Don't switch tabs until rules are acknowledged
         }
       }
+
+      // Save current subtab to localStorage for persistence
+      localStorage.setItem('vixxxen_educationSubtab', tab);
 
       // Update subtab buttons
       document.querySelectorAll('.education-subtab').forEach(btn => btn.classList.remove('active'));
@@ -20750,7 +21046,7 @@
       if (!currentUser) return true; // Not logged in, skip check
 
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/membership/rules-status`);
+        const response = await authFetch(`${API_BASE_URL}/api/payments/membership/rules-status`);
         if (response.ok) {
           const data = await response.json();
           userHasAcknowledgedRules = data.acknowledged;
@@ -20791,7 +21087,7 @@
       btn.textContent = 'Saving...';
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/membership/acknowledge-rules`, {
+        const response = await fetch(`${API_BASE_URL}/api/payments/membership/acknowledge-rules`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,

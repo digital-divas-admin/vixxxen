@@ -166,6 +166,14 @@ async function handleAvatarUpload(event) {
       userMenuAvatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
     }
 
+    // Update chat socket if connected (keeps avatar in sync for chat messages)
+    if (typeof chatSocket !== 'undefined' && chatSocket?.connected) {
+      chatSocket.emit('update_profile', {
+        displayName: currentUser.display_name || currentUser.full_name,
+        avatar: avatarUrl
+      });
+    }
+
     console.log('Avatar uploaded:', avatarUrl);
     alert('Avatar updated successfully!');
   } catch (error) {
@@ -218,6 +226,14 @@ async function updateProfile() {
     const avatarText = document.querySelector('.user-avatar');
     if (avatarText) {
       avatarText.textContent = newName.charAt(0).toUpperCase();
+    }
+
+    // Update chat socket if connected (keeps display name in sync for chat messages)
+    if (typeof chatSocket !== 'undefined' && chatSocket?.connected) {
+      chatSocket.emit('update_profile', {
+        displayName: newName,
+        avatar: currentUser.avatar_url
+      });
     }
 
     alert('Profile updated successfully!');
