@@ -12549,6 +12549,30 @@
           document.getElementById('ageVerifyBtn').disabled = !this.checked;
         });
       }
+
+      // Restore last active tab from localStorage
+      restoreLastActiveTab();
+    }
+
+    // Restore the last active tab from localStorage
+    function restoreLastActiveTab() {
+      const savedTab = localStorage.getItem('vixxxen_activeTab');
+      if (savedTab && savedTab !== 'image') {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          switchMainTab(savedTab);
+
+          // If education tab, also restore the subtab
+          if (savedTab === 'education') {
+            const savedSubtab = localStorage.getItem('vixxxen_educationSubtab');
+            if (savedSubtab) {
+              setTimeout(() => {
+                switchEducationSubtab(savedSubtab);
+              }, 100);
+            }
+          }
+        }, 50);
+      }
     }
 
     // Set content mode (called by toggle buttons)
@@ -12802,6 +12826,9 @@
     function switchMainTab(tab) {
       // Close mobile sidebar when switching tabs
       closeMobileSidebar();
+
+      // Save current tab to localStorage for persistence
+      localStorage.setItem('vixxxen_activeTab', tab);
 
       // Hide all tab sections
       document.querySelectorAll('.tab-section').forEach(section => {
@@ -18297,13 +18324,18 @@
         }
       });
 
-      // Auto-join first channel if available
+      // Try to restore last visited channel, or auto-join first channel
       if (channels.length > 0) {
-        joinChannel(channels[0]);
+        const savedChannelId = localStorage.getItem('vixxxen_lastChannelId');
+        const savedChannel = savedChannelId ? channels.find(c => c.id === savedChannelId) : null;
+        joinChannel(savedChannel || channels[0]);
       }
     }
 
     function joinChannel(channel) {
+      // Save selected channel to localStorage for persistence
+      localStorage.setItem('vixxxen_lastChannelId', channel.id);
+
       // Update UI
       document.querySelectorAll('.channel-item').forEach(item => {
         item.classList.remove('active');
@@ -19047,6 +19079,9 @@
           return; // Don't switch tabs until rules are acknowledged
         }
       }
+
+      // Save current subtab to localStorage for persistence
+      localStorage.setItem('vixxxen_educationSubtab', tab);
 
       // Update subtab buttons
       document.querySelectorAll('.education-subtab').forEach(btn => btn.classList.remove('active'));
