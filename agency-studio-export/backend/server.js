@@ -20,6 +20,7 @@ const { resolveAgency } = require('./middleware/agency');
 const healthRoutes = require('./routes/health');
 const agencyRoutes = require('./routes/agency');
 const teamRoutes = require('./routes/team');
+const generationRoutes = require('./routes/generation');
 
 // Validate environment on startup
 try {
@@ -138,8 +139,8 @@ app.use('/api', resolveAgency);
 app.use('/api/agency', agencyRoutes);
 app.use('/api/team', teamRoutes);
 
-// Generation routes (to be added in Phase 2)
-// app.use('/api/generate', generationLimiter, generationRoutes);
+// Generation routes
+app.use('/api/generate', generationLimiter, generationRoutes);
 
 // ===================
 // Static Files (Production)

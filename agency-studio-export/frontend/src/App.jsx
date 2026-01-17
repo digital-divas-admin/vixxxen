@@ -7,8 +7,8 @@ import { Routes, Route } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute } from './components/layout/ProtectedRoute';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
+import { ImageGenPage } from './pages/ImageGen';
 import {
-  ImageGenPage,
   VideoGenPage,
   EditToolsPage,
   ChatPage,
