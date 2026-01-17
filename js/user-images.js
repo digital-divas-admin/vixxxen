@@ -309,6 +309,7 @@ function renderLibraryModalGrid() {
     const canAppeal = img.status === 'pending_review' && !img.appeal_submitted_at;
     const canUse = img.status === 'auto_approved' || img.status === 'approved';
     const isRejected = img.status === 'rejected';
+    const isPending = img.status === 'pending_review';
 
     // Rejection notes display
     const rejectionNotesHtml = isRejected && img.review_notes
@@ -318,21 +319,29 @@ function renderLibraryModalGrid() {
          </div>`
       : '';
 
-    // Use image actions for approved images
+    // Use image actions for approved images only (shown on hover)
     const useActionsHtml = canUse
       ? `<div class="lib-use-actions" onclick="event.stopPropagation()">
            <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'seedream')" title="Use in Seedream 4.5">
              <span>🎨</span> Seedream
            </button>
            <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'nanobanana')" title="Use in NanoBanana Pro">
-             <span>🍌</span> NanoBanana
+             <span>🍌</span> Na
            </button>
            <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'inpaint')" title="Use in Inpaint">
              <span>🖌️</span> Inpaint
            </button>
-           <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'edit')" title="Use in Edit">
-             <span>✂️</span> Edit
+           <button class="lib-use-btn delete-btn" onclick="deleteLibImage('${img.id}')" title="Delete image">
+             <span>🗑️</span>
            </button>
+         </div>`
+      : '';
+
+    // For rejected/pending: only show Delete (and Appeal for pending without submitted appeal)
+    const simpleActionsHtml = (!canUse)
+      ? `<div class="lib-simple-actions" onclick="event.stopPropagation()">
+           ${canAppeal ? `<button class="lib-action-btn appeal" onclick="appealLibImage('${img.id}')">Appeal</button>` : ''}
+           <button class="lib-action-btn delete" onclick="deleteLibImage('${img.id}')">Delete</button>
          </div>`
       : '';
 
@@ -344,10 +353,7 @@ function renderLibraryModalGrid() {
         </div>
         ${rejectionNotesHtml}
         ${useActionsHtml}
-        <div class="library-item-actions" onclick="event.stopPropagation()">
-          ${canAppeal ? `<button class="lib-action-btn appeal" onclick="appealLibImage('${img.id}')">Appeal</button>` : ''}
-          <button class="lib-action-btn delete" onclick="deleteLibImage('${img.id}')">Delete</button>
-        </div>
+        ${simpleActionsHtml}
       </div>
     `;
   }).join('');

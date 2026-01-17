@@ -1022,7 +1022,7 @@
 .library-modal-item {
   position: relative;
   border-radius: 8px;
-  overflow: visible;
+  overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.2s;
@@ -1055,6 +1055,52 @@
 .library-modal-item.status-rejected {
   border-color: #ff4444;
   opacity: 0.7;
+}
+
+/* Simple actions for rejected/pending - just Delete and optionally Appeal */
+.lib-simple-actions {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(0,0,0,0.3);
+}
+
+.lib-simple-actions .lib-action-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #1a1a2e;
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lib-simple-actions .lib-action-btn:hover {
+  background: #333;
+}
+
+.lib-simple-actions .lib-action-btn.delete {
+  background: linear-gradient(135deg, #ff444420, #ff222220);
+  border-color: #ff4444;
+  color: #ff6666;
+}
+
+.lib-simple-actions .lib-action-btn.delete:hover {
+  background: #ff4444;
+  color: #fff;
+}
+
+.lib-simple-actions .lib-action-btn.appeal {
+  background: linear-gradient(135deg, #ffa50020, #ff880020);
+  border-color: #ffa500;
+  color: #ffa500;
+}
+
+.lib-simple-actions .lib-action-btn.appeal:hover {
+  background: #ffa500;
+  color: #000;
 }
 
 .library-item-badge {
@@ -1158,38 +1204,49 @@
   line-height: 1.3;
 }
 
-/* Use image action buttons */
+/* Use image action buttons - compact 2x2 grid */
 .lib-use-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 8px;
-  background: rgba(0,0,0,0.2);
+  gap: 3px;
+  padding: 4px;
+  background: rgba(0,0,0,0.3);
 }
 
 .lib-use-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 3px;
+  padding: 4px 6px;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   background: linear-gradient(135deg, #1a1a2e, #16162a);
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .lib-use-btn:hover {
   border-color: #ff2ebb;
   background: linear-gradient(135deg, #ff2ebb20, #9d4edd20);
-  transform: translateY(-1px);
 }
 
 .lib-use-btn span {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+}
+
+.lib-use-btn.delete-btn {
+  background: linear-gradient(135deg, #ff444420, #ff222220);
+  border-color: #ff4444;
+}
+
+.lib-use-btn.delete-btn:hover {
+  background: #ff4444;
+  border-color: #ff4444;
 }
 
 
