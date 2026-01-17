@@ -5659,13 +5659,13 @@
         flex-direction: column;
       }
 
-      /* When chat is active on mobile */
-      .education-chat.mobile-chat-active .channel-sidebar {
-        transform: translateX(-100%);
+      /* When chat is active on mobile - needs higher specificity */
+      #communityContent .education-chat.mobile-chat-active .channel-sidebar {
+        transform: translateX(-100%) !important;
       }
 
-      .education-chat.mobile-chat-active .chat-area {
-        transform: translateX(0);
+      #communityContent .education-chat.mobile-chat-active .chat-area {
+        transform: translateX(0) !important;
       }
 
       .chat-back-btn {
@@ -19165,6 +19165,26 @@
       }
     }
 
+    // Update body class for community section (hides footer/widgets on mobile)
+    function updateCommunityActiveClass() {
+      const communityContent = document.getElementById('communityContent');
+      const isActive = communityContent && communityContent.classList.contains('active');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isActive && isMobile) {
+        document.body.classList.add('community-active');
+      } else {
+        document.body.classList.remove('community-active');
+      }
+    }
+
+    // Initialize community class on page load and resize
+    window.addEventListener('resize', updateCommunityActiveClass);
+    document.addEventListener('DOMContentLoaded', function() {
+      // Delay to ensure tabs are initialized
+      setTimeout(updateCommunityActiveClass, 100);
+    });
+
     // Mobile keyboard handling - adjust chat when keyboard opens/closes
     function initMobileKeyboardHandling() {
       if (!window.visualViewport) return;
@@ -19940,12 +19960,8 @@
       document.querySelectorAll('.education-subtab-content').forEach(content => content.classList.remove('active'));
       document.getElementById(tab + 'Content').classList.add('active');
 
-      // Toggle body class for community section (hides footer on mobile)
-      if (tab === 'community' && window.innerWidth <= 768) {
-        document.body.classList.add('community-active');
-      } else {
-        document.body.classList.remove('community-active');
-      }
+      // Update body class for community section (hides footer/widgets on mobile)
+      updateCommunityActiveClass();
 
       // Hide all education admin buttons first
       const adminResourcesBtn = document.getElementById('adminResourcesBtn');
