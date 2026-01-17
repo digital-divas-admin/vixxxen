@@ -4,6 +4,7 @@ const { compressImages } = require('./services/imageCompression');
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
+const { processImageInputs } = require('./services/userImageService');
 
 const router = express.Router();
 
@@ -147,14 +148,34 @@ router.post('/generate', async (req, res) => {
     const validatedWidth = Math.min(Math.max(parseInt(width) || 2048, 512), 4096);
     const validatedHeight = Math.min(Math.max(parseInt(height) || 2048, 512), 4096);
 
+    // Process reference images (resolve library IDs to base64)
+    let processedReferenceImages = referenceImages || [];
+    if (processedReferenceImages.length > 0) {
+      // Get user ID from request (set by auth middleware)
+      const userId = req.userId;
+      if (userId) {
+        const imageResult = await processImageInputs(processedReferenceImages, userId);
+        if (!imageResult.success) {
+          return res.status(400).json({
+            error: 'Failed to process reference images',
+            message: imageResult.error,
+            failedIds: imageResult.failedIds
+          });
+        }
+        processedReferenceImages = imageResult.images;
+      }
+    }
+
     // Determine which endpoint to use based on whether we have reference images
-    const hasReferenceImage = referenceImages && referenceImages.length > 0;
+    const hasReferenceImage = processedReferenceImages && processedReferenceImages.length > 0;
     const apiEndpoint = hasReferenceImage ? WAVESPEED_IMG2IMG_URL : WAVESPEED_TEXT2IMG_URL;
     const modelName = hasReferenceImage ? 'seedream-v4.5-edit' : 'seedream-v4.5';
 
     // Screen reference images for celebrities and minors before processing
-    if (hasReferenceImage && isModerationEnabled()) {
-      const moderationResult = await screenImages(referenceImages);
+    // Skip if all images came from library (already approved)
+    const hasRawImages = (referenceImages || []).some(img => !img.match(/^[0-9a-f-]{36}$/i));
+    if (hasReferenceImage && hasRawImages && isModerationEnabled()) {
+      const moderationResult = await screenImages(processedReferenceImages);
       if (!moderationResult.approved) {
         logger.warn('Reference images rejected by moderation', {
           reasons: moderationResult.reasons,
@@ -171,14 +192,14 @@ router.post('/generate', async (req, res) => {
     console.log(`\n🎨 Generating ${numOutputs} image(s) with Seedream 4.5 via WaveSpeed...`);
     console.log(`   Prompt: ${prompt}`);
     console.log(`   📐 DIMENSIONS: ${validatedWidth}x${validatedHeight}`);
-    console.log(`   Reference Images: ${referenceImages.length}`);
+    console.log(`   Reference Images: ${processedReferenceImages.length}`);
     console.log(`   Using endpoint: ${hasReferenceImage ? 'seedream-v4.5-edit (img2img)' : 'seedream-v4.5 (text2img)'}`);
     console.log(`   Model: bytedance/${modelName}`);
 
     // Compress reference images more aggressively (1024px is plenty for style guidance)
     let compressedReferenceImages = [];
-    if (referenceImages && referenceImages.length > 0) {
-      compressedReferenceImages = await compressImages(referenceImages, {
+    if (processedReferenceImages && processedReferenceImages.length > 0) {
+      compressedReferenceImages = await compressImages(processedReferenceImages, {
         maxDimension: 1024,
         quality: 75
       });

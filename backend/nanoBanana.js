@@ -4,6 +4,7 @@ const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { RequestQueue, createFetchWithRetry } = require('./services/rateLimitService');
 const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
+const { processImageInputs } = require('./services/userImageService');
 
 const router = express.Router();
 
@@ -65,9 +66,28 @@ router.post('/generate', async (req, res) => {
       });
     }
 
+    // Process reference images (resolve library IDs to base64)
+    let processedReferenceImages = referenceImages || [];
+    if (processedReferenceImages.length > 0) {
+      const userId = req.userId;
+      if (userId) {
+        const imageResult = await processImageInputs(processedReferenceImages, userId);
+        if (!imageResult.success) {
+          return res.status(400).json({
+            error: 'Failed to process reference images',
+            message: imageResult.error,
+            failedIds: imageResult.failedIds
+          });
+        }
+        processedReferenceImages = imageResult.images;
+      }
+    }
+
     // Screen reference images for celebrities and minors before processing
-    if (referenceImages && referenceImages.length > 0 && isModerationEnabled()) {
-      const moderationResult = await screenImages(referenceImages);
+    // Skip if all images came from library (already approved)
+    const hasRawImages = (referenceImages || []).some(img => !img.match(/^[0-9a-f-]{36}$/i));
+    if (processedReferenceImages.length > 0 && hasRawImages && isModerationEnabled()) {
+      const moderationResult = await screenImages(processedReferenceImages);
       if (!moderationResult.approved) {
         logger.warn('Reference images rejected by moderation', {
           reasons: moderationResult.reasons,
@@ -84,7 +104,7 @@ router.post('/generate', async (req, res) => {
     logGeneration('nano-banana', 'started', {
       numOutputs,
       aspectRatio,
-      referenceImages: referenceImages.length,
+      referenceImages: processedReferenceImages.length,
       requestId: req.id
     });
 
@@ -92,13 +112,13 @@ router.post('/generate', async (req, res) => {
     analytics.generation.started('nano-banana', {
       num_outputs: numOutputs,
       aspect_ratio: aspectRatio,
-      reference_images: referenceImages.length
+      reference_images: processedReferenceImages.length
     }, req);
 
     // Compress reference images to avoid API size limits
     let compressedReferenceImages = [];
-    if (referenceImages && referenceImages.length > 0) {
-      compressedReferenceImages = await compressImages(referenceImages, {
+    if (processedReferenceImages && processedReferenceImages.length > 0) {
+      compressedReferenceImages = await compressImages(processedReferenceImages, {
         maxDimension: 1536,
         quality: 80
       });

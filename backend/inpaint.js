@@ -4,6 +4,7 @@ const { routeGenerationRequest, getJobStatus } = require('./services/gpuRouter')
 const { logger, logGeneration } = require('./services/logger');
 const analytics = require('./services/analyticsService');
 const { screenImages, isEnabled: isModerationEnabled } = require('./services/imageModeration');
+const { processImageInputs, isLibraryImageId } = require('./services/userImageService');
 
 // RunPod Configuration (shared with qwen.js)
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
@@ -473,9 +474,26 @@ router.post('/inpaint-sfw', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    // Process image (resolve library ID to base64 if needed)
+    let processedImage = image;
+    const userId = req.userId;
+    if (userId && isLibraryImageId(image)) {
+      const imageResult = await processImageInputs([image], userId);
+      if (!imageResult.success) {
+        return res.status(400).json({
+          error: 'Failed to process image',
+          message: imageResult.error,
+          failedIds: imageResult.failedIds
+        });
+      }
+      processedImage = imageResult.images[0];
+    }
+
     // Screen uploaded image for celebrities and minors
-    if (isModerationEnabled()) {
-      const moderationResult = await screenImages([image]);
+    // Skip if image came from library (already approved)
+    const isFromLibrary = isLibraryImageId(image);
+    if (!isFromLibrary && isModerationEnabled()) {
+      const moderationResult = await screenImages([processedImage]);
       if (!moderationResult.approved) {
         logger.warn('Inpaint image rejected by moderation', {
           reasons: moderationResult.reasons,
@@ -502,9 +520,9 @@ router.post('/inpaint-sfw', async (req, res) => {
     }, req);
 
     // Strip data URL prefix if present
-    let base64Image = image;
-    if (image.startsWith('data:')) {
-      base64Image = image.split(',')[1];
+    let base64Image = processedImage;
+    if (processedImage.startsWith('data:')) {
+      base64Image = processedImage.split(',')[1];
     }
     let base64Mask = mask;
     if (mask.startsWith('data:')) {
@@ -580,9 +598,26 @@ router.post('/inpaint-nsfw', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    // Process image (resolve library ID to base64 if needed)
+    let processedImage = image;
+    const userId = req.userId;
+    if (userId && isLibraryImageId(image)) {
+      const imageResult = await processImageInputs([image], userId);
+      if (!imageResult.success) {
+        return res.status(400).json({
+          error: 'Failed to process image',
+          message: imageResult.error,
+          failedIds: imageResult.failedIds
+        });
+      }
+      processedImage = imageResult.images[0];
+    }
+
     // Screen uploaded image for celebrities and minors
-    if (isModerationEnabled()) {
-      const moderationResult = await screenImages([image]);
+    // Skip if image came from library (already approved)
+    const isFromLibrary = isLibraryImageId(image);
+    if (!isFromLibrary && isModerationEnabled()) {
+      const moderationResult = await screenImages([processedImage]);
       if (!moderationResult.approved) {
         logger.warn('Inpaint image rejected by moderation', {
           reasons: moderationResult.reasons,
@@ -609,9 +644,9 @@ router.post('/inpaint-nsfw', async (req, res) => {
     }, req);
 
     // Strip data URL prefix if present
-    let base64Image = image;
-    if (image.startsWith('data:')) {
-      base64Image = image.split(',')[1];
+    let base64Image = processedImage;
+    if (processedImage.startsWith('data:')) {
+      base64Image = processedImage.split(',')[1];
     }
     let base64Mask = mask;
     if (mask.startsWith('data:')) {
