@@ -18128,6 +18128,22 @@
         console.log(data.displayName + ' left the channel');
       });
 
+      // Handle real-time profile updates from other users
+      chatSocket.on('user_profile_updated', (data) => {
+        console.log('User profile updated:', data.displayName);
+        // Update online users list if visible
+        const onlineUsersList = document.getElementById('onlineUsersList');
+        if (onlineUsersList) {
+          const userElements = onlineUsersList.querySelectorAll(`[data-user-id="${data.userId}"]`);
+          userElements.forEach(el => {
+            const nameEl = el.querySelector('.online-user-name');
+            if (nameEl) nameEl.textContent = data.displayName;
+            const avatarEl = el.querySelector('.online-user-avatar img');
+            if (avatarEl && data.avatar) avatarEl.src = data.avatar;
+          });
+        }
+      });
+
       chatSocket.on('error', (data) => {
         console.error('Chat error:', data.message);
         showError(data.message);
@@ -18233,8 +18249,9 @@
       // Parse @mentions - match @username patterns
       formatted = formatted.replace(/@(\w+(?:\s+\w+)?)/g, (match, username) => {
         // Check if this is a mention of the current user
-        const isMentionMe = currentUser &&
-          currentUser.displayName?.toLowerCase() === username.toLowerCase();
+        const myDisplayName = currentUser?.display_name || currentUser?.full_name;
+        const isMentionMe = myDisplayName &&
+          myDisplayName.toLowerCase() === username.toLowerCase();
         return `<span class="mention${isMentionMe ? ' mention-me' : ''}">${match}</span>`;
       });
 
@@ -18243,8 +18260,9 @@
 
     // Check if message mentions the current user
     function messageContainsMention(content) {
-      if (!currentUser || !currentUser.displayName) return false;
-      const mentionPattern = new RegExp(`@${currentUser.displayName}\\b`, 'i');
+      const myDisplayName = currentUser?.display_name || currentUser?.full_name;
+      if (!myDisplayName) return false;
+      const mentionPattern = new RegExp(`@${myDisplayName}\\b`, 'i');
       return mentionPattern.test(content);
     }
 

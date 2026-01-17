@@ -218,6 +218,41 @@ function initializeChat(io) {
       }
     });
 
+    // Update user profile (display name, avatar) in real-time
+    // This ensures the in-memory connectedUsers map stays in sync with database changes
+    socket.on('update_profile', (data) => {
+      const user = connectedUsers.get(socket.id);
+      if (!user) {
+        return;
+      }
+
+      const { displayName, avatar } = data;
+
+      // Update the in-memory user data
+      if (displayName !== undefined) {
+        user.displayName = displayName || 'New User';
+      }
+      if (avatar !== undefined) {
+        user.avatar = avatar;
+      }
+
+      connectedUsers.set(socket.id, user);
+
+      logger.debug('User profile updated in chat', {
+        userId: maskUserId(socket.userId),
+        displayName: user.displayName
+      });
+
+      // Notify others in the current channel about the profile update
+      if (socket.currentChannel) {
+        socket.to(socket.currentChannel).emit('user_profile_updated', {
+          userId: socket.userId,
+          displayName: user.displayName,
+          avatar: user.avatar
+        });
+      }
+    });
+
     // Get all members (admin only)
     socket.on('get_all_members', async () => {
       if (!socket.isAdmin) {
