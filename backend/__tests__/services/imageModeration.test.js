@@ -207,13 +207,34 @@ describe('Image Moderation Service', () => {
       expect(result.faceDetails.minorFaces).toHaveLength(1);
     });
 
-    it('should approve when face age range HIGH is 18 or above', async () => {
+    it('should reject borderline cases where LOW age is under 18', async () => {
+      // Strict mode: flag if LOW end could be a minor (e.g., 16-22 is flagged)
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
         .mockResolvedValueOnce({ ModerationLabels: [] })
         .mockResolvedValueOnce({
           FaceDetails: [{
             AgeRange: { Low: 16, High: 22 },
+            Confidence: 99
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(false);
+      expect(result.hasMinor).toBe(true);
+    });
+
+    it('should approve when face age range LOW is 18 or above', async () => {
+      // Only approve when the LOW end is definitely adult
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 18, High: 26 },
             Confidence: 99
           }]
         });

@@ -275,12 +275,14 @@ async function detectFaces(client, imageBuffer) {
     confidence: face.Confidence
   }));
 
-  // Check if any face appears to be a minor
+  // Check if any face appears to be a minor - STRICT MODE
+  // Flag if the LOW end of the age range is under 18
+  // This catches anyone who COULD be a minor based on appearance
+  // Examples: 13-17 (flagged), 14-20 (flagged), 16-22 (flagged), 18-24 (OK)
   const minorFaces = faces.filter(face => {
     if (face.ageRange) {
-      // Flag if the HIGH end of the age range is under the threshold
-      // This is conservative - if Rekognition thinks someone COULD be under 18, we flag
-      return face.ageRange.High < MINOR_AGE_THRESHOLD;
+      // Flag if the LOW end suggests they could be under 18
+      return face.ageRange.Low < MINOR_AGE_THRESHOLD;
     }
     return false;
   });
