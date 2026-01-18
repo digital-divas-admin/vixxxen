@@ -8659,6 +8659,26 @@
       </button>
     </div>
 
+    <!-- Quick Actions - scrollable pills -->
+    <div class="mobile-quick-actions" id="mobileQuickActions" role="toolbar" aria-label="Quick actions">
+      <button class="mobile-quick-action" onclick="quickActionLastPrompt()" aria-label="Regenerate last prompt">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🔄</span>
+        <span>Regenerate</span>
+      </button>
+      <button class="mobile-quick-action" onclick="quickActionFavoriteCharacter()" aria-label="Use favorite character">
+        <span class="mobile-quick-action-icon" aria-hidden="true">⭐</span>
+        <span>Favorite</span>
+      </button>
+      <button class="mobile-quick-action" onclick="openImageLibraryModal()" aria-label="Open image library">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🖼️</span>
+        <span>Library</span>
+      </button>
+      <button class="mobile-quick-action" onclick="quickActionRandomPrompt()" aria-label="Generate random prompt">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🎲</span>
+        <span>Random</span>
+      </button>
+    </div>
+
     <!-- Recent Generations -->
     <div class="mobile-recent-section" id="mobileRecentSection">
       <div class="mobile-recent-header">
