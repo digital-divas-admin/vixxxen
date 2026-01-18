@@ -61,67 +61,89 @@ router.post('/upload', requireAuth, upload.single('image'), async (req, res) => 
     const fileExt = file.originalname.split('.').pop() || 'jpg';
     const storagePath = `${userId}/${imageId}.${fileExt}`;
 
-    // Screen the image if moderation is enabled
+    // Screen the image - moderation is REQUIRED (fail-closed)
     let status = 'auto_approved';
     let moderationFlags = null;
     let celebrityConfidence = null;
     let minorConfidence = null;
     let expiresAt = null;
 
-    if (isModerationEnabled()) {
-      try {
-        const moderationResult = await screenImage(file.buffer, {
-          celebrityConfidenceThreshold: MODERATION_THRESHOLDS.CELEBRITY_SOFT_FLAG,
-          moderationConfidenceThreshold: MODERATION_THRESHOLDS.MINOR_HARD_FLAG
+    // Always screen images - fail-closed if moderation is unavailable
+    try {
+      const moderationResult = await screenImage(file.buffer, {
+        celebrityConfidenceThreshold: MODERATION_THRESHOLDS.CELEBRITY_SOFT_FLAG,
+        moderationConfidenceThreshold: MODERATION_THRESHOLDS.MINOR_HARD_FLAG
+      });
+
+      // If moderation service is unavailable, block the upload entirely
+      if (moderationResult.serviceUnavailable) {
+        logger.error('Moderation service unavailable - blocking upload', { userId, imageId });
+        return res.status(503).json({
+          error: 'Image moderation service is temporarily unavailable. Please try again later.',
+          retryable: true
         });
-
-        moderationFlags = {
-          celebrities: moderationResult.celebrities || [],
-          moderationLabels: moderationResult.moderationLabels || [],
-          reasons: moderationResult.reasons || []
-        };
-
-        // Get highest confidence values
-        if (moderationResult.celebrities && moderationResult.celebrities.length > 0) {
-          celebrityConfidence = Math.max(...moderationResult.celebrities.map(c => c.confidence));
-        }
-
-        // Check for minor-related labels
-        const minorLabels = (moderationResult.moderationLabels || []).filter(label => {
-          const name = (label.name || '').toLowerCase();
-          const parent = (label.parentName || '').toLowerCase();
-          return ['child', 'minor', 'underage', 'infant', 'baby', 'toddler', 'teen', 'adolescent', 'youth', 'kid']
-            .some(term => name.includes(term) || parent.includes(term));
-        });
-
-        if (minorLabels.length > 0) {
-          minorConfidence = Math.max(...minorLabels.map(l => l.confidence));
-        }
-
-        // Determine status based on confidence tiers
-        if (minorConfidence && minorConfidence >= MODERATION_THRESHOLDS.MINOR_HARD_FLAG) {
-          // Minor detected - hard flag
-          status = 'pending_review';
-          logger.warn('Image flagged for minor detection', { userId, imageId, minorConfidence });
-        } else if (celebrityConfidence && celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_HARD_FLAG) {
-          // High confidence celebrity - hard flag
-          status = 'pending_review';
-          logger.warn('Image flagged for celebrity detection', { userId, imageId, celebrityConfidence });
-        } else if (celebrityConfidence && celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_SOFT_FLAG) {
-          // Medium confidence celebrity - auto-approve but log
-          status = 'auto_approved';
-          logger.info('Image soft-flagged for celebrity (auto-approved)', { userId, imageId, celebrityConfidence });
-        } else {
-          // No issues
-          status = 'auto_approved';
-        }
-
-      } catch (moderationError) {
-        logger.error('Moderation check failed', { error: moderationError.message, userId, imageId });
-        // On moderation error, flag for manual review to be safe
-        status = 'pending_review';
-        moderationFlags = { error: moderationError.message };
       }
+
+      moderationFlags = {
+        celebrities: moderationResult.celebrities || [],
+        moderationLabels: moderationResult.moderationLabels || [],
+        reasons: moderationResult.reasons || []
+      };
+
+      // Get highest confidence values
+      if (moderationResult.celebrities && moderationResult.celebrities.length > 0) {
+        celebrityConfidence = Math.max(...moderationResult.celebrities.map(c => c.confidence));
+      }
+
+      // Check for minor-related labels
+      const minorLabels = (moderationResult.moderationLabels || []).filter(label => {
+        const name = (label.name || '').toLowerCase();
+        const parent = (label.parentName || '').toLowerCase();
+        return ['child', 'minor', 'underage', 'infant', 'baby', 'toddler', 'teen', 'adolescent', 'youth', 'kid']
+          .some(term => name.includes(term) || parent.includes(term));
+      });
+
+      if (minorLabels.length > 0) {
+        minorConfidence = Math.max(...minorLabels.map(l => l.confidence));
+      }
+
+      // Also check face detection for minor detection
+      if (moderationResult.faceDetails && moderationResult.faceDetails.hasMinor) {
+        // Get the highest minor face confidence as minor_confidence
+        const minorFaceConfidences = moderationResult.faceDetails.minorFaces.map(f => f.confidence || 100);
+        const maxFaceConfidence = Math.max(...minorFaceConfidences);
+        minorConfidence = Math.max(minorConfidence || 0, maxFaceConfidence);
+      }
+
+      // Determine status based on confidence tiers
+      if (minorConfidence && minorConfidence >= MODERATION_THRESHOLDS.MINOR_HARD_FLAG) {
+        // Minor detected - hard flag
+        status = 'pending_review';
+        logger.warn('Image flagged for minor detection', { userId, imageId, minorConfidence });
+      } else if (moderationResult.faceDetails && moderationResult.faceDetails.hasMinor) {
+        // Face detection flagged minor (even if no moderation labels)
+        status = 'pending_review';
+        logger.warn('Image flagged for minor face detection', { userId, imageId, minorFaces: moderationResult.faceDetails.minorFaces });
+      } else if (celebrityConfidence && celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_HARD_FLAG) {
+        // High confidence celebrity - hard flag
+        status = 'pending_review';
+        logger.warn('Image flagged for celebrity detection', { userId, imageId, celebrityConfidence });
+      } else if (celebrityConfidence && celebrityConfidence >= MODERATION_THRESHOLDS.CELEBRITY_SOFT_FLAG) {
+        // Medium confidence celebrity - auto-approve but log
+        status = 'auto_approved';
+        logger.info('Image soft-flagged for celebrity (auto-approved)', { userId, imageId, celebrityConfidence });
+      } else {
+        // No issues
+        status = 'auto_approved';
+      }
+
+    } catch (moderationError) {
+      logger.error('Moderation check failed', { error: moderationError.message, userId, imageId });
+      // On moderation error, block the upload for safety (fail-closed)
+      return res.status(503).json({
+        error: 'Image moderation check failed. Please try again later.',
+        retryable: true
+      });
     }
 
     // Upload to Supabase Storage

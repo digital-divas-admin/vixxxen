@@ -342,9 +342,17 @@ function isMinorRelatedLabel(name, parentName) {
 async function screenAndSaveImages(images, userId, options = {}) {
   const { screenImages, isEnabled } = require('./imageModeration');
 
+  // Fail-closed: if moderation is not enabled, block uploads for safety
   if (!isEnabled()) {
-    logger.warn('Moderation not enabled - skipping screening');
-    return { approved: true, images, skipped: true };
+    logger.error('Moderation not enabled - blocking uploads for safety');
+    return {
+      approved: false,
+      serviceUnavailable: true,
+      reasons: ['Image moderation service is temporarily unavailable. Please try again later.'],
+      failedIndex: 0,
+      failedCount: images?.length || 0,
+      totalCount: images?.length || 0
+    };
   }
 
   if (!images || images.length === 0) {
@@ -355,6 +363,7 @@ async function screenAndSaveImages(images, userId, options = {}) {
   const savedImages = [];
   let allApproved = true;
   let firstFailedIndex = null;
+  let serviceUnavailable = false;
 
   for (let i = 0; i < images.length; i++) {
     const image = images[i];
@@ -377,9 +386,15 @@ async function screenAndSaveImages(images, userId, options = {}) {
       allApproved = false;
       if (firstFailedIndex === null) firstFailedIndex = i;
 
-      // Save to library for appeal (if user is authenticated)
+      // Track if this is a service unavailability vs content rejection
+      if (moderationResult.serviceUnavailable) {
+        serviceUnavailable = true;
+      }
+
+      // Only save to library for appeal if it's a CONTENT issue (not service unavailability)
+      // Service unavailability shouldn't create pending appeals
       let savedInfo = null;
-      if (userId) {
+      if (userId && !moderationResult.serviceUnavailable) {
         const saveResult = await saveToLibrary(image, userId, moderationResult);
         if (saveResult.success) {
           savedInfo = {
@@ -396,6 +411,7 @@ async function screenAndSaveImages(images, userId, options = {}) {
         reasons: moderationResult.reasons,
         hasCelebrity: moderationResult.hasCelebrity,
         hasMinor: moderationResult.hasMinor,
+        serviceUnavailable: moderationResult.serviceUnavailable,
         savedToLibrary: savedInfo
       });
     }
@@ -424,7 +440,8 @@ async function screenAndSaveImages(images, userId, options = {}) {
     results,
     savedImageIds: savedImages,
     errorMessage: errorMessages.join('; '),
-    reasons: failedResults.flatMap(r => r.reasons)
+    reasons: failedResults.flatMap(r => r.reasons),
+    serviceUnavailable
   };
 }
 
