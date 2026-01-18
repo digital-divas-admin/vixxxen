@@ -2103,7 +2103,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 10002;
+    z-index: 25000;
+    background: transparent;
   }
 
   #imageLibraryModal.active {
