@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Vixxxen - AI Image Generator</title>
 
   <!-- Favicons -->
@@ -460,6 +460,23 @@
 
     .character-gallery-image:hover {
       transform: scale(1.05);
+    }
+
+    /* Character Modal - Mobile-only elements (hidden on desktop) */
+    .character-modal-sticky-bar {
+      display: none;
+    }
+
+    .character-modal-readmore {
+      display: none;
+    }
+
+    .character-gallery-toggle {
+      display: none;
+    }
+
+    .character-modal-description-wrapper {
+      margin-bottom: 24px;
     }
 
     /* Lightbox Modal */
@@ -1059,6 +1076,7 @@
     .content-mode-toggle {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 12px;
       margin-top: 16px;
       padding: 8px 16px;
@@ -8433,6 +8451,10 @@
 
     /* Light theme overrides and cold-start banner now in external css/main.css */
   </style>
+
+  <!-- Responsive CSS - Must load AFTER inline styles to override them -->
+  <link rel="stylesheet" href="css/responsive.css?v=20260118">
+
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Socket.io Client -->
@@ -8633,29 +8655,29 @@
         <span class="greeting-text" id="mobileGreeting">Welcome back</span>
         <span class="greeting-credits" id="mobileCredits">Login to see credits</span>
       </div>
-      <div class="mobile-dashboard-avatar" onclick="openMobileAccountSheet()" id="mobileDashboardAvatar">
+      <button class="mobile-dashboard-avatar" onclick="openMobileAccountSheet()" id="mobileDashboardAvatar" aria-label="Open account menu" aria-haspopup="dialog">
         👤
-      </div>
+      </button>
     </div>
 
     <!-- Quick Actions - scrollable pills -->
-    <div class="mobile-quick-actions" id="mobileQuickActions">
-      <div class="mobile-quick-action" onclick="quickActionLastPrompt()">
-        <span class="mobile-quick-action-icon">🔄</span>
+    <div class="mobile-quick-actions" id="mobileQuickActions" role="toolbar" aria-label="Quick actions">
+      <button class="mobile-quick-action" onclick="quickActionLastPrompt()" aria-label="Regenerate last prompt">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🔄</span>
         <span>Regenerate</span>
-      </div>
-      <div class="mobile-quick-action" onclick="quickActionFavoriteCharacter()">
-        <span class="mobile-quick-action-icon">⭐</span>
+      </button>
+      <button class="mobile-quick-action" onclick="quickActionFavoriteCharacter()" aria-label="Use favorite character">
+        <span class="mobile-quick-action-icon" aria-hidden="true">⭐</span>
         <span>Favorite</span>
-      </div>
-      <div class="mobile-quick-action" onclick="openImageLibraryModal()">
-        <span class="mobile-quick-action-icon">🖼️</span>
+      </button>
+      <button class="mobile-quick-action" onclick="openImageLibraryModal()" aria-label="Open image library">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🖼️</span>
         <span>Library</span>
-      </div>
-      <div class="mobile-quick-action" onclick="quickActionRandomPrompt()">
-        <span class="mobile-quick-action-icon">🎲</span>
+      </button>
+      <button class="mobile-quick-action" onclick="quickActionRandomPrompt()" aria-label="Generate random prompt">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🎲</span>
         <span>Random</span>
-      </div>
+      </button>
     </div>
 
     <!-- Recent Generations -->
@@ -8672,56 +8694,56 @@
       </div>
     </div>
 
-    <div class="mobile-dashboard-tools">
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('image')">
-        <div class="mobile-tool-icon">🎨</div>
+    <div class="mobile-dashboard-tools" role="navigation" aria-label="Main tools">
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('image')" aria-label="Image - Generate images">
+        <div class="mobile-tool-icon" aria-hidden="true">🎨</div>
         <div class="mobile-tool-name">Image</div>
         <div class="mobile-tool-desc">Generate images</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('video')">
-        <div class="mobile-tool-icon">🎬</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('video')" aria-label="Video - Create videos">
+        <div class="mobile-tool-icon" aria-hidden="true">🎬</div>
         <div class="mobile-tool-name">Video</div>
         <div class="mobile-tool-desc">Create videos</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('edit')">
-        <div class="mobile-tool-icon">✂️</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('edit')" aria-label="Edit - Transform images">
+        <div class="mobile-tool-icon" aria-hidden="true">✂️</div>
         <div class="mobile-tool-name">Edit</div>
         <div class="mobile-tool-desc">Transform images</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('inpaint')">
-        <div class="mobile-tool-icon">🖌️</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('inpaint')" aria-label="Inpaint - Edit regions">
+        <div class="mobile-tool-icon" aria-hidden="true">🖌️</div>
         <div class="mobile-tool-name">Inpaint</div>
         <div class="mobile-tool-desc">Edit regions</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('caption')">
-        <div class="mobile-tool-icon">💬</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('caption')" aria-label="Caption - Describe images">
+        <div class="mobile-tool-icon" aria-hidden="true">💬</div>
         <div class="mobile-tool-name">Caption</div>
         <div class="mobile-tool-desc">Describe images</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('education')">
-        <div class="mobile-tool-icon">🎓</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('education')" aria-label="Learn - Tutorials and tips">
+        <div class="mobile-tool-icon" aria-hidden="true">🎓</div>
         <div class="mobile-tool-name">Learn</div>
         <div class="mobile-tool-desc">Tutorials & tips</div>
-      </div>
+      </button>
     </div>
 
     <div class="mobile-dashboard-section">
-      <div class="mobile-section-header">Marketplace</div>
-      <div class="mobile-tool-card mobile-tool-card-wide" onclick="openToolFromDashboard('marketplace')">
-        <div class="mobile-tool-icon">🛍️</div>
+      <h2 class="mobile-section-header">Marketplace</h2>
+      <button class="mobile-tool-card mobile-tool-card-wide" onclick="openToolFromDashboard('marketplace')" aria-label="Browse Marketplace - Models, LoRAs and presets">
+        <div class="mobile-tool-icon" aria-hidden="true">🛍️</div>
         <div class="mobile-tool-info">
           <div class="mobile-tool-name">Browse Marketplace</div>
           <div class="mobile-tool-desc">Models, LoRAs & presets</div>
         </div>
-      </div>
+      </button>
     </div>
   </div>
 
   <!-- Mobile Account Bottom Sheet -->
-  <div class="mobile-account-sheet" id="mobileAccountSheet">
-    <div class="mobile-sheet-backdrop" onclick="closeMobileAccountSheet()"></div>
-    <div class="mobile-sheet-content">
-      <div class="mobile-sheet-handle"></div>
+  <div class="mobile-account-sheet" id="mobileAccountSheet" role="dialog" aria-modal="true" aria-labelledby="mobileSheetName">
+    <div class="mobile-sheet-backdrop" onclick="closeMobileAccountSheet()" aria-hidden="true"></div>
+    <div class="mobile-sheet-content" role="document">
+      <div class="mobile-sheet-handle" aria-hidden="true"></div>
       <div class="mobile-sheet-header">
         <div class="mobile-sheet-avatar">👤</div>
         <div class="mobile-sheet-user">
@@ -8732,7 +8754,7 @@
       <div class="mobile-sheet-credits">
         <span class="mobile-sheet-credits-label">Credits</span>
         <span class="mobile-sheet-credits-value" id="mobileSheetCredits">-</span>
-        <button class="mobile-sheet-buy-btn" onclick="openBuyCreditsModal()">Buy</button>
+        <button class="mobile-sheet-buy-btn" onclick="openBillingPage(); closeMobileAccountSheet();">Buy</button>
       </div>
       <div class="mobile-sheet-divider"></div>
       <div class="mobile-sheet-menu">
@@ -8757,13 +8779,48 @@
   </div>
 
   <!-- Mobile Back Button (shown when in a tool) -->
-  <div class="mobile-back-bar" id="mobileBackBar">
-    <button class="mobile-back-btn" onclick="backToDashboard()">
-      <span class="mobile-back-arrow">←</span>
+  <nav class="mobile-back-bar" id="mobileBackBar" aria-label="Tool navigation">
+    <button class="mobile-back-btn" onclick="backToDashboard()" aria-label="Return to dashboard">
+      <span class="mobile-back-arrow" aria-hidden="true">←</span>
       <span class="mobile-back-text">Back</span>
     </button>
-    <span class="mobile-current-tool" id="mobileCurrentTool">Image</span>
-    <div class="mobile-back-spacer"></div>
+    <span class="mobile-current-tool" id="mobileCurrentTool" aria-live="polite">Image</span>
+    <div class="mobile-back-spacer" aria-hidden="true"></div>
+  </nav>
+
+  <!-- Login Modal - Outside container so it works on mobile -->
+  <div class="login-modal" id="loginModal">
+    <div class="login-modal-content">
+      <div class="login-modal-title">Welcome to Vixxxen</div>
+      <div class="login-modal-subtitle">Sign in or create an account to start creating</div>
+
+      <!-- Google Sign-In Button -->
+      <button class="google-signin-btn" onclick="handleGoogleSignIn()">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.26c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="login-divider">
+        <span>or use email</span>
+      </div>
+
+      <input type="email" class="login-input" placeholder="Email" id="loginEmail">
+      <input type="password" class="login-input" placeholder="Password (min 6 characters)" id="loginPassword">
+
+      <div style="display: flex; gap: 10px; width: 100%;">
+        <button class="user-menu-btn primary" onclick="handleLogin()" style="flex: 1;">Sign In</button>
+        <button class="user-menu-btn primary" onclick="handleSignUpFromModal()" style="flex: 1; background: linear-gradient(135deg, #00b2ff, #0088cc);">Create Account</button>
+      </div>
+      <div style="font-size: 0.8rem; color: #888; text-align: center; margin-top: 8px;">
+        🎁 New accounts get <strong style="color: #00b2ff;">20 free credits</strong> to start!
+      </div>
+      <button class="user-menu-btn" onclick="closeLoginModal()" style="margin-top: 8px;">Cancel</button>
+    </div>
   </div>
 
   <div class="container">
@@ -8837,48 +8894,12 @@
       <button class="user-menu-btn" onclick="handleLogout()">Logout</button>
     </div>
 
-    <!-- Login Modal -->
-    <div class="login-modal" id="loginModal">
-      <div class="login-modal-content">
-        <div class="login-modal-title">Welcome to Vixxxen</div>
-        <div class="login-modal-subtitle">Sign in or create an account to start creating</div>
-
-        <!-- Google Sign-In Button -->
-        <button class="google-signin-btn" onclick="handleGoogleSignIn()">
-          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
-            <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.26c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
-            <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-            <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
-          </svg>
-          Continue with Google
-        </button>
-
-        <div class="login-divider">
-          <span>or use email</span>
-        </div>
-
-        <input type="email" class="login-input" placeholder="Email" id="loginEmail">
-        <input type="password" class="login-input" placeholder="Password (min 6 characters)" id="loginPassword">
-
-        <div style="display: flex; gap: 10px; width: 100%;">
-          <button class="user-menu-btn primary" onclick="handleLogin()" style="flex: 1;">Sign In</button>
-          <button class="user-menu-btn primary" onclick="handleSignUpFromModal()" style="flex: 1; background: linear-gradient(135deg, #00b2ff, #0088cc);">Create Account</button>
-        </div>
-        <div style="font-size: 0.8rem; color: #888; text-align: center; margin-top: 8px;">
-          🎁 New accounts get <strong style="color: #00b2ff;">20 free credits</strong> to start!
-        </div>
-        <button class="user-menu-btn" onclick="closeLoginModal()" style="margin-top: 8px;">Cancel</button>
-      </div>
-    </div>
-
     <!-- Image Tab Section -->
     <div class="tab-section active" id="imageSection">
       <div class="left-panel">
       <div class="header">
         <!-- Content Mode Toggle -->
         <div class="content-mode-toggle" id="contentModeToggle">
-          <span class="content-mode-label">Content Mode:</span>
           <div class="content-mode-switch">
             <button class="content-mode-btn active" id="safeModeBtn" onclick="setContentMode('safe')">
               Safe
@@ -9081,7 +9102,6 @@
 
           <!-- Content Mode Toggle for Video -->
           <div class="content-mode-toggle" id="videoContentModeToggle">
-            <span class="content-mode-label">Content Mode:</span>
             <div class="content-mode-switch">
               <button class="content-mode-btn active" id="videoSafeModeBtn" onclick="setContentMode('safe')">
                 Safe
@@ -9358,8 +9378,8 @@
             </div>
 
             <!-- Brush Controls -->
-            <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
-              <div style="flex: 1;">
+            <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 150px;">
                 <div style="font-size: 0.75rem; color: #888; margin-bottom: 4px;">Brush Size: <span id="brushSizeValue">30</span>px</div>
                 <input type="range" id="brushSize" min="5" max="100" value="30" style="width: 100%; cursor: pointer;" oninput="updateBrushSize(this.value)">
               </div>
@@ -9372,8 +9392,21 @@
             </div>
 
             <!-- Canvas Container -->
-            <div style="position: relative; background: #0a0a0a; border-radius: 8px; overflow: hidden; border: 1px solid #2a2a2a;">
+            <div class="edit-canvas-wrapper" id="editCanvasWrapper">
               <canvas id="maskCanvas" style="display: block; max-width: 100%; cursor: crosshair;"></canvas>
+
+              <!-- Mobile touch mode toggle (only visible on mobile) -->
+              <button class="inpaint-touch-mode-toggle" id="editTouchModeToggle" onclick="toggleInpaintTouchMode()" aria-label="Toggle paint/navigate mode">
+                <span class="toggle-icon">🖌️</span>
+                <span class="toggle-label">Paint</span>
+              </button>
+
+              <!-- First-use hint for mobile -->
+              <div class="inpaint-touch-hint" id="editTouchHint">
+                <span>☝️ One finger to paint</span>
+                <span>✌️ Two fingers to scroll</span>
+                <button onclick="dismissEditTouchHint()">Got it</button>
+              </div>
             </div>
           </div>
 
@@ -9462,6 +9495,19 @@
             <input type="file" id="inpaintImageInput" accept="image/*" onchange="handleInpaintImageUpload(event)" style="display: none;">
             <canvas id="inpaintCanvas" style="display: none;"></canvas>
             <canvas id="inpaintMaskCanvas" style="display: none;"></canvas>
+
+            <!-- Mobile touch mode toggle (only visible on mobile) -->
+            <button class="inpaint-touch-mode-toggle" id="inpaintTouchModeToggle" onclick="toggleInpaintTouchMode()" aria-label="Toggle paint/navigate mode">
+              <span class="toggle-icon">🖌️</span>
+              <span class="toggle-label">Paint</span>
+            </button>
+
+            <!-- First-use hint for mobile -->
+            <div class="inpaint-touch-hint" id="inpaintTouchHint">
+              <span>☝️ One finger to paint</span>
+              <span>✌️ Two fingers to scroll</span>
+              <button onclick="dismissInpaintTouchHint()">Got it</button>
+            </div>
           </div>
         </div>
 
@@ -11433,24 +11479,38 @@
           <div class="character-modal-info">
             <div class="character-modal-name" id="modalCharacterName"></div>
             <div class="character-modal-category" id="modalCharacterCategory"></div>
-            <div class="character-modal-description" id="modalCharacterDescription"></div>
+            <div class="character-modal-description-wrapper">
+              <div class="character-modal-description" id="modalCharacterDescription"></div>
+              <button class="character-modal-readmore" id="modalReadMore" onclick="toggleCharacterDescription()">Read more</button>
+            </div>
 
             <div class="character-modal-tags" id="modalCharacterTags"></div>
-
-            <div class="character-modal-purchase">
-              <div class="character-modal-price" id="modalCharacterPrice">$14.99</div>
-              <button class="character-modal-buy-btn" id="modalBuyBtn" onclick="purchaseCharacter()">
-                💳 Purchase Character
-              </button>
-            </div>
           </div>
+        </div>
+
+        <div class="character-modal-purchase">
+          <div class="character-modal-price" id="modalCharacterPrice">$14.99</div>
+          <button class="character-modal-buy-btn" id="modalBuyBtn" onclick="purchaseCharacter()">
+            💳 Purchase Character
+          </button>
         </div>
 
         <div class="character-modal-gallery">
           <div class="character-modal-gallery-title">Example Gallery</div>
+          <button class="character-gallery-toggle" id="galleryToggle" onclick="toggleCharacterGallery()">
+            <span class="character-gallery-toggle-text">Example Gallery</span>
+            <span class="character-gallery-toggle-count" id="galleryCount">(0)</span>
+            <span class="character-gallery-toggle-icon">▼</span>
+          </button>
           <div class="character-gallery-grid" id="modalCharacterGallery">
             <!-- Gallery images will be populated here -->
           </div>
+        </div>
+
+        <!-- Mobile sticky purchase bar -->
+        <div class="character-modal-sticky-bar">
+          <div class="sticky-bar-price" id="modalStickyPrice">$14.99</div>
+          <button class="sticky-bar-btn" onclick="purchaseCharacter()">Purchase</button>
         </div>
       </div>
     </div>
@@ -11835,63 +11895,6 @@
     </div>
     <!-- End Account Page Section -->
 
-    <!-- Unified Image Library Modal (handles both flagged images and library view) -->
-    <div class="modal-overlay" id="imageLibraryModal">
-      <div class="modal-content">
-        <div class="modal-header" id="libraryModalHeader">
-          <h2 id="libraryModalTitle">My Images</h2>
-          <button class="modal-close" onclick="closeImageLibraryModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-          <!-- Flagged Image View (shown when image is flagged) -->
-          <div id="flaggedImageView" style="display: none;">
-            <div class="flagged-view-content">
-              <div class="flagged-icon">⚠️</div>
-              <p style="color: #ccc; margin-bottom: 12px;">
-                This image was flagged by our content moderation system:
-              </p>
-              <div class="flagged-reasons">
-                <ul id="flagReasonsList">
-                  <!-- Reasons inserted by JS -->
-                </ul>
-              </div>
-              <!-- Flagged image preview -->
-              <div id="flaggedImagePreview" style="display: none; margin: 16px 0; max-height: 200px; overflow: hidden; border-radius: 8px;">
-                <!-- Image inserted by JS -->
-              </div>
-              <!-- Appeal form -->
-              <div id="appealSection" class="appeal-form" style="display: none;">
-                <p style="color: #888; font-size: 0.9rem; margin-bottom: 12px;">
-                  If you believe this was flagged in error, you can submit an appeal. We'll review it within 24-48 hours.
-                </p>
-                <label>Why should this image be approved?</label>
-                <textarea id="appealReasonInput" rows="3" placeholder="Explain why you think this image should be approved..."></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Library View (shown when viewing image library) -->
-          <div id="libraryGridView">
-            <!-- Filter tabs -->
-            <div class="library-modal-filters">
-              <button class="lib-filter-btn active" data-filter="all" onclick="filterLibraryModal('all')">All</button>
-              <button class="lib-filter-btn" data-filter="approved" onclick="filterLibraryModal('approved')">Approved</button>
-              <button class="lib-filter-btn" data-filter="pending" onclick="filterLibraryModal('pending_review')">Pending</button>
-              <button class="lib-filter-btn" data-filter="rejected" onclick="filterLibraryModal('rejected')">Rejected</button>
-            </div>
-            <!-- Image grid -->
-            <div id="libraryModalGrid" class="library-modal-grid">
-              <div class="library-modal-loading">Loading...</div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer" id="libraryModalFooter">
-          <button class="account-btn secondary" onclick="closeImageLibraryModal()">Close</button>
-          <button class="account-btn primary" id="submitAppealBtn" onclick="submitModerationAppeal()" style="display: none;">Submit Appeal</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Billing Page Section -->
     <div class="tab-section" id="billingSection">
       <div class="account-page">
@@ -11964,9 +11967,70 @@
 
   </div>
 
+  <!-- Unified Image Library Modal (handles both flagged images and library view) -->
+  <!-- Placed outside container so it's visible even when container is hidden on mobile -->
+  <div class="modal-overlay" id="imageLibraryModal">
+    <div class="library-modal-backdrop" onclick="closeImageLibraryModal()"></div>
+    <div class="modal-content">
+      <div class="library-modal-handle"></div>
+      <div class="modal-header" id="libraryModalHeader">
+        <h2 id="libraryModalTitle">My Images</h2>
+        <button class="modal-close" onclick="closeImageLibraryModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Flagged Image View (shown when image is flagged) -->
+        <div id="flaggedImageView" style="display: none;">
+          <div class="flagged-view-content">
+            <div class="flagged-icon">⚠️</div>
+            <p style="color: #ccc; margin-bottom: 12px;">
+              This image was flagged by our content moderation system:
+            </p>
+            <div class="flagged-reasons">
+              <ul id="flagReasonsList">
+                <!-- Reasons inserted by JS -->
+              </ul>
+            </div>
+            <!-- Flagged image preview -->
+            <div id="flaggedImagePreview" style="display: none; margin: 16px 0; max-height: 200px; overflow: hidden; border-radius: 8px;">
+              <!-- Image inserted by JS -->
+            </div>
+            <!-- Appeal form -->
+            <div id="appealSection" class="appeal-form" style="display: none;">
+              <p style="color: #888; font-size: 0.9rem; margin-bottom: 12px;">
+                If you believe this was flagged in error, you can submit an appeal. We'll review it within 24-48 hours.
+              </p>
+              <label>Why should this image be approved?</label>
+              <textarea id="appealReasonInput" rows="3" placeholder="Explain why you think this image should be approved..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Library View (shown when viewing image library) -->
+        <div id="libraryGridView">
+          <!-- Filter tabs -->
+          <div class="library-modal-filters">
+            <button class="lib-filter-btn active" data-filter="all" onclick="filterLibraryModal('all')">All</button>
+            <button class="lib-filter-btn" data-filter="approved" onclick="filterLibraryModal('approved')">Approved</button>
+            <button class="lib-filter-btn" data-filter="pending" onclick="filterLibraryModal('pending_review')">Pending</button>
+            <button class="lib-filter-btn" data-filter="rejected" onclick="filterLibraryModal('rejected')">Rejected</button>
+          </div>
+          <!-- Image grid -->
+          <div id="libraryModalGrid" class="library-modal-grid">
+            <div class="library-modal-loading">Loading...</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" id="libraryModalFooter">
+        <button class="account-btn secondary" onclick="closeImageLibraryModal()">Close</button>
+        <button class="account-btn primary" id="submitAppealBtn" onclick="submitModerationAppeal()" style="display: none;">Submit Appeal</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Site Footer -->
   <footer class="site-footer">
-    <div class="footer-content">
+    <!-- Desktop footer content (hidden on mobile) -->
+    <div class="footer-content footer-desktop">
       <div class="footer-ai-disclosure">
         <span class="ai-badge">🤖 AI</span>
         <span>All characters and content on this platform are entirely AI-generated. No real persons are depicted.</span>
@@ -11984,7 +12048,39 @@
         </div>
       </div>
     </div>
+
+    <!-- Mobile slim footer (shown on mobile only) -->
+    <div class="footer-mobile-slim">
+      <span class="footer-copyright">&copy; 2025 Vixxxen</span>
+      <span class="footer-mobile-ai">🤖 AI Generated</span>
+      <button class="footer-more-btn" onclick="openFooterLinksSheet()" aria-label="More options">
+        <span>More</span>
+        <span class="footer-more-icon">⋯</span>
+      </button>
+    </div>
   </footer>
+
+  <!-- Mobile Footer Links Sheet -->
+  <div class="footer-links-sheet" id="footerLinksSheet">
+    <div class="footer-sheet-backdrop" onclick="closeFooterLinksSheet()"></div>
+    <div class="footer-sheet-content">
+      <div class="footer-sheet-handle"></div>
+      <div class="footer-sheet-title">Links & Info</div>
+      <div class="footer-sheet-links">
+        <a href="#" onclick="openPolicyModal('terms'); closeFooterLinksSheet(); return false;">📜 Terms of Service</a>
+        <a href="#" onclick="openPolicyModal('privacy'); closeFooterLinksSheet(); return false;">🔒 Privacy Policy</a>
+        <a href="#" onclick="openPolicyModal('refund'); closeFooterLinksSheet(); return false;">💳 Refund Policy</a>
+        <a href="#" onclick="openPolicyModal('prohibited'); closeFooterLinksSheet(); return false;">🚫 Prohibited Content</a>
+        <a href="#" onclick="open2257Modal(); closeFooterLinksSheet(); return false;">📋 2257 Compliance</a>
+        <a href="#" onclick="openPolicyModal('faq'); closeFooterLinksSheet(); return false;">❓ FAQ</a>
+        <a href="#" onclick="openPolicyModal('contact'); closeFooterLinksSheet(); return false;">✉️ Contact Us</a>
+      </div>
+      <div class="footer-sheet-disclosure">
+        <span class="ai-badge">🤖 AI</span>
+        <span>All characters and content on this platform are entirely AI-generated. No real persons are depicted.</span>
+      </div>
+    </div>
+  </div>
 
   <!-- Policy Modal -->
   <div class="policy-modal" id="policyModal">
@@ -12270,7 +12366,7 @@
     // ===========================================
 
     // Track if we're in a tool view on mobile (global for landing-page.js access)
-    window.window.mobileToolActive = false;
+    window.mobileToolActive = false;
 
     // Tool name mappings for display
     const toolDisplayNames = {
@@ -12397,7 +12493,12 @@
     // Handle auth action from mobile sheet
     function handleMobileAuth() {
       closeMobileAccountSheet();
-      if (currentUser) {
+      // Check both currentUser state AND what the UI was showing
+      // This handles edge cases where state might be out of sync
+      const authLabel = document.getElementById('mobileAuthLabel');
+      const wasShowingSignOut = authLabel && authLabel.textContent === 'Sign Out';
+
+      if (currentUser || wasShowingSignOut) {
         handleLogout();
       } else {
         showLoginModal();
@@ -12475,8 +12576,30 @@
       }
     }
 
+    // Debounce utility for resize events
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Debounced resize handler for performance
+    const debouncedMobileResize = debounce(handleMobileResize, 150);
+
     // Add resize listener for mobile/desktop transitions
-    window.addEventListener('resize', handleMobileResize);
+    window.addEventListener('resize', debouncedMobileResize);
+
+    // Add orientationchange listener for mobile devices
+    window.addEventListener('orientationchange', () => {
+      // Small delay to let the browser finish orientation change
+      setTimeout(handleMobileResize, 100);
+    });
 
     // ===========================================
     // PHASE 2: QUICK ACTIONS
@@ -12620,6 +12743,12 @@
 
     // Add image to recent generations (called after successful generation)
     function addToRecentGenerations(imageUrl, metadata = {}) {
+      // Skip base64 URLs to avoid quota issues - only store permanent URLs
+      if (imageUrl && imageUrl.startsWith('data:')) {
+        // Store a placeholder that will be updated when permanent URL is available
+        return;
+      }
+
       recentGenerationsCache.unshift({
         url: imageUrl,
         thumbnail: metadata.thumbnail || imageUrl,
@@ -12635,8 +12764,21 @@
         recentGenerationsCache = recentGenerationsCache.slice(0, 20);
       }
 
-      // Save to session
-      sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+      // Save to session with error handling for quota
+      try {
+        sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+      } catch (e) {
+        // Quota exceeded - clear old data and try again
+        console.warn('📦 Recent generations storage quota exceeded, clearing cache');
+        recentGenerationsCache = recentGenerationsCache.slice(0, 5);
+        try {
+          sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+        } catch (e2) {
+          // Still failing, clear completely
+          sessionStorage.removeItem('vixxxen_recentGenerations');
+          recentGenerationsCache = [];
+        }
+      }
 
       // Update grid if on dashboard
       updateMobileRecentGenerations();
@@ -12647,9 +12789,32 @@
       const saved = sessionStorage.getItem('vixxxen_recentGenerations');
       if (saved) {
         try {
-          recentGenerationsCache = JSON.parse(saved);
+          // Check if data is too large (> 100KB suggests base64 data is stored)
+          if (saved.length > 100000) {
+            console.warn('📦 Recent generations cache too large, clearing...');
+            sessionStorage.removeItem('vixxxen_recentGenerations');
+            recentGenerationsCache = [];
+            return;
+          }
+
+          const parsed = JSON.parse(saved);
+          // Filter out any entries with base64 URLs
+          recentGenerationsCache = parsed.filter(item =>
+            item.url && !item.url.startsWith('data:')
+          );
+
+          // If we filtered some out, save the cleaned version
+          if (recentGenerationsCache.length !== parsed.length) {
+            console.log('📦 Cleaned base64 URLs from recent generations cache');
+            sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+          }
+
           updateMobileRecentGenerations();
-        } catch (e) {}
+        } catch (e) {
+          // Corrupted data, clear it
+          sessionStorage.removeItem('vixxxen_recentGenerations');
+          recentGenerationsCache = [];
+        }
       }
     }
 
@@ -14306,6 +14471,31 @@
       // Close mobile sidebar when switching tabs
       closeMobileSidebar();
 
+      // On mobile, ensure back bar is visible and dashboard is hidden
+      if (window.innerWidth <= 900) {
+        const dashboard = document.getElementById('mobileDashboard');
+        const container = document.querySelector('.container');
+        const backBar = document.getElementById('mobileBackBar');
+        const currentToolLabel = document.getElementById('mobileCurrentTool');
+        const siteFooter = document.querySelector('.site-footer');
+
+        // Hide dashboard, show container with tool
+        if (dashboard) dashboard.classList.add('hidden');
+        if (container) container.classList.add('mobile-tool-active');
+        if (backBar) backBar.classList.add('visible');
+        if (siteFooter) siteFooter.style.display = 'flex';
+
+        // Update tool name in back bar
+        if (currentToolLabel) {
+          const displayName = toolDisplayNames[tab] || tab;
+          currentToolLabel.textContent = displayName;
+        }
+
+        // Track state
+        window.mobileToolActive = true;
+        sessionStorage.setItem('vixxxen_mobileToolActive', tab);
+      }
+
       // Save current tab to localStorage for persistence
       localStorage.setItem('vixxxen_activeTab', tab);
 
@@ -15280,6 +15470,7 @@
 
     function setupCanvasDrawing() {
       let rect = maskCanvas.getBoundingClientRect();
+      let isTwoFingerGesture = false;
 
       // Mouse events
       maskCanvas.addEventListener('mousedown', startDrawing);
@@ -15287,8 +15478,17 @@
       maskCanvas.addEventListener('mouseup', stopDrawing);
       maskCanvas.addEventListener('mouseout', stopDrawing);
 
-      // Touch events for mobile
+      // Touch events for mobile - smart gesture handling
       maskCanvas.addEventListener('touchstart', (e) => {
+        isTwoFingerGesture = e.touches.length >= 2;
+
+        // If in navigate mode or two fingers, allow scrolling
+        if (window.inpaintTouchMode === 'navigate' || isTwoFingerGesture) {
+          isDrawing = false;
+          return;
+        }
+
+        // Single finger painting
         e.preventDefault();
         const touch = e.touches[0];
         const mouseEvent = new MouseEvent('mousedown', {
@@ -15296,23 +15496,65 @@
           clientY: touch.clientY
         });
         maskCanvas.dispatchEvent(mouseEvent);
+        maskCanvas.classList.add('painting');
       });
 
       maskCanvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const mouseEvent = new MouseEvent('mousemove', {
-          clientX: touch.clientX,
-          clientY: touch.clientY
-        });
-        maskCanvas.dispatchEvent(mouseEvent);
+        // If in navigate mode, allow scrolling
+        if (window.inpaintTouchMode === 'navigate') {
+          return;
+        }
+
+        // If second finger added, stop painting and allow scroll
+        if (e.touches.length >= 2) {
+          isTwoFingerGesture = true;
+          isDrawing = false;
+          maskCanvas.classList.remove('painting');
+          return;
+        }
+
+        // If two-finger gesture in progress, continue allowing scroll
+        if (isTwoFingerGesture) {
+          return;
+        }
+
+        // Single finger painting
+        if (isDrawing) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          });
+          maskCanvas.dispatchEvent(mouseEvent);
+        }
       });
 
       maskCanvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
+        if (e.touches.length === 0) {
+          isTwoFingerGesture = false;
+        }
+        isDrawing = false;
+        maskCanvas.classList.remove('painting');
         const mouseEvent = new MouseEvent('mouseup', {});
         maskCanvas.dispatchEvent(mouseEvent);
       });
+
+      maskCanvas.addEventListener('touchcancel', () => {
+        isTwoFingerGesture = false;
+        isDrawing = false;
+        maskCanvas.classList.remove('painting');
+      });
+
+      // Show first-use hint on mobile
+      if (window.innerWidth <= 900 && !localStorage.getItem('vixxxen_edit_touch_hint_seen')) {
+        const hint = document.getElementById('editTouchHint');
+        if (hint) {
+          setTimeout(() => {
+            hint.classList.add('visible');
+          }, 500);
+        }
+      }
     }
 
     function startDrawing(e) {
@@ -15353,6 +15595,15 @@
       if (isDrawing) {
         isDrawing = false;
         maskCtx.beginPath();
+      }
+    }
+
+    // Dismiss the Edit tab touch hint
+    function dismissEditTouchHint() {
+      const hint = document.getElementById('editTouchHint');
+      if (hint) {
+        hint.classList.remove('visible');
+        localStorage.setItem('vixxxen_edit_touch_hint_seen', 'true');
       }
     }
 
@@ -16136,6 +16387,11 @@
       maskCtx.lineCap = 'round';
       maskCtx.lineJoin = 'round';
 
+      // Mobile touch mode: 'auto' (two-finger pan, one-finger paint) or 'paint' (always paint)
+      window.inpaintTouchMode = window.inpaintTouchMode || 'auto';
+      let isTwoFingerGesture = false;
+      let touchStartTime = 0;
+
       // Get scale factor
       function getScale() {
         return canvas.width / canvas.offsetWidth;
@@ -16147,6 +16403,15 @@
         return {
           x: (e.clientX - rect.left) * scale,
           y: (e.clientY - rect.top) * scale
+        };
+      }
+
+      function getTouchPos(touch) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = getScale();
+        return {
+          x: (touch.clientX - rect.left) * scale,
+          y: (touch.clientY - rect.top) * scale
         };
       }
 
@@ -16180,22 +16445,169 @@
         isInpaintDrawing = false;
       };
 
-      // Touch events for mobile
+      // Touch events for mobile - smart gesture handling
       canvas.ontouchstart = function(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        canvas.onmousedown({ clientX: touch.clientX, clientY: touch.clientY });
+        touchStartTime = Date.now();
+        isTwoFingerGesture = e.touches.length >= 2;
+
+        // If in navigate mode, allow all scrolling
+        if (window.inpaintTouchMode === 'navigate') {
+          isInpaintDrawing = false;
+          return; // Don't prevent default - allow scroll
+        }
+
+        // If two fingers, allow native scrolling/zooming
+        if (isTwoFingerGesture) {
+          isInpaintDrawing = false;
+          return; // Don't prevent default - allow scroll
+        }
+
+        // If in auto mode or paint mode with single finger, start painting
+        if (window.inpaintTouchMode === 'auto' || window.inpaintTouchMode === 'paint') {
+          e.preventDefault();
+          const touch = e.touches[0];
+
+          // Save state for undo
+          inpaintMaskHistory.push(maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height));
+          if (inpaintMaskHistory.length > 20) inpaintMaskHistory.shift();
+
+          isInpaintDrawing = true;
+          const pos = getTouchPos(touch);
+          maskCtx.beginPath();
+          maskCtx.moveTo(pos.x, pos.y);
+          maskCtx.lineWidth = inpaintBrushSize * getScale();
+
+          // Visual feedback - add painting class
+          canvas.classList.add('painting');
+        }
       };
 
       canvas.ontouchmove = function(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        canvas.onmousemove({ clientX: touch.clientX, clientY: touch.clientY });
+        // If in navigate mode, allow scrolling
+        if (window.inpaintTouchMode === 'navigate') {
+          return;
+        }
+
+        // If second finger added during gesture, stop painting and allow scroll
+        if (e.touches.length >= 2) {
+          isTwoFingerGesture = true;
+          isInpaintDrawing = false;
+          canvas.classList.remove('painting');
+          return; // Allow native scroll
+        }
+
+        // If we detected two fingers earlier, continue allowing scroll
+        if (isTwoFingerGesture) {
+          return;
+        }
+
+        // Single finger painting
+        if (isInpaintDrawing) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const pos = getTouchPos(touch);
+          maskCtx.lineTo(pos.x, pos.y);
+          maskCtx.stroke();
+          maskCtx.beginPath();
+          maskCtx.moveTo(pos.x, pos.y);
+        }
       };
 
-      canvas.ontouchend = function() {
+      canvas.ontouchend = function(e) {
+        // Reset two-finger flag when all fingers lifted
+        if (e.touches.length === 0) {
+          isTwoFingerGesture = false;
+        }
         isInpaintDrawing = false;
+        canvas.classList.remove('painting');
       };
+
+      canvas.ontouchcancel = function() {
+        isTwoFingerGesture = false;
+        isInpaintDrawing = false;
+        canvas.classList.remove('painting');
+      };
+
+      // Show first-use hint on mobile
+      if (window.innerWidth <= 900 && !localStorage.getItem('vixxxen_inpaint_touch_hint_seen')) {
+        const hint = document.getElementById('inpaintTouchHint');
+        if (hint) {
+          setTimeout(() => {
+            hint.classList.add('visible');
+          }, 500);
+        }
+      }
+    }
+
+    // Toggle between paint and navigate modes on mobile (shared by Inpaint and Edit tabs)
+    function toggleInpaintTouchMode() {
+      // Get elements from both Inpaint and Edit tabs
+      const inpaintToggle = document.getElementById('inpaintTouchModeToggle');
+      const editToggle = document.getElementById('editTouchModeToggle');
+      const inpaintCanvas = document.getElementById('inpaintCanvas');
+      const editCanvas = document.getElementById('maskCanvas');
+      const inpaintWrapper = document.getElementById('inpaintCanvasWrapper');
+      const editWrapper = document.getElementById('editCanvasWrapper');
+
+      if (window.inpaintTouchMode === 'auto' || window.inpaintTouchMode === 'paint') {
+        // Switch to navigate mode
+        window.inpaintTouchMode = 'navigate';
+
+        // Update both toggles
+        [inpaintToggle, editToggle].forEach(toggle => {
+          if (toggle) {
+            toggle.classList.add('navigate-mode');
+            toggle.querySelector('.toggle-icon').textContent = '✋';
+            toggle.querySelector('.toggle-label').textContent = 'Move';
+          }
+        });
+
+        // Update both wrappers
+        [inpaintWrapper, editWrapper].forEach(wrapper => {
+          if (wrapper) wrapper.classList.add('navigate-mode');
+        });
+
+        // Update both canvases
+        [inpaintCanvas, editCanvas].forEach(canvas => {
+          if (canvas) canvas.style.touchAction = 'pan-x pan-y';
+        });
+      } else {
+        // Switch to paint mode
+        window.inpaintTouchMode = 'paint';
+
+        // Update both toggles
+        [inpaintToggle, editToggle].forEach(toggle => {
+          if (toggle) {
+            toggle.classList.remove('navigate-mode');
+            toggle.querySelector('.toggle-icon').textContent = '🖌️';
+            toggle.querySelector('.toggle-label').textContent = 'Paint';
+          }
+        });
+
+        // Update both wrappers
+        [inpaintWrapper, editWrapper].forEach(wrapper => {
+          if (wrapper) wrapper.classList.remove('navigate-mode');
+        });
+
+        // Update both canvases
+        [inpaintCanvas, editCanvas].forEach(canvas => {
+          if (canvas) canvas.style.touchAction = 'none';
+        });
+      }
+
+      // Haptic feedback
+      if (typeof triggerHaptic === 'function') {
+        triggerHaptic('light');
+      }
+    }
+
+    // Dismiss the first-use touch hint
+    function dismissInpaintTouchHint() {
+      const hint = document.getElementById('inpaintTouchHint');
+      if (hint) {
+        hint.classList.remove('visible');
+        localStorage.setItem('vixxxen_inpaint_touch_hint_seen', 'true');
+      }
     }
 
     function updateInpaintBrushSize(value) {
@@ -17201,14 +17613,6 @@
           generatedImages.push(newImage);
           replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
 
-          // Add to recent generations for mobile dashboard
-          addToRecentGenerations(imageUrl, {
-            prompt: prompt,
-            model: 'qwen',
-            character: loraValue || '',
-            aspectRatio: aspectRatio
-          });
-
           // Upload to Supabase Storage
           uploadImageToStorage(imageUrl, {
             prompt: qwenPrompt,
@@ -17221,6 +17625,13 @@
             if (storedUrl) {
               newImage.storedUrl = storedUrl;
               console.log('📁 Image saved to permanent storage');
+              // Add to recent generations with permanent URL (not base64)
+              addToRecentGenerations(storedUrl, {
+                prompt: prompt,
+                model: 'qwen',
+                character: loraValue || '',
+                aspectRatio: aspectRatio
+              });
             }
           });
         }
@@ -17501,15 +17912,13 @@
             generatedImages.push(newImage);
             replacePlaceholderWithImage(placeholders[i], newImage);
 
-            // Add to recent generations for mobile dashboard
-            addToRecentGenerations(data.images[imageIndex], {
-              prompt: prompt,
-              model: capturedModel,
-              character: characterSelect?.value || '',
-              aspectRatio: aspectRatio
-            });
-
             // Upload to Supabase Storage (async, don't block UI)
+            // Capture values for closure
+            const imgPrompt = prompt;
+            const imgModel = capturedModel;
+            const imgCharacter = characterSelect?.value || '';
+            const imgAspectRatio = aspectRatio;
+
             uploadImageToStorage(data.images[imageIndex], {
               prompt: prompt,
               model: capturedModel,
@@ -17521,6 +17930,13 @@
               if (storedUrl) {
                 newImage.storedUrl = storedUrl;
                 console.log('📁 Image saved to permanent storage');
+                // Add to recent generations with permanent URL (not base64)
+                addToRecentGenerations(storedUrl, {
+                  prompt: imgPrompt,
+                  model: imgModel,
+                  character: imgCharacter,
+                  aspectRatio: imgAspectRatio
+                });
               }
             });
             imageIndex++;
@@ -18249,8 +18665,27 @@
     // Update credits display in UI
     function updateCreditsDisplay() {
       if (isUserLoggedIn) {
+        // Desktop credits
         document.getElementById('userCreditsDisplay').textContent = userCredits.toLocaleString();
         document.getElementById('userCreditsDetail').textContent = `${userCredits.toLocaleString()} Credits`;
+
+        // Mobile credits
+        const mobileCredits = document.getElementById('mobileCredits');
+        const mobileSheetCredits = document.getElementById('mobileSheetCredits');
+        if (mobileCredits) mobileCredits.textContent = `${userCredits.toLocaleString()} credits`;
+        if (mobileSheetCredits) mobileSheetCredits.textContent = userCredits.toLocaleString();
+
+        // Update mobile dashboard greeting with user name
+        const greetingEl = document.getElementById('mobileGreeting');
+        if (greetingEl && currentUser) {
+          const hour = new Date().getHours();
+          let greeting = 'Welcome back';
+          if (hour < 12) greeting = 'Good morning';
+          else if (hour < 18) greeting = 'Good afternoon';
+          else greeting = 'Good evening';
+          const name = currentUser.display_name || currentUser.email?.split('@')[0] || '';
+          greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
+        }
       }
     }
 
@@ -18719,9 +19154,11 @@
       if (userCreditsDisplay) userCreditsDisplay.textContent = 'Login';
       if (userMenu) userMenu.classList.remove('active');
 
-      // Clear login form
-      document.getElementById('loginEmail').value = '';
-      document.getElementById('loginPassword').value = '';
+      // Clear login form (with null checks)
+      const loginEmail = document.getElementById('loginEmail');
+      const loginPassword = document.getElementById('loginPassword');
+      if (loginEmail) loginEmail.value = '';
+      if (loginPassword) loginPassword.value = '';
 
       // Update dropdowns
       updateCharacterDropdowns();
@@ -18879,15 +19316,27 @@
         if (userAvatar) userAvatar.classList.remove('logged-out');
         if (userStatusDot) userStatusDot.style.display = 'block';
 
-        // Load user profile data
+        // Update mobile dashboard and account sheet immediately with session user info
+        // This ensures UI shows logged-in state even before profile fully loads
+        if (typeof updateMobileDashboard === 'function') {
+          updateMobileDashboard();
+        }
+        if (typeof updateMobileAccountSheet === 'function') {
+          updateMobileAccountSheet();
+        }
+
+        // Load user profile data (credits, preferences, etc.)
         console.log('🔐 Calling loadUserProfile...');
         try {
           await loadUserProfile(session.user.id);
           console.log('🔐 loadUserProfile completed');
 
-          // Update mobile dashboard with user info
+          // Update mobile UI again with full profile data (credits, display name, etc.)
           if (typeof updateMobileDashboard === 'function') {
             updateMobileDashboard();
+          }
+          if (typeof updateMobileAccountSheet === 'function') {
+            updateMobileAccountSheet();
           }
 
           // Check for prompts/reminders after profile load
@@ -18896,6 +19345,13 @@
           }
         } catch (err) {
           console.error('🔐 loadUserProfile failed:', err);
+          // Still update UI with basic session info even if profile load failed
+          if (typeof updateMobileDashboard === 'function') {
+            updateMobileDashboard();
+          }
+          if (typeof updateMobileAccountSheet === 'function') {
+            updateMobileAccountSheet();
+          }
         }
 
         // Reload marketplace with user's ownership data and admin status (will use preloaded cache)
@@ -18940,9 +19396,12 @@
         if (userStatusDot) userStatusDot.style.display = 'none';
         if (userCreditsDisplay) userCreditsDisplay.textContent = 'Login';
 
-        // Update mobile dashboard to logged out state
+        // Update mobile dashboard and account sheet to logged out state
         if (typeof updateMobileDashboard === 'function') {
           updateMobileDashboard();
+        }
+        if (typeof updateMobileAccountSheet === 'function') {
+          updateMobileAccountSheet();
         }
 
         // Reload marketplace to hide admin controls and reset ownership
@@ -18959,6 +19418,25 @@
     function openSubscriptionPage() {
       // Close user menu
       document.getElementById('userMenu').classList.remove('active');
+
+      // Handle mobile view
+      if (window.innerWidth <= 900) {
+        const dashboard = document.getElementById('mobileDashboard');
+        const container = document.querySelector('.container');
+        const backBar = document.getElementById('mobileBackBar');
+        const currentToolLabel = document.getElementById('mobileCurrentTool');
+        const siteFooter = document.querySelector('.site-footer');
+
+        // Hide dashboard, show container
+        if (dashboard) dashboard.classList.add('hidden');
+        if (container) container.classList.add('mobile-tool-active');
+        if (backBar) backBar.classList.add('visible');
+        if (currentToolLabel) currentToolLabel.textContent = 'Plans';
+        if (siteFooter) siteFooter.style.display = 'none';
+
+        // Set mobile tool state
+        window.mobileToolActive = 'subscription';
+      }
 
       // Hide all tab sections
       document.querySelectorAll('.tab-section').forEach(section => {
@@ -19228,7 +19706,7 @@
                 <div class="character-price">${isOwned ? 'Owned' : (character.price === 0 ? 'Free' : '$' + character.price.toFixed(2))}</div>
                 ${!isOwned && character.price > 0 ? '<div class="character-price-label">one-time</div>' : ''}
               </div>
-              <button class="character-buy-btn ${isOwned ? 'owned' : ''}" onclick="event.stopPropagation(); ${isOwned ? '' : 'openCharacterModal(' + JSON.stringify(character).replace(/"/g, '&quot;') + ')'}">
+              <button class="character-buy-btn ${isOwned ? 'owned' : ''}" onclick="${isOwned ? 'event.stopPropagation()' : ''}">
                 ${isOwned ? '✓ Owned' : 'Buy Now'}
               </button>
             </div>
@@ -19321,6 +19799,26 @@
       document.getElementById('modalCharacterImage').src = character.image;
       document.getElementById('modalCharacterPrice').textContent = isOwned ? 'Owned' : '$' + character.price.toFixed(2);
 
+      // Update sticky bar price (mobile)
+      const stickyPrice = document.getElementById('modalStickyPrice');
+      const stickyBtn = document.querySelector('.sticky-bar-btn');
+      if (stickyPrice) {
+        stickyPrice.textContent = isOwned ? 'Owned' : '$' + character.price.toFixed(2);
+      }
+      if (stickyBtn) {
+        if (isOwned) {
+          stickyBtn.textContent = '✓ Owned';
+          stickyBtn.style.background = '#2a2a2a';
+          stickyBtn.style.color = '#00ff88';
+          stickyBtn.onclick = null;
+        } else {
+          stickyBtn.textContent = 'Purchase';
+          stickyBtn.style.background = 'linear-gradient(135deg, #ff2ebb, #00b2ff)';
+          stickyBtn.style.color = '#fff';
+          stickyBtn.onclick = purchaseCharacter;
+        }
+      }
+
       // Render tags
       const tagsContainer = document.getElementById('modalCharacterTags');
       tagsContainer.innerHTML = character.tags.map(tag =>
@@ -19331,16 +19829,24 @@
       const galleryImages = character.galleryImages || [];
       const allImages = [character.image, ...galleryImages];
 
+      // Update gallery count for mobile toggle
+      const galleryCount = document.getElementById('galleryCount');
+      if (galleryCount) {
+        galleryCount.textContent = `(${galleryImages.length})`;
+      }
+
       // Make main image clickable to open lightbox
       const mainImage = document.getElementById('modalCharacterImage');
       mainImage.onclick = () => openLightbox(allImages, 0);
 
       // Render gallery images with lightbox functionality
       const galleryContainer = document.getElementById('modalCharacterGallery');
+      const isMobile = window.innerWidth <= 768;
+
       if (galleryImages.length > 0) {
         galleryContainer.innerHTML = galleryImages.map((url, index) => `
           <div class="character-gallery-item" data-image-index="${index + 1}">
-            <img src="${url}" alt="Example ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+            <img src="${url}" alt="Example ${index + 1}" style="width: 100%; height: 100%; object-fit: cover;">
           </div>
         `).join('');
         galleryContainer.parentElement.style.display = 'block';
@@ -19350,20 +19856,21 @@
           item.onclick = () => openLightbox(allImages, index + 1);
         });
       } else {
-        galleryContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No example images yet</div>';
-        galleryContainer.parentElement.style.display = 'block';
+        // Hide gallery section if no images
+        galleryContainer.parentElement.style.display = 'none';
       }
 
       // Update buy button
       const buyBtn = document.getElementById('modalBuyBtn');
       if (isOwned) {
-        buyBtn.textContent = '✓ Already Owned';
+        buyBtn.textContent = '✓ Owned';
         buyBtn.style.background = '#2a2a2a';
         buyBtn.style.color = '#00ff88';
         buyBtn.style.cursor = 'default';
         buyBtn.onclick = null;
       } else {
-        buyBtn.textContent = `💳 Purchase for $${character.price.toFixed(2)}`;
+        // Shorter text on mobile since price is shown separately
+        buyBtn.textContent = isMobile ? 'Purchase' : `💳 Purchase for $${character.price.toFixed(2)}`;
         buyBtn.style.background = 'linear-gradient(135deg, #ff2ebb, #00b2ff)';
         buyBtn.style.color = '#fff';
         buyBtn.style.cursor = 'pointer';
@@ -19376,6 +19883,40 @@
     function closeCharacterModal() {
       document.getElementById('characterModal').classList.remove('active');
       currentCharacterModal = null;
+
+      // Reset mobile states when closing
+      const description = document.getElementById('modalCharacterDescription');
+      const readMoreBtn = document.getElementById('modalReadMore');
+      const gallery = document.getElementById('modalCharacterGallery');
+      const galleryToggle = document.getElementById('galleryToggle');
+
+      if (description) description.classList.remove('expanded');
+      if (readMoreBtn) readMoreBtn.textContent = 'Read more';
+      if (gallery) gallery.classList.add('collapsed');
+      if (galleryToggle) galleryToggle.classList.remove('expanded');
+    }
+
+    // Toggle description expand/collapse (mobile)
+    function toggleCharacterDescription() {
+      const description = document.getElementById('modalCharacterDescription');
+      const readMoreBtn = document.getElementById('modalReadMore');
+
+      if (description.classList.contains('expanded')) {
+        description.classList.remove('expanded');
+        readMoreBtn.textContent = 'Read more';
+      } else {
+        description.classList.add('expanded');
+        readMoreBtn.textContent = 'Read less';
+      }
+    }
+
+    // Toggle gallery expand/collapse (mobile)
+    function toggleCharacterGallery() {
+      const gallery = document.getElementById('modalCharacterGallery');
+      const galleryToggle = document.getElementById('galleryToggle');
+
+      gallery.classList.toggle('collapsed');
+      galleryToggle.classList.toggle('expanded');
     }
 
     // Lightbox functionality
@@ -23396,6 +23937,23 @@
       document.getElementById('policyEditorTitleInput').value = policy.title;
       document.getElementById('policyEditorContent').value = policy.content;
       editorModal.classList.add('active');
+    }
+
+    // Mobile footer links sheet functions
+    function openFooterLinksSheet() {
+      const sheet = document.getElementById('footerLinksSheet');
+      if (sheet) {
+        sheet.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeFooterLinksSheet() {
+      const sheet = document.getElementById('footerLinksSheet');
+      if (sheet) {
+        sheet.classList.remove('open');
+        document.body.style.overflow = '';
+      }
     }
 
     async function openPolicyModal(type) {

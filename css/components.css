@@ -965,6 +965,12 @@
   border-top: 1px solid #2a2a2a;
 }
 
+/* Hide mobile-only elements on desktop */
+.library-modal-backdrop,
+.library-modal-handle {
+  display: none;
+}
+
 /* Library Modal Tabs */
 .library-modal-tabs {
   display: flex;

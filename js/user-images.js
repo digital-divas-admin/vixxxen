@@ -9,6 +9,7 @@ let pendingFlaggedImages = [];
 let libraryModalFilter = 'all';
 let libraryModalImages = [];
 let currentModalView = 'library'; // 'library' or 'flagged'
+let librarySwipeInitialized = false;
 
 /**
  * Show the modal in flagged image mode
@@ -84,6 +85,9 @@ function showModerationModal(errorResponse, imageData = null) {
 
   // Show modal
   modal.classList.add('active');
+
+  // Initialize swipe gestures for mobile
+  initLibrarySwipeGestures();
 }
 
 /**
@@ -115,6 +119,9 @@ function openImageLibraryModal() {
   // Show modal and load images
   modal.classList.add('active');
   loadLibraryModalImages();
+
+  // Initialize swipe gestures for mobile
+  initLibrarySwipeGestures();
 }
 
 /**
@@ -147,6 +154,85 @@ function closeImageLibraryModal() {
 // Alias for backwards compatibility
 function closeModerationModal() {
   closeImageLibraryModal();
+}
+
+/**
+ * Initialize swipe-to-dismiss for mobile bottom sheet
+ * Called once when the modal is first opened
+ */
+function initLibrarySwipeGestures() {
+  if (librarySwipeInitialized) return;
+
+  const modal = document.getElementById('imageLibraryModal');
+  const content = modal?.querySelector('.modal-content');
+  if (!content) return;
+
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+
+  const handle = content.querySelector('.library-modal-handle');
+  const header = content.querySelector('.modal-header');
+
+  // Only enable swipe gestures on mobile (< 900px)
+  const isMobile = () => window.innerWidth <= 900;
+
+  const touchStart = (e) => {
+    if (!isMobile()) return;
+    // Only allow swipe from handle or header area
+    const target = e.target;
+    const isHandle = handle?.contains(target);
+    const isHeader = header?.contains(target);
+    const isCloseBtn = target.classList.contains('modal-close');
+
+    if ((isHandle || isHeader) && !isCloseBtn) {
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      currentY = startY;
+      content.style.transition = 'none';
+    }
+  };
+
+  const touchMove = (e) => {
+    if (!isDragging) return;
+    currentY = e.touches[0].clientY;
+    const deltaY = currentY - startY;
+
+    // Only allow dragging downward
+    if (deltaY > 0) {
+      content.style.transform = `translateY(${deltaY}px)`;
+      e.preventDefault();
+    }
+  };
+
+  const touchEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    const deltaY = currentY - startY;
+    content.style.transition = 'transform 0.3s ease';
+
+    // If dragged down more than 100px, close the modal
+    if (deltaY > 100) {
+      content.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        closeImageLibraryModal();
+        content.style.transform = '';
+        content.style.transition = '';
+      }, 300);
+    } else {
+      content.style.transform = '';
+      setTimeout(() => {
+        content.style.transition = '';
+      }, 300);
+    }
+  };
+
+  content.addEventListener('touchstart', touchStart, { passive: true });
+  content.addEventListener('touchmove', touchMove, { passive: false });
+  content.addEventListener('touchend', touchEnd);
+
+  librarySwipeInitialized = true;
 }
 
 /**
