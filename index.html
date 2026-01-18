@@ -8639,7 +8639,7 @@
       <span class="hamburger-line"></span>
       <span class="hamburger-line"></span>
     </button>
-    <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" class="navbar-logo">
+    <img src="/public/images/logos/Color_A.svg" alt="Vixxxen" class="navbar-logo" onclick="handleLogoClick()" style="cursor: pointer;">
   </nav>
 
   <!-- Mobile overlay for sidebar -->
@@ -12412,6 +12412,17 @@
 
       // Save to session for page refreshes
       sessionStorage.setItem('vixxxen_mobileToolActive', tool);
+    }
+
+    // Handle logo click - on mobile, go back to dashboard
+    function handleLogoClick() {
+      if (window.innerWidth <= 900) {
+        // On mobile, return to the dashboard
+        backToDashboard();
+      } else {
+        // On desktop, switch to image section (home)
+        switchMainTab('image');
+      }
     }
 
     // Go back to the mobile dashboard
