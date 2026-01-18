@@ -12642,6 +12642,12 @@
 
     // Add image to recent generations (called after successful generation)
     function addToRecentGenerations(imageUrl, metadata = {}) {
+      // Skip base64 URLs to avoid quota issues - only store permanent URLs
+      if (imageUrl && imageUrl.startsWith('data:')) {
+        // Store a placeholder that will be updated when permanent URL is available
+        return;
+      }
+
       recentGenerationsCache.unshift({
         url: imageUrl,
         thumbnail: metadata.thumbnail || imageUrl,
@@ -12657,8 +12663,21 @@
         recentGenerationsCache = recentGenerationsCache.slice(0, 20);
       }
 
-      // Save to session
-      sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+      // Save to session with error handling for quota
+      try {
+        sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+      } catch (e) {
+        // Quota exceeded - clear old data and try again
+        console.warn('📦 Recent generations storage quota exceeded, clearing cache');
+        recentGenerationsCache = recentGenerationsCache.slice(0, 5);
+        try {
+          sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+        } catch (e2) {
+          // Still failing, clear completely
+          sessionStorage.removeItem('vixxxen_recentGenerations');
+          recentGenerationsCache = [];
+        }
+      }
 
       // Update grid if on dashboard
       updateMobileRecentGenerations();
@@ -12669,9 +12688,32 @@
       const saved = sessionStorage.getItem('vixxxen_recentGenerations');
       if (saved) {
         try {
-          recentGenerationsCache = JSON.parse(saved);
+          // Check if data is too large (> 100KB suggests base64 data is stored)
+          if (saved.length > 100000) {
+            console.warn('📦 Recent generations cache too large, clearing...');
+            sessionStorage.removeItem('vixxxen_recentGenerations');
+            recentGenerationsCache = [];
+            return;
+          }
+
+          const parsed = JSON.parse(saved);
+          // Filter out any entries with base64 URLs
+          recentGenerationsCache = parsed.filter(item =>
+            item.url && !item.url.startsWith('data:')
+          );
+
+          // If we filtered some out, save the cleaned version
+          if (recentGenerationsCache.length !== parsed.length) {
+            console.log('📦 Cleaned base64 URLs from recent generations cache');
+            sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+          }
+
           updateMobileRecentGenerations();
-        } catch (e) {}
+        } catch (e) {
+          // Corrupted data, clear it
+          sessionStorage.removeItem('vixxxen_recentGenerations');
+          recentGenerationsCache = [];
+        }
       }
     }
 
@@ -17248,14 +17290,6 @@
           generatedImages.push(newImage);
           replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
 
-          // Add to recent generations for mobile dashboard
-          addToRecentGenerations(imageUrl, {
-            prompt: prompt,
-            model: 'qwen',
-            character: loraValue || '',
-            aspectRatio: aspectRatio
-          });
-
           // Upload to Supabase Storage
           uploadImageToStorage(imageUrl, {
             prompt: qwenPrompt,
@@ -17268,6 +17302,13 @@
             if (storedUrl) {
               newImage.storedUrl = storedUrl;
               console.log('📁 Image saved to permanent storage');
+              // Add to recent generations with permanent URL (not base64)
+              addToRecentGenerations(storedUrl, {
+                prompt: prompt,
+                model: 'qwen',
+                character: loraValue || '',
+                aspectRatio: aspectRatio
+              });
             }
           });
         }
@@ -17548,15 +17589,13 @@
             generatedImages.push(newImage);
             replacePlaceholderWithImage(placeholders[i], newImage);
 
-            // Add to recent generations for mobile dashboard
-            addToRecentGenerations(data.images[imageIndex], {
-              prompt: prompt,
-              model: capturedModel,
-              character: characterSelect?.value || '',
-              aspectRatio: aspectRatio
-            });
-
             // Upload to Supabase Storage (async, don't block UI)
+            // Capture values for closure
+            const imgPrompt = prompt;
+            const imgModel = capturedModel;
+            const imgCharacter = characterSelect?.value || '';
+            const imgAspectRatio = aspectRatio;
+
             uploadImageToStorage(data.images[imageIndex], {
               prompt: prompt,
               model: capturedModel,
@@ -17568,6 +17607,13 @@
               if (storedUrl) {
                 newImage.storedUrl = storedUrl;
                 console.log('📁 Image saved to permanent storage');
+                // Add to recent generations with permanent URL (not base64)
+                addToRecentGenerations(storedUrl, {
+                  prompt: imgPrompt,
+                  model: imgModel,
+                  character: imgCharacter,
+                  aspectRatio: imgAspectRatio
+                });
               }
             });
             imageIndex++;
