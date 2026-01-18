@@ -9358,8 +9358,8 @@
             </div>
 
             <!-- Brush Controls -->
-            <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
-              <div style="flex: 1;">
+            <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 150px;">
                 <div style="font-size: 0.75rem; color: #888; margin-bottom: 4px;">Brush Size: <span id="brushSizeValue">30</span>px</div>
                 <input type="range" id="brushSize" min="5" max="100" value="30" style="width: 100%; cursor: pointer;" oninput="updateBrushSize(this.value)">
               </div>
@@ -9372,8 +9372,21 @@
             </div>
 
             <!-- Canvas Container -->
-            <div style="position: relative; background: #0a0a0a; border-radius: 8px; overflow: hidden; border: 1px solid #2a2a2a;">
+            <div class="edit-canvas-wrapper" id="editCanvasWrapper">
               <canvas id="maskCanvas" style="display: block; max-width: 100%; cursor: crosshair;"></canvas>
+
+              <!-- Mobile touch mode toggle (only visible on mobile) -->
+              <button class="inpaint-touch-mode-toggle" id="editTouchModeToggle" onclick="toggleInpaintTouchMode()" aria-label="Toggle paint/navigate mode">
+                <span class="toggle-icon">🖌️</span>
+                <span class="toggle-label">Paint</span>
+              </button>
+
+              <!-- First-use hint for mobile -->
+              <div class="inpaint-touch-hint" id="editTouchHint">
+                <span>☝️ One finger to paint</span>
+                <span>✌️ Two fingers to scroll</span>
+                <button onclick="dismissEditTouchHint()">Got it</button>
+              </div>
             </div>
           </div>
 
@@ -15457,6 +15470,16 @@
         isDrawing = false;
         maskCanvas.classList.remove('painting');
       });
+
+      // Show first-use hint on mobile
+      if (window.innerWidth <= 900 && !localStorage.getItem('vixxxen_edit_touch_hint_seen')) {
+        const hint = document.getElementById('editTouchHint');
+        if (hint) {
+          setTimeout(() => {
+            hint.classList.add('visible');
+          }, 500);
+        }
+      }
     }
 
     function startDrawing(e) {
@@ -15497,6 +15520,15 @@
       if (isDrawing) {
         isDrawing = false;
         maskCtx.beginPath();
+      }
+    }
+
+    // Dismiss the Edit tab touch hint
+    function dismissEditTouchHint() {
+      const hint = document.getElementById('editTouchHint');
+      if (hint) {
+        hint.classList.remove('visible');
+        localStorage.setItem('vixxxen_edit_touch_hint_seen', 'true');
       }
     }
 
@@ -16432,28 +16464,60 @@
       }
     }
 
-    // Toggle between paint and navigate modes on mobile
+    // Toggle between paint and navigate modes on mobile (shared by Inpaint and Edit tabs)
     function toggleInpaintTouchMode() {
-      const toggle = document.getElementById('inpaintTouchModeToggle');
-      const canvas = document.getElementById('inpaintCanvas');
-      const wrapper = document.getElementById('inpaintCanvasWrapper');
+      // Get elements from both Inpaint and Edit tabs
+      const inpaintToggle = document.getElementById('inpaintTouchModeToggle');
+      const editToggle = document.getElementById('editTouchModeToggle');
+      const inpaintCanvas = document.getElementById('inpaintCanvas');
+      const editCanvas = document.getElementById('maskCanvas');
+      const inpaintWrapper = document.getElementById('inpaintCanvasWrapper');
+      const editWrapper = document.getElementById('editCanvasWrapper');
 
       if (window.inpaintTouchMode === 'auto' || window.inpaintTouchMode === 'paint') {
         // Switch to navigate mode
         window.inpaintTouchMode = 'navigate';
-        toggle.classList.add('navigate-mode');
-        toggle.querySelector('.toggle-icon').textContent = '✋';
-        toggle.querySelector('.toggle-label').textContent = 'Move';
-        if (wrapper) wrapper.classList.add('navigate-mode');
-        if (canvas) canvas.style.touchAction = 'pan-x pan-y';
+
+        // Update both toggles
+        [inpaintToggle, editToggle].forEach(toggle => {
+          if (toggle) {
+            toggle.classList.add('navigate-mode');
+            toggle.querySelector('.toggle-icon').textContent = '✋';
+            toggle.querySelector('.toggle-label').textContent = 'Move';
+          }
+        });
+
+        // Update both wrappers
+        [inpaintWrapper, editWrapper].forEach(wrapper => {
+          if (wrapper) wrapper.classList.add('navigate-mode');
+        });
+
+        // Update both canvases
+        [inpaintCanvas, editCanvas].forEach(canvas => {
+          if (canvas) canvas.style.touchAction = 'pan-x pan-y';
+        });
       } else {
         // Switch to paint mode
         window.inpaintTouchMode = 'paint';
-        toggle.classList.remove('navigate-mode');
-        toggle.querySelector('.toggle-icon').textContent = '🖌️';
-        toggle.querySelector('.toggle-label').textContent = 'Paint';
-        if (wrapper) wrapper.classList.remove('navigate-mode');
-        if (canvas) canvas.style.touchAction = 'none';
+
+        // Update both toggles
+        [inpaintToggle, editToggle].forEach(toggle => {
+          if (toggle) {
+            toggle.classList.remove('navigate-mode');
+            toggle.querySelector('.toggle-icon').textContent = '🖌️';
+            toggle.querySelector('.toggle-label').textContent = 'Paint';
+          }
+        });
+
+        // Update both wrappers
+        [inpaintWrapper, editWrapper].forEach(wrapper => {
+          if (wrapper) wrapper.classList.remove('navigate-mode');
+        });
+
+        // Update both canvases
+        [inpaintCanvas, editCanvas].forEach(canvas => {
+          if (canvas) canvas.style.touchAction = 'none';
+        });
       }
 
       // Haptic feedback

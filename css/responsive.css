@@ -1916,4 +1916,38 @@
   .inpaint-canvas-wrapper {
     position: relative;
   }
+
+  /* Edit tab canvas wrapper - same styles as inpaint */
+  .edit-canvas-wrapper {
+    position: relative;
+    background: #0a0a0a;
+    border-radius: 8px;
+    overflow: visible; /* Allow toggle button to show outside */
+    border: 1px solid #2a2a2a;
+  }
+
+  .edit-canvas-wrapper:not(.navigate-mode) #maskCanvas {
+    cursor: crosshair;
+  }
+
+  .edit-canvas-wrapper.navigate-mode #maskCanvas {
+    cursor: grab;
+  }
+
+  #maskCanvas.painting {
+    box-shadow: 0 0 0 3px var(--accent-primary);
+  }
+
+  /* Edit tab uses same toggle button styles as inpaint */
+  #editTouchModeToggle {
+    display: flex;
+  }
+
+  #editTouchHint {
+    display: none;
+  }
+
+  #editTouchHint.visible {
+    display: flex;
+  }
 }
