@@ -1430,19 +1430,8 @@ function showWizardError(message) {
 function switchToLogin() {
   hideOnboardingWizard();
 
-  // The login modal is inside .container which is hidden when landing page is shown.
-  // We need to show the container and hide the landing page to make the login modal visible.
-  const container = document.querySelector('.container');
-  const landingPage = document.getElementById('landingPage');
-
-  if (container) {
-    container.style.display = 'flex';
-  }
-  if (landingPage) {
-    landingPage.style.display = 'none';
-  }
-
-  // Now show the login modal
+  // Login modal is now outside the container, so it works on mobile too
+  // Just show the modal - it has position:fixed and high z-index
   const loginModal = document.getElementById('loginModal');
   if (loginModal) {
     loginModal.classList.add('active');
