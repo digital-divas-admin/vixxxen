@@ -2248,6 +2248,7 @@
   .character-modal {
     padding: 0 !important;
     align-items: flex-end !important;
+    overflow: hidden;
   }
 
   .character-modal-content {
@@ -2256,6 +2257,8 @@
     height: 100%;
     border-radius: 0;
     border: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Close button - more prominent on mobile */
