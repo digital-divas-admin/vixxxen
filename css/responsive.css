@@ -148,7 +148,7 @@
   }
 
   /* =========================================
-     FOOTER - At the end of content
+     FOOTER - Slim mobile footer
      ========================================= */
   .site-footer {
     position: static !important;
@@ -156,39 +156,72 @@
     right: auto !important;
     bottom: auto !important;
     width: 100%;
-    padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 0;
     margin-top: 0;
     flex-shrink: 0;
     /* Hide footer by default on mobile - only show when tool is active */
     display: none !important;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
   }
 
   /* Show footer when a tool is active (container is visible) */
   .container.mobile-tool-active ~ .site-footer {
-    display: flex !important;
+    display: block !important;
   }
 
   .site-footer.sidebar-collapsed {
     left: auto !important;
   }
 
-  .footer-main {
-    flex-direction: column;
-    gap: 12px;
+  /* Hide desktop footer content on mobile */
+  .footer-desktop {
+    display: none !important;
   }
 
-  .footer-links {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-    font-size: 0.85rem;
-  }
-
-  .footer-ai-disclosure {
+  /* Mobile slim footer bar */
+  .footer-mobile-slim {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     font-size: 0.75rem;
-    text-align: center;
-    padding: 8px 12px;
+    color: var(--text-secondary);
+  }
+
+  .footer-mobile-slim .footer-copyright {
+    opacity: 0.7;
+  }
+
+  .footer-mobile-ai {
+    font-size: 0.7rem;
+    opacity: 0.6;
+  }
+
+  .footer-more-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .footer-more-btn:active {
+    transform: scale(0.95);
+    background: var(--bg-card);
+  }
+
+  .footer-more-icon {
+    font-size: 1rem;
+    line-height: 1;
   }
 
   /* =========================================
@@ -1949,5 +1982,371 @@
 
   #editTouchHint.visible {
     display: flex;
+  }
+}
+
+/* ===========================================
+   MOBILE FOOTER LINKS SHEET
+   =========================================== */
+
+/* Hide footer mobile elements on desktop */
+.footer-mobile-slim {
+  display: none;
+}
+
+.footer-links-sheet {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /* Footer links bottom sheet */
+  .footer-links-sheet {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10001;
+  }
+
+  .footer-links-sheet.open {
+    display: block;
+  }
+
+  .footer-sheet-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .footer-sheet-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 14px));
+    animation: slideUp 0.3s ease;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .footer-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+    opacity: 0.6;
+  }
+
+  .footer-sheet-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .footer-sheet-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .footer-sheet-links a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    transition: background 0.15s;
+  }
+
+  .footer-sheet-links a:active {
+    background: var(--bg-tertiary);
+  }
+
+  .footer-sheet-disclosure {
+    margin-top: 20px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .footer-sheet-disclosure .ai-badge {
+    flex-shrink: 0;
+  }
+
+  /* ===========================================
+     IMAGE LIBRARY MODAL - Mobile Bottom Sheet
+     =========================================== */
+
+  #imageLibraryModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10002;
+  }
+
+  #imageLibraryModal.active {
+    display: block;
+  }
+
+  .library-modal-backdrop {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    animation: fadeIn 0.2s ease;
+  }
+
+  #imageLibraryModal .modal-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card, #1a1a1a);
+    border-radius: 20px 20px 0 0;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+    overflow: hidden;
+  }
+
+  .library-modal-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border-color, #333);
+    border-radius: 2px;
+    margin: 12px auto 0;
+    opacity: 0.6;
+  }
+
+  #imageLibraryModal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid var(--border-color, #333);
+    flex-shrink: 0;
+  }
+
+  #imageLibraryModal .modal-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #fff);
+  }
+
+  #imageLibraryModal .modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-tertiary, #2a2a2a);
+    border: none;
+    color: var(--text-primary, #fff);
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  #imageLibraryModal .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Filter buttons - scrollable row on mobile */
+  #imageLibraryModal .library-modal-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+  }
+
+  #imageLibraryModal .lib-filter-btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* 2-column grid for larger thumbnails */
+  #imageLibraryModal .library-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  #imageLibraryModal .library-modal-item {
+    aspect-ratio: 1;
+    border-radius: 10px;
+  }
+
+  #imageLibraryModal .library-item-badge {
+    font-size: 0.6rem;
+    padding: 2px 5px;
+  }
+
+  /* Footer - sticky at bottom */
+  #imageLibraryModal .modal-footer {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border-color, #333);
+    display: flex;
+    gap: 10px;
+  }
+
+  #imageLibraryModal .modal-footer .account-btn {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+
+  /* Hide the close button in footer on mobile - use X or swipe */
+  #imageLibraryModal .modal-footer .account-btn.secondary {
+    display: none;
+  }
+
+  /* ===========================================
+     CHARACTER MODAL - Mobile Optimization
+     =========================================== */
+
+  .character-modal {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .character-modal-content {
+    max-width: 100%;
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+  }
+
+  /* Close button - more prominent on mobile */
+  .character-modal-close {
+    position: fixed;
+    top: env(safe-area-inset-top, 12px);
+    right: 12px;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+  }
+
+  /* Stack layout - image on top, info below */
+  .character-modal-header {
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+  }
+
+  .character-modal-image {
+    width: 100%;
+    height: 50vh;
+    min-height: 280px;
+    max-height: 400px;
+    border-radius: 0;
+  }
+
+  .character-modal-info {
+    padding: 20px 16px;
+  }
+
+  .character-modal-name {
+    font-size: 1.5rem;
+  }
+
+  .character-modal-category {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+  }
+
+  .character-modal-description {
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+  }
+
+  .character-modal-tags {
+    margin-bottom: 16px;
+  }
+
+  .character-tag {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+
+  /* Purchase section - prominent on mobile */
+  .character-modal-purchase {
+    margin: 0 16px 16px;
+    padding: 20px;
+  }
+
+  .character-modal-price {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .character-modal-buy-btn {
+    padding: 18px;
+    font-size: 1rem;
+    min-height: 54px;
+  }
+
+  /* Gallery section */
+  .character-modal-gallery {
+    padding: 20px 16px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .character-modal-gallery-title {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+  }
+
+  .character-gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .character-gallery-img {
+    aspect-ratio: 1;
+    border-radius: 10px;
   }
 }

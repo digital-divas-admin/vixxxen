@@ -11863,7 +11863,9 @@
 
     <!-- Unified Image Library Modal (handles both flagged images and library view) -->
     <div class="modal-overlay" id="imageLibraryModal">
+      <div class="library-modal-backdrop" onclick="closeImageLibraryModal()"></div>
       <div class="modal-content">
+        <div class="library-modal-handle"></div>
         <div class="modal-header" id="libraryModalHeader">
           <h2 id="libraryModalTitle">My Images</h2>
           <button class="modal-close" onclick="closeImageLibraryModal()">&times;</button>
@@ -11992,7 +11994,8 @@
 
   <!-- Site Footer -->
   <footer class="site-footer">
-    <div class="footer-content">
+    <!-- Desktop footer content (hidden on mobile) -->
+    <div class="footer-content footer-desktop">
       <div class="footer-ai-disclosure">
         <span class="ai-badge">🤖 AI</span>
         <span>All characters and content on this platform are entirely AI-generated. No real persons are depicted.</span>
@@ -12010,7 +12013,39 @@
         </div>
       </div>
     </div>
+
+    <!-- Mobile slim footer (shown on mobile only) -->
+    <div class="footer-mobile-slim">
+      <span class="footer-copyright">&copy; 2025 Vixxxen</span>
+      <span class="footer-mobile-ai">🤖 AI Generated</span>
+      <button class="footer-more-btn" onclick="openFooterLinksSheet()" aria-label="More options">
+        <span>More</span>
+        <span class="footer-more-icon">⋯</span>
+      </button>
+    </div>
   </footer>
+
+  <!-- Mobile Footer Links Sheet -->
+  <div class="footer-links-sheet" id="footerLinksSheet">
+    <div class="footer-sheet-backdrop" onclick="closeFooterLinksSheet()"></div>
+    <div class="footer-sheet-content">
+      <div class="footer-sheet-handle"></div>
+      <div class="footer-sheet-title">Links & Info</div>
+      <div class="footer-sheet-links">
+        <a href="#" onclick="openPolicyModal('terms'); closeFooterLinksSheet(); return false;">📜 Terms of Service</a>
+        <a href="#" onclick="openPolicyModal('privacy'); closeFooterLinksSheet(); return false;">🔒 Privacy Policy</a>
+        <a href="#" onclick="openPolicyModal('refund'); closeFooterLinksSheet(); return false;">💳 Refund Policy</a>
+        <a href="#" onclick="openPolicyModal('prohibited'); closeFooterLinksSheet(); return false;">🚫 Prohibited Content</a>
+        <a href="#" onclick="open2257Modal(); closeFooterLinksSheet(); return false;">📋 2257 Compliance</a>
+        <a href="#" onclick="openPolicyModal('faq'); closeFooterLinksSheet(); return false;">❓ FAQ</a>
+        <a href="#" onclick="openPolicyModal('contact'); closeFooterLinksSheet(); return false;">✉️ Contact Us</a>
+      </div>
+      <div class="footer-sheet-disclosure">
+        <span class="ai-badge">🤖 AI</span>
+        <span>All characters and content on this platform are entirely AI-generated. No real persons are depicted.</span>
+      </div>
+    </div>
+  </div>
 
   <!-- Policy Modal -->
   <div class="policy-modal" id="policyModal">
@@ -23737,6 +23772,23 @@
       document.getElementById('policyEditorTitleInput').value = policy.title;
       document.getElementById('policyEditorContent').value = policy.content;
       editorModal.classList.add('active');
+    }
+
+    // Mobile footer links sheet functions
+    function openFooterLinksSheet() {
+      const sheet = document.getElementById('footerLinksSheet');
+      if (sheet) {
+        sheet.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeFooterLinksSheet() {
+      const sheet = document.getElementById('footerLinksSheet');
+      if (sheet) {
+        sheet.classList.remove('open');
+        document.body.style.overflow = '';
+      }
     }
 
     async function openPolicyModal(type) {
