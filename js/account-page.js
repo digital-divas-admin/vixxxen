@@ -9,6 +9,25 @@ function openAccountPage() {
   // Close user menu
   document.getElementById('userMenu').classList.remove('active');
 
+  // Handle mobile view
+  if (window.innerWidth <= 900) {
+    const dashboard = document.getElementById('mobileDashboard');
+    const container = document.querySelector('.container');
+    const backBar = document.getElementById('mobileBackBar');
+    const currentToolLabel = document.getElementById('mobileCurrentTool');
+    const siteFooter = document.querySelector('.site-footer');
+
+    // Hide dashboard, show container
+    if (dashboard) dashboard.classList.add('hidden');
+    if (container) container.classList.add('mobile-tool-active');
+    if (backBar) backBar.classList.add('visible');
+    if (currentToolLabel) currentToolLabel.textContent = 'Account';
+    if (siteFooter) siteFooter.style.display = 'none';
+
+    // Set mobile tool state
+    window.mobileToolActive = 'account';
+  }
+
   // Hide all tab sections
   document.querySelectorAll('.tab-section').forEach(section => {
     section.classList.remove('active');
