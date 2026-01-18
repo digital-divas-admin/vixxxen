@@ -18641,8 +18641,27 @@
     // Update credits display in UI
     function updateCreditsDisplay() {
       if (isUserLoggedIn) {
+        // Desktop credits
         document.getElementById('userCreditsDisplay').textContent = userCredits.toLocaleString();
         document.getElementById('userCreditsDetail').textContent = `${userCredits.toLocaleString()} Credits`;
+
+        // Mobile credits
+        const mobileCredits = document.getElementById('mobileCredits');
+        const mobileSheetCredits = document.getElementById('mobileSheetCredits');
+        if (mobileCredits) mobileCredits.textContent = `${userCredits.toLocaleString()} credits`;
+        if (mobileSheetCredits) mobileSheetCredits.textContent = userCredits.toLocaleString();
+
+        // Update mobile dashboard greeting with user name
+        const greetingEl = document.getElementById('mobileGreeting');
+        if (greetingEl && currentUser) {
+          const hour = new Date().getHours();
+          let greeting = 'Welcome back';
+          if (hour < 12) greeting = 'Good morning';
+          else if (hour < 18) greeting = 'Good afternoon';
+          else greeting = 'Good evening';
+          const name = currentUser.display_name || currentUser.email?.split('@')[0] || '';
+          greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
+        }
       }
     }
 
