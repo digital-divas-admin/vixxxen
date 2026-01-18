@@ -775,3 +775,455 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* =============================================================================
+   MOBILE DASHBOARD - Progressive Disclosure Layout
+   Only shown on mobile devices (<= 900px)
+   ============================================================================= */
+
+/* Hide mobile dashboard on desktop */
+.mobile-dashboard,
+.mobile-account-sheet,
+.mobile-back-bar {
+  display: none;
+}
+
+/* Mobile Dashboard Styles - Only on mobile */
+@media (max-width: 900px) {
+  /* Hide the hamburger button since we have the dashboard */
+  .hamburger-btn {
+    display: none;
+  }
+
+  /* Show the dashboard by default on mobile */
+  .mobile-dashboard {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-primary);
+    z-index: 100;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide dashboard when viewing a tool */
+  .mobile-dashboard.hidden {
+    display: none;
+  }
+
+  /* Hide the main container content by default on mobile - show dashboard first */
+  .container {
+    display: none;
+  }
+
+  /* Show container when a tool is active */
+  .container.mobile-tool-active {
+    display: flex;
+    margin-top: 90px; /* Extra space for back bar */
+  }
+
+  /* Hide the sidebar completely on mobile */
+  .container.mobile-tool-active .main-nav {
+    display: none !important;
+  }
+
+  /* Mobile Back Bar */
+  .mobile-back-bar {
+    display: none;
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 999;
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobile-back-bar.visible {
+    display: flex;
+  }
+
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 0;
+  }
+
+  .mobile-back-arrow {
+    font-size: 1.2rem;
+  }
+
+  .mobile-current-tool {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-back-spacer {
+    width: 60px;
+  }
+
+  /* Dashboard Header */
+  .mobile-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .mobile-dashboard-greeting {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .greeting-text {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .greeting-credits {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-dashboard-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .mobile-dashboard-avatar:active {
+    transform: scale(0.95);
+  }
+
+  /* Tool Cards Grid */
+  .mobile-dashboard-tools {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .mobile-tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mobile-tool-card:active {
+    transform: scale(0.98);
+    background: var(--bg-secondary);
+  }
+
+  .mobile-tool-icon {
+    font-size: 2rem;
+    margin-bottom: 4px;
+  }
+
+  .mobile-tool-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-tool-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* Wide tool card (for Marketplace) */
+  .mobile-tool-card-wide {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-name {
+    text-align: left;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-desc {
+    text-align: left;
+  }
+
+  /* Dashboard Section */
+  .mobile-dashboard-section {
+    margin-bottom: 24px;
+  }
+
+  .mobile-section-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  /* =========================================================================
+     MOBILE ACCOUNT BOTTOM SHEET
+     ========================================================================= */
+
+  .mobile-account-sheet {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+  }
+
+  .mobile-account-sheet.open {
+    display: block;
+  }
+
+  .mobile-sheet-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .mobile-sheet-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 20px 34px;
+    animation: slideUp 0.3s ease;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .mobile-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+
+  .mobile-sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-sheet-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .mobile-sheet-user {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-sheet-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-sheet-email {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-sheet-credits {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-sheet-credits-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-sheet-credits-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-secondary);
+    flex: 1;
+  }
+
+  .mobile-sheet-buy-btn {
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+  }
+
+  .mobile-sheet-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 8px 0;
+  }
+
+  .mobile-sheet-menu {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 4px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+
+  .mobile-sheet-item:active {
+    background: var(--bg-secondary);
+  }
+
+  .mobile-sheet-item-icon {
+    font-size: 1.2rem;
+    width: 28px;
+    text-align: center;
+  }
+
+  .mobile-sheet-item-label {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    flex: 1;
+  }
+
+  .mobile-sheet-item-toggle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-sheet-item-auth {
+    color: var(--accent-primary);
+  }
+
+  .mobile-sheet-item-auth .mobile-sheet-item-label {
+    color: var(--accent-primary);
+  }
+}
+
+/* Smaller phones adjustments */
+@media (max-width: 480px) {
+  .mobile-dashboard {
+    top: 46px;
+    padding: 16px;
+  }
+
+  .mobile-back-bar {
+    top: 46px;
+  }
+
+  .container.mobile-tool-active {
+    margin-top: 90px;
+  }
+
+  .greeting-text {
+    font-size: 1.2rem;
+  }
+
+  .mobile-tool-card {
+    padding: 16px 12px;
+  }
+
+  .mobile-tool-icon {
+    font-size: 1.6rem;
+  }
+
+  .mobile-tool-name {
+    font-size: 0.85rem;
+  }
+
+  .mobile-tool-desc {
+    font-size: 0.7rem;
+  }
+}

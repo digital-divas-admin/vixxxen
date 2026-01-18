@@ -8546,6 +8546,112 @@
   <!-- Mobile overlay for sidebar -->
   <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
 
+  <!-- Mobile Dashboard - Only shown on mobile when no tool is active -->
+  <div class="mobile-dashboard" id="mobileDashboard">
+    <div class="mobile-dashboard-header">
+      <div class="mobile-dashboard-greeting">
+        <span class="greeting-text" id="mobileGreeting">Welcome back</span>
+        <span class="greeting-credits" id="mobileCredits">Login to see credits</span>
+      </div>
+      <div class="mobile-dashboard-avatar" onclick="openMobileAccountSheet()" id="mobileDashboardAvatar">
+        👤
+      </div>
+    </div>
+
+    <div class="mobile-dashboard-tools">
+      <div class="mobile-tool-card" onclick="openToolFromDashboard('image')">
+        <div class="mobile-tool-icon">🎨</div>
+        <div class="mobile-tool-name">Image</div>
+        <div class="mobile-tool-desc">Generate images</div>
+      </div>
+      <div class="mobile-tool-card" onclick="openToolFromDashboard('video')">
+        <div class="mobile-tool-icon">🎬</div>
+        <div class="mobile-tool-name">Video</div>
+        <div class="mobile-tool-desc">Create videos</div>
+      </div>
+      <div class="mobile-tool-card" onclick="openToolFromDashboard('edit')">
+        <div class="mobile-tool-icon">✂️</div>
+        <div class="mobile-tool-name">Edit</div>
+        <div class="mobile-tool-desc">Transform images</div>
+      </div>
+      <div class="mobile-tool-card" onclick="openToolFromDashboard('inpaint')">
+        <div class="mobile-tool-icon">🖌️</div>
+        <div class="mobile-tool-name">Inpaint</div>
+        <div class="mobile-tool-desc">Edit regions</div>
+      </div>
+      <div class="mobile-tool-card" onclick="openToolFromDashboard('caption')">
+        <div class="mobile-tool-icon">💬</div>
+        <div class="mobile-tool-name">Caption</div>
+        <div class="mobile-tool-desc">Describe images</div>
+      </div>
+      <div class="mobile-tool-card" onclick="openToolFromDashboard('education')">
+        <div class="mobile-tool-icon">🎓</div>
+        <div class="mobile-tool-name">Learn</div>
+        <div class="mobile-tool-desc">Tutorials & tips</div>
+      </div>
+    </div>
+
+    <div class="mobile-dashboard-section">
+      <div class="mobile-section-header">Marketplace</div>
+      <div class="mobile-tool-card mobile-tool-card-wide" onclick="openToolFromDashboard('marketplace')">
+        <div class="mobile-tool-icon">🛍️</div>
+        <div class="mobile-tool-info">
+          <div class="mobile-tool-name">Browse Marketplace</div>
+          <div class="mobile-tool-desc">Models, LoRAs & presets</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Account Bottom Sheet -->
+  <div class="mobile-account-sheet" id="mobileAccountSheet">
+    <div class="mobile-sheet-backdrop" onclick="closeMobileAccountSheet()"></div>
+    <div class="mobile-sheet-content">
+      <div class="mobile-sheet-handle"></div>
+      <div class="mobile-sheet-header">
+        <div class="mobile-sheet-avatar">👤</div>
+        <div class="mobile-sheet-user">
+          <div class="mobile-sheet-name" id="mobileSheetName">Guest</div>
+          <div class="mobile-sheet-email" id="mobileSheetEmail">Not logged in</div>
+        </div>
+      </div>
+      <div class="mobile-sheet-credits">
+        <span class="mobile-sheet-credits-label">Credits</span>
+        <span class="mobile-sheet-credits-value" id="mobileSheetCredits">-</span>
+        <button class="mobile-sheet-buy-btn" onclick="openBuyCreditsModal()">Buy</button>
+      </div>
+      <div class="mobile-sheet-divider"></div>
+      <div class="mobile-sheet-menu">
+        <div class="mobile-sheet-item" onclick="openImageLibraryModal(); closeMobileAccountSheet();">
+          <span class="mobile-sheet-item-icon">🖼️</span>
+          <span class="mobile-sheet-item-label">Image Library</span>
+        </div>
+        <div class="mobile-sheet-item" onclick="toggleTheme(); updateMobileThemeIcon();">
+          <span class="mobile-sheet-item-icon" id="mobileThemeIcon">🌙</span>
+          <span class="mobile-sheet-item-label">Dark Mode</span>
+          <span class="mobile-sheet-item-toggle" id="mobileThemeToggle">On</span>
+        </div>
+      </div>
+      <div class="mobile-sheet-divider"></div>
+      <div class="mobile-sheet-menu">
+        <div class="mobile-sheet-item mobile-sheet-item-auth" id="mobileAuthItem" onclick="handleMobileAuth()">
+          <span class="mobile-sheet-item-icon">🚪</span>
+          <span class="mobile-sheet-item-label" id="mobileAuthLabel">Sign In</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Back Button (shown when in a tool) -->
+  <div class="mobile-back-bar" id="mobileBackBar">
+    <button class="mobile-back-btn" onclick="backToDashboard()">
+      <span class="mobile-back-arrow">←</span>
+      <span class="mobile-back-text">Back</span>
+    </button>
+    <span class="mobile-current-tool" id="mobileCurrentTool">Image</span>
+    <div class="mobile-back-spacer"></div>
+  </div>
+
   <div class="container">
     <!-- Main Navigation Sidebar -->
     <div class="main-nav">
@@ -12046,6 +12152,204 @@
     }
 
     // ===========================================
+    // MOBILE DASHBOARD FUNCTIONS
+    // ===========================================
+
+    // Track if we're in a tool view on mobile
+    let mobileToolActive = false;
+
+    // Tool name mappings for display
+    const toolDisplayNames = {
+      'image': 'Image',
+      'video': 'Video',
+      'edit': 'Edit',
+      'inpaint': 'Inpaint',
+      'caption': 'Caption',
+      'marketplace': 'Marketplace',
+      'education': 'Learn'
+    };
+
+    // Open a tool from the mobile dashboard
+    function openToolFromDashboard(tool) {
+      if (window.innerWidth > 900) return; // Only on mobile
+
+      const dashboard = document.getElementById('mobileDashboard');
+      const container = document.querySelector('.container');
+      const backBar = document.getElementById('mobileBackBar');
+      const currentToolLabel = document.getElementById('mobileCurrentTool');
+
+      // Hide dashboard
+      dashboard.classList.add('hidden');
+
+      // Show container with tool
+      container.classList.add('mobile-tool-active');
+
+      // Show back bar
+      backBar.classList.add('visible');
+
+      // Update tool name in back bar
+      currentToolLabel.textContent = toolDisplayNames[tool] || tool;
+
+      // Switch to the selected tab
+      switchMainTab(tool);
+
+      // Track state
+      mobileToolActive = true;
+
+      // Save to session for page refreshes
+      sessionStorage.setItem('vixxxen_mobileToolActive', tool);
+    }
+
+    // Go back to the mobile dashboard
+    function backToDashboard() {
+      if (window.innerWidth > 900) return; // Only on mobile
+
+      const dashboard = document.getElementById('mobileDashboard');
+      const container = document.querySelector('.container');
+      const backBar = document.getElementById('mobileBackBar');
+
+      // Show dashboard
+      dashboard.classList.remove('hidden');
+
+      // Hide container
+      container.classList.remove('mobile-tool-active');
+
+      // Hide back bar
+      backBar.classList.remove('visible');
+
+      // Track state
+      mobileToolActive = false;
+
+      // Clear session storage
+      sessionStorage.removeItem('vixxxen_mobileToolActive');
+    }
+
+    // Open the mobile account bottom sheet
+    function openMobileAccountSheet() {
+      const sheet = document.getElementById('mobileAccountSheet');
+      sheet.classList.add('open');
+
+      // Update sheet with current user info
+      updateMobileAccountSheet();
+    }
+
+    // Close the mobile account bottom sheet
+    function closeMobileAccountSheet() {
+      const sheet = document.getElementById('mobileAccountSheet');
+      sheet.classList.remove('open');
+    }
+
+    // Update the mobile account sheet with current user info
+    function updateMobileAccountSheet() {
+      const nameEl = document.getElementById('mobileSheetName');
+      const emailEl = document.getElementById('mobileSheetEmail');
+      const creditsEl = document.getElementById('mobileSheetCredits');
+      const authLabel = document.getElementById('mobileAuthLabel');
+
+      if (currentUser) {
+        nameEl.textContent = currentUser.display_name || currentUser.email?.split('@')[0] || 'User';
+        emailEl.textContent = currentUser.email || '';
+        creditsEl.textContent = userCredits !== null ? userCredits : '-';
+        authLabel.textContent = 'Sign Out';
+      } else {
+        nameEl.textContent = 'Guest';
+        emailEl.textContent = 'Not logged in';
+        creditsEl.textContent = '-';
+        authLabel.textContent = 'Sign In';
+      }
+
+      // Update theme toggle state
+      updateMobileThemeIcon();
+    }
+
+    // Update mobile theme icon
+    function updateMobileThemeIcon() {
+      const themeIcon = document.getElementById('mobileThemeIcon');
+      const themeToggle = document.getElementById('mobileThemeToggle');
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+      if (themeIcon) themeIcon.textContent = isDark ? '🌙' : '☀️';
+      if (themeToggle) themeToggle.textContent = isDark ? 'On' : 'Off';
+    }
+
+    // Handle auth action from mobile sheet
+    function handleMobileAuth() {
+      closeMobileAccountSheet();
+      if (currentUser) {
+        signOut();
+      } else {
+        showLoginModal();
+      }
+    }
+
+    // Update mobile dashboard greeting and credits
+    function updateMobileDashboard() {
+      const greetingEl = document.getElementById('mobileGreeting');
+      const creditsEl = document.getElementById('mobileCredits');
+
+      if (!greetingEl || !creditsEl) return;
+
+      // Get time-based greeting
+      const hour = new Date().getHours();
+      let greeting = 'Welcome back';
+      if (hour < 12) greeting = 'Good morning';
+      else if (hour < 18) greeting = 'Good afternoon';
+      else greeting = 'Good evening';
+
+      if (currentUser) {
+        const name = currentUser.display_name || currentUser.email?.split('@')[0] || '';
+        greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
+        creditsEl.textContent = userCredits !== null ? `${userCredits} credits` : 'Loading credits...';
+      } else {
+        greetingEl.textContent = 'Welcome';
+        creditsEl.textContent = 'Sign in to get started';
+      }
+    }
+
+    // Initialize mobile dashboard on page load
+    function initMobileDashboard() {
+      if (window.innerWidth > 900) return; // Only on mobile
+
+      // Check if we were in a tool view before refresh
+      const savedTool = sessionStorage.getItem('vixxxen_mobileToolActive');
+      if (savedTool) {
+        openToolFromDashboard(savedTool);
+      }
+
+      // Update dashboard info
+      updateMobileDashboard();
+    }
+
+    // Handle window resize - switch between mobile/desktop modes
+    function handleMobileResize() {
+      const isMobile = window.innerWidth <= 900;
+      const dashboard = document.getElementById('mobileDashboard');
+      const container = document.querySelector('.container');
+      const backBar = document.getElementById('mobileBackBar');
+
+      if (!isMobile) {
+        // Switching to desktop - ensure container is visible and dashboard hidden
+        if (dashboard) dashboard.classList.add('hidden');
+        if (container) container.classList.remove('mobile-tool-active');
+        if (backBar) backBar.classList.remove('visible');
+      } else {
+        // Switching to mobile - show dashboard unless tool was active
+        if (mobileToolActive) {
+          if (dashboard) dashboard.classList.add('hidden');
+          if (container) container.classList.add('mobile-tool-active');
+          if (backBar) backBar.classList.add('visible');
+        } else {
+          if (dashboard) dashboard.classList.remove('hidden');
+          if (container) container.classList.remove('mobile-tool-active');
+          if (backBar) backBar.classList.remove('visible');
+        }
+      }
+    }
+
+    // Add resize listener for mobile/desktop transitions
+    window.addEventListener('resize', handleMobileResize);
+
+    // ===========================================
     // SUPABASE STORAGE FUNCTIONS
     // ===========================================
 
@@ -13508,6 +13812,9 @@
 
     // Initialize content mode when DOM is ready
     document.addEventListener('DOMContentLoaded', initContentMode);
+
+    // Initialize mobile dashboard when DOM is ready
+    document.addEventListener('DOMContentLoaded', initMobileDashboard);
 
     // Edit/Eraser state
     let currentEditTool = 'eraser'; // 'eraser' or 'bg-remover'
@@ -17916,6 +18223,11 @@
           await loadUserProfile(session.user.id);
           console.log('🔐 loadUserProfile completed');
 
+          // Update mobile dashboard with user info
+          if (typeof updateMobileDashboard === 'function') {
+            updateMobileDashboard();
+          }
+
           // Check for prompts/reminders after profile load
           if (typeof checkAndShowPrompts === 'function') {
             setTimeout(() => checkAndShowPrompts(), 2000);
@@ -17965,6 +18277,11 @@
         if (userAvatar) userAvatar.classList.add('logged-out');
         if (userStatusDot) userStatusDot.style.display = 'none';
         if (userCreditsDisplay) userCreditsDisplay.textContent = 'Login';
+
+        // Update mobile dashboard to logged out state
+        if (typeof updateMobileDashboard === 'function') {
+          updateMobileDashboard();
+        }
 
         // Reload marketplace to hide admin controls and reset ownership
         loadMarketplaceCharacters();
