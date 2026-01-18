@@ -462,6 +462,23 @@
       transform: scale(1.05);
     }
 
+    /* Character Modal - Mobile-only elements (hidden on desktop) */
+    .character-modal-sticky-bar {
+      display: none;
+    }
+
+    .character-modal-readmore {
+      display: none;
+    }
+
+    .character-gallery-toggle {
+      display: none;
+    }
+
+    .character-modal-description-wrapper {
+      margin-bottom: 24px;
+    }
+
     /* Lightbox Modal */
     .lightbox-modal {
       position: fixed;
@@ -11459,7 +11476,10 @@
           <div class="character-modal-info">
             <div class="character-modal-name" id="modalCharacterName"></div>
             <div class="character-modal-category" id="modalCharacterCategory"></div>
-            <div class="character-modal-description" id="modalCharacterDescription"></div>
+            <div class="character-modal-description-wrapper">
+              <div class="character-modal-description" id="modalCharacterDescription"></div>
+              <button class="character-modal-readmore" id="modalReadMore" onclick="toggleCharacterDescription()">Read more</button>
+            </div>
 
             <div class="character-modal-tags" id="modalCharacterTags"></div>
 
@@ -11474,9 +11494,20 @@
 
         <div class="character-modal-gallery">
           <div class="character-modal-gallery-title">Example Gallery</div>
+          <button class="character-gallery-toggle" id="galleryToggle" onclick="toggleCharacterGallery()">
+            <span class="character-gallery-toggle-text">Example Gallery</span>
+            <span class="character-gallery-toggle-count" id="galleryCount">(0)</span>
+            <span class="character-gallery-toggle-icon">▼</span>
+          </button>
           <div class="character-gallery-grid" id="modalCharacterGallery">
             <!-- Gallery images will be populated here -->
           </div>
+        </div>
+
+        <!-- Mobile sticky purchase bar -->
+        <div class="character-modal-sticky-bar">
+          <div class="sticky-bar-price" id="modalStickyPrice">$14.99</div>
+          <button class="sticky-bar-btn" onclick="purchaseCharacter()">Purchase</button>
         </div>
       </div>
     </div>
@@ -19698,6 +19729,26 @@
       document.getElementById('modalCharacterImage').src = character.image;
       document.getElementById('modalCharacterPrice').textContent = isOwned ? 'Owned' : '$' + character.price.toFixed(2);
 
+      // Update sticky bar price (mobile)
+      const stickyPrice = document.getElementById('modalStickyPrice');
+      const stickyBtn = document.querySelector('.sticky-bar-btn');
+      if (stickyPrice) {
+        stickyPrice.textContent = isOwned ? 'Owned' : '$' + character.price.toFixed(2);
+      }
+      if (stickyBtn) {
+        if (isOwned) {
+          stickyBtn.textContent = '✓ Owned';
+          stickyBtn.style.background = '#2a2a2a';
+          stickyBtn.style.color = '#00ff88';
+          stickyBtn.onclick = null;
+        } else {
+          stickyBtn.textContent = 'Purchase';
+          stickyBtn.style.background = 'linear-gradient(135deg, #ff2ebb, #00b2ff)';
+          stickyBtn.style.color = '#fff';
+          stickyBtn.onclick = purchaseCharacter;
+        }
+      }
+
       // Render tags
       const tagsContainer = document.getElementById('modalCharacterTags');
       tagsContainer.innerHTML = character.tags.map(tag =>
@@ -19707,6 +19758,12 @@
       // Prepare all images for lightbox (main image + gallery images)
       const galleryImages = character.galleryImages || [];
       const allImages = [character.image, ...galleryImages];
+
+      // Update gallery count for mobile toggle
+      const galleryCount = document.getElementById('galleryCount');
+      if (galleryCount) {
+        galleryCount.textContent = `(${galleryImages.length})`;
+      }
 
       // Make main image clickable to open lightbox
       const mainImage = document.getElementById('modalCharacterImage');
@@ -19753,6 +19810,40 @@
     function closeCharacterModal() {
       document.getElementById('characterModal').classList.remove('active');
       currentCharacterModal = null;
+
+      // Reset mobile states when closing
+      const description = document.getElementById('modalCharacterDescription');
+      const readMoreBtn = document.getElementById('modalReadMore');
+      const gallery = document.getElementById('modalCharacterGallery');
+      const galleryToggle = document.getElementById('galleryToggle');
+
+      if (description) description.classList.remove('expanded');
+      if (readMoreBtn) readMoreBtn.textContent = 'Read more';
+      if (gallery) gallery.classList.remove('expanded');
+      if (galleryToggle) galleryToggle.classList.remove('expanded');
+    }
+
+    // Toggle description expand/collapse (mobile)
+    function toggleCharacterDescription() {
+      const description = document.getElementById('modalCharacterDescription');
+      const readMoreBtn = document.getElementById('modalReadMore');
+
+      if (description.classList.contains('expanded')) {
+        description.classList.remove('expanded');
+        readMoreBtn.textContent = 'Read more';
+      } else {
+        description.classList.add('expanded');
+        readMoreBtn.textContent = 'Read less';
+      }
+    }
+
+    // Toggle gallery expand/collapse (mobile)
+    function toggleCharacterGallery() {
+      const gallery = document.getElementById('modalCharacterGallery');
+      const galleryToggle = document.getElementById('galleryToggle');
+
+      gallery.classList.toggle('expanded');
+      galleryToggle.classList.toggle('expanded');
     }
 
     // Lightbox functionality

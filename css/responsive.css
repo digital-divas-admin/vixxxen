@@ -2350,4 +2350,143 @@
     aspect-ratio: 1;
     border-radius: 10px;
   }
+
+  /* ========================================
+     CHARACTER MODAL - MOBILE OPTIMIZATIONS
+     ======================================== */
+
+  /* Description wrapper with truncation */
+  .character-modal-description-wrapper {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .character-modal-description {
+    margin-bottom: 0;
+    max-height: 4.8em; /* ~3 lines */
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .character-modal-description.expanded {
+    max-height: 1000px;
+  }
+
+  .character-modal-readmore {
+    display: inline-block;
+    background: none;
+    border: none;
+    color: #00b2ff;
+    font-size: 0.9rem;
+    padding: 8px 0;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .character-modal-readmore:active {
+    opacity: 0.7;
+  }
+
+  /* Hide original purchase section on mobile - using sticky bar instead */
+  .character-modal-purchase {
+    display: none;
+  }
+
+  /* Collapsible gallery toggle button */
+  .character-gallery-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px;
+    background: #2a2a2a;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 12px;
+  }
+
+  .character-gallery-toggle-text {
+    font-weight: 600;
+  }
+
+  .character-gallery-toggle-count {
+    color: #888;
+    margin-left: 8px;
+  }
+
+  .character-gallery-toggle-icon {
+    transition: transform 0.3s ease;
+    color: #888;
+  }
+
+  .character-gallery-toggle.expanded .character-gallery-toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Hide original gallery title on mobile */
+  .character-modal-gallery-title {
+    display: none;
+  }
+
+  /* Gallery grid - collapsed by default on mobile */
+  .character-gallery-grid {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+
+  .character-gallery-grid.expanded {
+    max-height: 2000px;
+  }
+
+  /* Bottom padding for gallery to account for sticky bar */
+  .character-modal-gallery {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Sticky purchase bar at bottom */
+  .character-modal-sticky-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 20px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #2a2a2a;
+    z-index: 50;
+  }
+
+  .sticky-bar-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sticky-bar-btn {
+    padding: 14px 32px;
+    background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 48px;
+  }
+
+  .sticky-bar-btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
 }
