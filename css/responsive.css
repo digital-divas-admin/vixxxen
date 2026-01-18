@@ -575,13 +575,9 @@
   .content-mode-toggle {
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 10px;
     padding: 10px 12px;
-  }
-
-  .content-mode-label {
-    font-size: 0.8rem;
   }
 
   .content-mode-info {
@@ -705,10 +701,6 @@
   .content-mode-toggle {
     gap: 6px;
     padding: 8px 10px;
-  }
-
-  .content-mode-label {
-    font-size: 0.75rem;
   }
 
   .content-mode-btn {
