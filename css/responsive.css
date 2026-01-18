@@ -1441,6 +1441,31 @@
     object-fit: cover;
   }
 
+  .mobile-recent-remix {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 46, 187, 0.9);
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition: all 0.2s;
+  }
+
+  .mobile-recent-remix:active {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
   .mobile-recent-empty {
     grid-column: 1 / -1;
     text-align: center;
@@ -1546,7 +1571,11 @@
   }
 
   /* Improved loading states */
-  .mobile-loading-shimmer {
+  /* =========================================
+     SKELETON LOADING STATES
+     ========================================= */
+
+  .skeleton {
     background: linear-gradient(
       90deg,
       var(--bg-tertiary) 0%,
@@ -1555,11 +1584,178 @@
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  .skeleton-text {
+    height: 1em;
+    border-radius: 4px;
+  }
+
+  .skeleton-text.short {
+    width: 40%;
+  }
+
+  .skeleton-text.medium {
+    width: 70%;
+  }
+
+  .skeleton-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+  }
+
+  .skeleton-card {
+    height: 100px;
+    border-radius: 12px;
+  }
+
+  .skeleton-image {
+    aspect-ratio: 1;
+    border-radius: 10px;
+  }
+
+  /* Skeleton for tool cards */
+  .mobile-tool-card.skeleton {
+    pointer-events: none;
+  }
+
+  .mobile-tool-card.skeleton .mobile-tool-icon,
+  .mobile-tool-card.skeleton .mobile-tool-name,
+  .mobile-tool-card.skeleton .mobile-tool-desc {
+    visibility: hidden;
+  }
+
+  /* Skeleton for recent images */
+  .mobile-recent-item.skeleton {
+    pointer-events: none;
+  }
+
+  .mobile-recent-item.skeleton img {
+    visibility: hidden;
   }
 
   @keyframes shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+  }
+
+  /* Fade in animation for loaded content */
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Stagger animation delays for grid items */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
+
+  /* Scale-up animation for images loading */
+  .scale-up {
+    animation: scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes scaleUp {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Pulse animation for active/loading states */
+  .pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Pop animation for successful actions */
+  .pop {
+    animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  /* Slide-in from right for panels */
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Smooth image reveal animation */
+  .image-reveal {
+    animation: imageReveal 0.5s ease-out;
+  }
+
+  @keyframes imageReveal {
+    0% {
+      opacity: 0;
+      clip-path: inset(0 100% 0 0);
+    }
+    100% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* Button press feedback */
+  .mobile-tool-card:active,
+  .mobile-quick-action:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+
+  /* Smooth transitions for interactive elements */
+  .mobile-tool-card,
+  .mobile-quick-action,
+  .mobile-recent-item,
+  .mobile-auth-btn {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  /* Hover lift effect */
+  .mobile-tool-card:hover,
+  .mobile-quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   /* Scroll snap for horizontal scrolling */

@@ -6789,6 +6789,40 @@
       opacity: 0.9;
     }
 
+    /* Scale-up animation for images when they load */
+    .output-item img.scale-up {
+      animation: scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes scaleUp {
+      from {
+        opacity: 0;
+        transform: scale(0.85);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Lazy loading states */
+    .output-item img.lazy-loading {
+      opacity: 0.3 !important;
+      background: linear-gradient(90deg, var(--bg-tertiary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .output-item img.lazy-error {
+      opacity: 0.5;
+      filter: grayscale(100%);
+    }
+
     /* Video grid - consistent 16:9 containers for clean layout */
     #videoOutputGrid .output-item {
       aspect-ratio: 16 / 9;
@@ -7032,6 +7066,49 @@
       line-height: 1.5;
     }
 
+    .retry-btn {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, rgba(255, 46, 187, 0.3), rgba(0, 178, 255, 0.3));
+      border: 1px solid rgba(255, 46, 187, 0.5);
+      border-radius: 20px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .retry-btn:hover {
+      background: linear-gradient(135deg, rgba(255, 46, 187, 0.5), rgba(0, 178, 255, 0.5));
+      transform: scale(1.05);
+    }
+
+    .retry-btn:active {
+      transform: scale(0.98);
+    }
+
+    .retry-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .retry-btn.retrying {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .retry-btn.retrying svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
 
     .output-item-overlay {
       position: absolute;
@@ -12536,16 +12613,21 @@
       grid.innerHTML = recentImages.map((img, index) => `
         <div class="mobile-recent-item" onclick="viewRecentImage(${index})">
           <img src="${img.thumbnail || img.url}" alt="Recent generation" loading="lazy">
+          ${img.prompt ? `<button class="mobile-recent-remix" onclick="event.stopPropagation(); remixRecentImage(${index})" title="Remix">↻</button>` : ''}
         </div>
       `).join('');
     }
 
     // Add image to recent generations (called after successful generation)
-    function addToRecentGenerations(imageUrl, thumbnail) {
+    function addToRecentGenerations(imageUrl, metadata = {}) {
       recentGenerationsCache.unshift({
         url: imageUrl,
-        thumbnail: thumbnail || imageUrl,
-        timestamp: Date.now()
+        thumbnail: metadata.thumbnail || imageUrl,
+        timestamp: Date.now(),
+        prompt: metadata.prompt || '',
+        model: metadata.model || '',
+        character: metadata.character || '',
+        aspectRatio: metadata.aspectRatio || ''
       });
 
       // Keep only last 20
@@ -12582,6 +12664,20 @@
         } else {
           window.open(img.url, '_blank');
         }
+      }
+    }
+
+    // Remix a recent image - opens image tool with the prompt
+    function remixRecentImage(index) {
+      const img = recentGenerationsCache[index];
+      if (img) {
+        triggerHaptic('success');
+        remixImage({
+          prompt: img.prompt,
+          model: img.model,
+          character: img.character,
+          aspectRatio: img.aspectRatio
+        });
       }
     }
 
@@ -17098,13 +17194,20 @@
             model: 'qwen-comfyui',
             aspectRatio: aspectRatio,
             timestamp: Date.now() + genIndex,
-            isNsfw: isNsfwAtStart
+            isNsfw: isNsfwAtStart,
+            prompt: prompt,
+            character: loraValue || ''
           };
           generatedImages.push(newImage);
           replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
 
           // Add to recent generations for mobile dashboard
-          addToRecentGenerations(imageUrl);
+          addToRecentGenerations(imageUrl, {
+            prompt: prompt,
+            model: 'qwen',
+            character: loraValue || '',
+            aspectRatio: aspectRatio
+          });
 
           // Upload to Supabase Storage
           uploadImageToStorage(imageUrl, {
@@ -17384,19 +17487,27 @@
         for (let i = 0; i < numOutputs; i++) {
           if (imageIndex < data.images.length) {
             // This image succeeded - replace with actual image (use NSFW flag captured at start)
+            const characterSelect = document.getElementById('characterSelect');
             const newImage = {
               url: data.images[imageIndex],
               model: data.model,
               aspectRatio: aspectRatio,
               timestamp: Date.now() + imageIndex,
-              isNsfw: isNsfwAtStart
+              isNsfw: isNsfwAtStart,
+              prompt: prompt,
+              character: characterSelect?.value || ''
             };
             console.log('🔞 Image generated with NSFW flag:', isNsfwAtStart);
             generatedImages.push(newImage);
             replacePlaceholderWithImage(placeholders[i], newImage);
 
             // Add to recent generations for mobile dashboard
-            addToRecentGenerations(data.images[imageIndex]);
+            addToRecentGenerations(data.images[imageIndex], {
+              prompt: prompt,
+              model: capturedModel,
+              character: characterSelect?.value || '',
+              aspectRatio: aspectRatio
+            });
 
             // Upload to Supabase Storage (async, don't block UI)
             uploadImageToStorage(data.images[imageIndex], {
@@ -17468,13 +17579,96 @@
     }
 
     function updatePlaceholderWithError(placeholder, errorMessage) {
+      // Check if it's a retryable error (not content filter or moderation)
+      const isRetryable = !errorMessage?.toLowerCase().includes('content') &&
+                          !errorMessage?.toLowerCase().includes('filter') &&
+                          !errorMessage?.toLowerCase().includes('blocked') &&
+                          !errorMessage?.toLowerCase().includes('moderation');
+
       placeholder.innerHTML = `
         <div class="output-placeholder-failed">
           <button class="failed-dismiss-btn" onclick="this.closest('.output-item').remove()" title="Dismiss">×</button>
           <div class="failed-icon">⚠️</div>
           <div class="failed-text">${errorMessage || 'Generation failed'}</div>
+          ${isRetryable ? `
+            <button class="retry-btn" onclick="retryGeneration(this)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 2v6h-6"></path>
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              </svg>
+              Try Again
+            </button>
+          ` : ''}
         </div>
       `;
+    }
+
+    // Retry generation using the last saved settings
+    function retryGeneration(btn) {
+      // Remove the failed placeholder
+      const placeholder = btn.closest('.output-item');
+      if (placeholder) {
+        placeholder.remove();
+      }
+
+      // Trigger generation using the current form settings
+      if (typeof generateImages === 'function') {
+        generateImages();
+      }
+    }
+
+    // Lazy Loading Utility - Enhanced IntersectionObserver for images
+    let lazyImageObserver = null;
+
+    function initLazyLoading() {
+      if (!('IntersectionObserver' in window)) return;
+
+      lazyImageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            const dataSrc = img.dataset.src;
+
+            if (dataSrc) {
+              // Show skeleton while loading
+              img.classList.add('lazy-loading');
+
+              img.onload = () => {
+                img.classList.remove('lazy-loading');
+                img.classList.add('scale-up');
+                img.style.opacity = '1';
+              };
+
+              img.onerror = () => {
+                img.classList.remove('lazy-loading');
+                img.classList.add('lazy-error');
+                img.style.opacity = '1';
+              };
+
+              img.src = dataSrc;
+              delete img.dataset.src;
+            }
+
+            lazyImageObserver.unobserve(img);
+          }
+        });
+      }, {
+        rootMargin: '100px 0px', // Load 100px before visible
+        threshold: 0.01
+      });
+    }
+
+    function observeLazyImage(img) {
+      if (lazyImageObserver && img.dataset.src) {
+        lazyImageObserver.observe(img);
+      }
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initLazyLoading);
+    } else {
+      initLazyLoading();
     }
 
     function replacePlaceholderWithImage(placeholder, image) {
@@ -17486,16 +17680,29 @@
       // Store image data on placeholder for click handlers (avoids inline URL issues with base64)
       placeholder.dataset.imageUrl = image.url;
       placeholder.dataset.timestamp = image.timestamp;
+      // Store remix metadata
+      placeholder.dataset.prompt = image.prompt || '';
+      placeholder.dataset.model = image.model || '';
+      placeholder.dataset.character = image.character || '';
+      placeholder.dataset.aspectRatio = image.aspectRatio || '';
 
       placeholder.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy" onload="this.style.opacity=1; this.classList.add('scale-up')" style="opacity: 0;">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
           </div>
           <div class="output-item-actions">
+            <button class="icon-btn remix-btn" onclick="remixImageFromParent(this)" title="Remix - Edit prompt and regenerate">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 2v6h-6"></path>
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                <path d="M3 22v-6h6"></path>
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+              </svg>
+            </button>
             <button class="icon-btn" onclick="downloadImageFromParent(this)" title="Download">
               <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -17545,7 +17752,7 @@
       imageDiv.innerHTML = `
         <div class="select-checkbox" onclick="toggleImageSelection(event, this)"></div>
         ${image.isNsfw ? '<span class="nsfw-badge">NSFW</span>' : ''}
-        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy">
+        <img src="${image.url}" alt="Generated image" crossorigin="anonymous" onclick="showImageModal(this.src)" title="Click to view full size" loading="lazy" onload="this.style.opacity=1; this.classList.add('scale-up')" style="opacity: 0;">
         <div class="output-item-overlay">
           <div class="output-item-info">
             ${image.model} · ${image.aspectRatio || 'Square'}
@@ -17632,13 +17839,83 @@
       const container = element.closest('.output-item');
       return {
         url: container.dataset.imageUrl,
-        timestamp: container.dataset.timestamp
+        timestamp: container.dataset.timestamp,
+        prompt: container.dataset.prompt || '',
+        model: container.dataset.model || '',
+        character: container.dataset.character || '',
+        aspectRatio: container.dataset.aspectRatio || ''
       };
     }
 
     function downloadImageFromParent(element) {
       const data = getImageDataFromParent(element);
       downloadImage(data.url, data.timestamp);
+    }
+
+    // Remix: Open image tool with the original prompt pre-filled for editing
+    function remixImageFromParent(element) {
+      event.stopPropagation();
+      const data = getImageDataFromParent(element);
+      remixImage(data);
+    }
+
+    function remixImage(imageData) {
+      // Switch to image tab
+      switchMainTab('image');
+
+      // Set the prompt
+      const promptInput = document.getElementById('promptInput');
+      if (promptInput && imageData.prompt) {
+        promptInput.value = imageData.prompt;
+        promptInput.focus();
+      }
+
+      // Set character if available
+      if (imageData.character) {
+        const charSelect = document.getElementById('characterSelect');
+        if (charSelect) {
+          charSelect.value = imageData.character;
+        }
+      }
+
+      // Set model if we can determine which one
+      const model = imageData.model?.toLowerCase() || '';
+      if (model.includes('qwen')) {
+        selectModel('qwen');
+        // Also set Qwen character
+        const qwenCharSelect = document.getElementById('qwenGenCharacter');
+        if (qwenCharSelect && imageData.character) {
+          qwenCharSelect.value = imageData.character;
+        }
+      } else if (model.includes('seedream')) {
+        selectModel('seedream');
+      } else if (model.includes('nano') || model.includes('banana')) {
+        selectModel('nano-banana');
+      }
+
+      // Set aspect ratio if available
+      if (imageData.aspectRatio) {
+        const aspectSelect = document.getElementById('aspectRatio');
+        const seedreamAspect = document.getElementById('seedreamAspectRatio');
+        const qwenAspect = document.getElementById('qwenGenAspectRatio');
+
+        if (aspectSelect) aspectSelect.value = imageData.aspectRatio;
+        if (seedreamAspect) seedreamAspect.value = imageData.aspectRatio;
+        if (qwenAspect) qwenAspect.value = imageData.aspectRatio;
+      }
+
+      // Show toast
+      showToast('Prompt loaded - edit and generate!');
+
+      // On mobile, we might be on dashboard - ensure we're in tool view
+      if (window.innerWidth <= 900 && typeof openToolFromDashboard === 'function') {
+        openToolFromDashboard('image');
+      }
+
+      // Scroll prompt into view on mobile
+      setTimeout(() => {
+        promptInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
     }
 
     function sendToVideoFromParent(element, event) {
