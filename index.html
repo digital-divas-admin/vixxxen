@@ -12284,7 +12284,7 @@
     function handleMobileAuth() {
       closeMobileAccountSheet();
       if (currentUser) {
-        signOut();
+        handleLogout();
       } else {
         showLoginModal();
       }
