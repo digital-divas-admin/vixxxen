@@ -194,6 +194,11 @@ function showLandingPage() {
   if (mobileBackBar) mobileBackBar.style.display = 'none';
   if (mobileAccountSheet) mobileAccountSheet.classList.remove('open');
 
+  // Show Tidio chat on landing page
+  if (typeof showTidioWidget === 'function') {
+    showTidioWidget();
+  }
+
   // Enable scrolling on body for landing page
   document.body.style.overflow = 'auto';
   document.body.style.height = 'auto';
@@ -219,6 +224,11 @@ function hideLandingPage() {
 
   // Show main app elements
   if (topNavbar) topNavbar.style.display = 'flex';
+
+  // Hide Tidio chat inside the app
+  if (typeof hideTidioWidget === 'function') {
+    hideTidioWidget();
+  }
 
   // On mobile, show dashboard instead of container
   // On desktop, show container
