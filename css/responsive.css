@@ -157,6 +157,7 @@
     bottom: auto !important;
     width: 100%;
     padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     margin-top: 0;
     flex-shrink: 0;
     /* Hide footer by default on mobile - only show when tool is active */
@@ -814,6 +815,10 @@
     background: var(--bg-primary);
     z-index: 100;
     padding: 20px;
+    /* Safe area insets for notched devices and landscape mode */
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -851,6 +856,9 @@
     border-bottom: 1px solid var(--border-color);
     z-index: 999;
     padding: 0 16px;
+    /* Safe area insets for landscape mode */
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
     align-items: center;
     justify-content: space-between;
   }
@@ -922,6 +930,11 @@
     font-size: 1.3rem;
     cursor: pointer;
     transition: transform 0.2s;
+    /* Button reset for semantic button element */
+    border: none;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   .mobile-dashboard-avatar:active {
@@ -947,6 +960,12 @@
     gap: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    /* Button reset for semantic button element */
+    font-family: inherit;
+    font-size: inherit;
+    text-align: center;
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   .mobile-tool-card:active {
@@ -1048,7 +1067,7 @@
     right: 0;
     background: var(--bg-card);
     border-radius: 20px 20px 0 0;
-    padding: 12px 20px 34px;
+    padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 14px));
     animation: slideUp 0.3s ease;
     max-height: 70vh;
     overflow-y: auto;
@@ -1376,6 +1395,10 @@
     transition: all 0.2s;
     flex-shrink: 0;
     box-sizing: border-box;
+    /* Button reset for semantic button element */
+    font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   .mobile-quick-action:active {

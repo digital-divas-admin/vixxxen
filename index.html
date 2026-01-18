@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Vixxxen - AI Image Generator</title>
 
   <!-- Favicons -->
@@ -8633,29 +8633,29 @@
         <span class="greeting-text" id="mobileGreeting">Welcome back</span>
         <span class="greeting-credits" id="mobileCredits">Login to see credits</span>
       </div>
-      <div class="mobile-dashboard-avatar" onclick="openMobileAccountSheet()" id="mobileDashboardAvatar">
+      <button class="mobile-dashboard-avatar" onclick="openMobileAccountSheet()" id="mobileDashboardAvatar" aria-label="Open account menu" aria-haspopup="dialog">
         👤
-      </div>
+      </button>
     </div>
 
     <!-- Quick Actions - scrollable pills -->
-    <div class="mobile-quick-actions" id="mobileQuickActions">
-      <div class="mobile-quick-action" onclick="quickActionLastPrompt()">
-        <span class="mobile-quick-action-icon">🔄</span>
+    <div class="mobile-quick-actions" id="mobileQuickActions" role="toolbar" aria-label="Quick actions">
+      <button class="mobile-quick-action" onclick="quickActionLastPrompt()" aria-label="Regenerate last prompt">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🔄</span>
         <span>Regenerate</span>
-      </div>
-      <div class="mobile-quick-action" onclick="quickActionFavoriteCharacter()">
-        <span class="mobile-quick-action-icon">⭐</span>
+      </button>
+      <button class="mobile-quick-action" onclick="quickActionFavoriteCharacter()" aria-label="Use favorite character">
+        <span class="mobile-quick-action-icon" aria-hidden="true">⭐</span>
         <span>Favorite</span>
-      </div>
-      <div class="mobile-quick-action" onclick="openImageLibraryModal()">
-        <span class="mobile-quick-action-icon">🖼️</span>
+      </button>
+      <button class="mobile-quick-action" onclick="openImageLibraryModal()" aria-label="Open image library">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🖼️</span>
         <span>Library</span>
-      </div>
-      <div class="mobile-quick-action" onclick="quickActionRandomPrompt()">
-        <span class="mobile-quick-action-icon">🎲</span>
+      </button>
+      <button class="mobile-quick-action" onclick="quickActionRandomPrompt()" aria-label="Generate random prompt">
+        <span class="mobile-quick-action-icon" aria-hidden="true">🎲</span>
         <span>Random</span>
-      </div>
+      </button>
     </div>
 
     <!-- Recent Generations -->
@@ -8672,56 +8672,56 @@
       </div>
     </div>
 
-    <div class="mobile-dashboard-tools">
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('image')">
-        <div class="mobile-tool-icon">🎨</div>
+    <div class="mobile-dashboard-tools" role="navigation" aria-label="Main tools">
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('image')" aria-label="Image - Generate images">
+        <div class="mobile-tool-icon" aria-hidden="true">🎨</div>
         <div class="mobile-tool-name">Image</div>
         <div class="mobile-tool-desc">Generate images</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('video')">
-        <div class="mobile-tool-icon">🎬</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('video')" aria-label="Video - Create videos">
+        <div class="mobile-tool-icon" aria-hidden="true">🎬</div>
         <div class="mobile-tool-name">Video</div>
         <div class="mobile-tool-desc">Create videos</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('edit')">
-        <div class="mobile-tool-icon">✂️</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('edit')" aria-label="Edit - Transform images">
+        <div class="mobile-tool-icon" aria-hidden="true">✂️</div>
         <div class="mobile-tool-name">Edit</div>
         <div class="mobile-tool-desc">Transform images</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('inpaint')">
-        <div class="mobile-tool-icon">🖌️</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('inpaint')" aria-label="Inpaint - Edit regions">
+        <div class="mobile-tool-icon" aria-hidden="true">🖌️</div>
         <div class="mobile-tool-name">Inpaint</div>
         <div class="mobile-tool-desc">Edit regions</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('caption')">
-        <div class="mobile-tool-icon">💬</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('caption')" aria-label="Caption - Describe images">
+        <div class="mobile-tool-icon" aria-hidden="true">💬</div>
         <div class="mobile-tool-name">Caption</div>
         <div class="mobile-tool-desc">Describe images</div>
-      </div>
-      <div class="mobile-tool-card" onclick="openToolFromDashboard('education')">
-        <div class="mobile-tool-icon">🎓</div>
+      </button>
+      <button class="mobile-tool-card" onclick="openToolFromDashboard('education')" aria-label="Learn - Tutorials and tips">
+        <div class="mobile-tool-icon" aria-hidden="true">🎓</div>
         <div class="mobile-tool-name">Learn</div>
         <div class="mobile-tool-desc">Tutorials & tips</div>
-      </div>
+      </button>
     </div>
 
     <div class="mobile-dashboard-section">
-      <div class="mobile-section-header">Marketplace</div>
-      <div class="mobile-tool-card mobile-tool-card-wide" onclick="openToolFromDashboard('marketplace')">
-        <div class="mobile-tool-icon">🛍️</div>
+      <h2 class="mobile-section-header">Marketplace</h2>
+      <button class="mobile-tool-card mobile-tool-card-wide" onclick="openToolFromDashboard('marketplace')" aria-label="Browse Marketplace - Models, LoRAs and presets">
+        <div class="mobile-tool-icon" aria-hidden="true">🛍️</div>
         <div class="mobile-tool-info">
           <div class="mobile-tool-name">Browse Marketplace</div>
           <div class="mobile-tool-desc">Models, LoRAs & presets</div>
         </div>
-      </div>
+      </button>
     </div>
   </div>
 
   <!-- Mobile Account Bottom Sheet -->
-  <div class="mobile-account-sheet" id="mobileAccountSheet">
-    <div class="mobile-sheet-backdrop" onclick="closeMobileAccountSheet()"></div>
-    <div class="mobile-sheet-content">
-      <div class="mobile-sheet-handle"></div>
+  <div class="mobile-account-sheet" id="mobileAccountSheet" role="dialog" aria-modal="true" aria-labelledby="mobileSheetName">
+    <div class="mobile-sheet-backdrop" onclick="closeMobileAccountSheet()" aria-hidden="true"></div>
+    <div class="mobile-sheet-content" role="document">
+      <div class="mobile-sheet-handle" aria-hidden="true"></div>
       <div class="mobile-sheet-header">
         <div class="mobile-sheet-avatar">👤</div>
         <div class="mobile-sheet-user">
@@ -8757,14 +8757,14 @@
   </div>
 
   <!-- Mobile Back Button (shown when in a tool) -->
-  <div class="mobile-back-bar" id="mobileBackBar">
-    <button class="mobile-back-btn" onclick="backToDashboard()">
-      <span class="mobile-back-arrow">←</span>
+  <nav class="mobile-back-bar" id="mobileBackBar" aria-label="Tool navigation">
+    <button class="mobile-back-btn" onclick="backToDashboard()" aria-label="Return to dashboard">
+      <span class="mobile-back-arrow" aria-hidden="true">←</span>
       <span class="mobile-back-text">Back</span>
     </button>
-    <span class="mobile-current-tool" id="mobileCurrentTool">Image</span>
-    <div class="mobile-back-spacer"></div>
-  </div>
+    <span class="mobile-current-tool" id="mobileCurrentTool" aria-live="polite">Image</span>
+    <div class="mobile-back-spacer" aria-hidden="true"></div>
+  </nav>
 
   <div class="container">
     <!-- Main Navigation Sidebar -->
@@ -12270,7 +12270,7 @@
     // ===========================================
 
     // Track if we're in a tool view on mobile (global for landing-page.js access)
-    window.window.mobileToolActive = false;
+    window.mobileToolActive = false;
 
     // Tool name mappings for display
     const toolDisplayNames = {
@@ -12475,8 +12475,30 @@
       }
     }
 
+    // Debounce utility for resize events
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Debounced resize handler for performance
+    const debouncedMobileResize = debounce(handleMobileResize, 150);
+
     // Add resize listener for mobile/desktop transitions
-    window.addEventListener('resize', handleMobileResize);
+    window.addEventListener('resize', debouncedMobileResize);
+
+    // Add orientationchange listener for mobile devices
+    window.addEventListener('orientationchange', () => {
+      // Small delay to let the browser finish orientation change
+      setTimeout(handleMobileResize, 100);
+    });
 
     // ===========================================
     // PHASE 2: QUICK ACTIONS
@@ -14305,6 +14327,31 @@
     function switchMainTab(tab) {
       // Close mobile sidebar when switching tabs
       closeMobileSidebar();
+
+      // On mobile, ensure back bar is visible and dashboard is hidden
+      if (window.innerWidth <= 900) {
+        const dashboard = document.getElementById('mobileDashboard');
+        const container = document.querySelector('.container');
+        const backBar = document.getElementById('mobileBackBar');
+        const currentToolLabel = document.getElementById('mobileCurrentTool');
+        const siteFooter = document.querySelector('.site-footer');
+
+        // Hide dashboard, show container with tool
+        if (dashboard) dashboard.classList.add('hidden');
+        if (container) container.classList.add('mobile-tool-active');
+        if (backBar) backBar.classList.add('visible');
+        if (siteFooter) siteFooter.style.display = 'flex';
+
+        // Update tool name in back bar
+        if (currentToolLabel) {
+          const displayName = toolDisplayNames[tab] || tab;
+          currentToolLabel.textContent = displayName;
+        }
+
+        // Track state
+        window.mobileToolActive = true;
+        sessionStorage.setItem('vixxxen_mobileToolActive', tab);
+      }
 
       // Save current tab to localStorage for persistence
       localStorage.setItem('vixxxen_activeTab', tab);
