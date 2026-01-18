@@ -11482,14 +11482,14 @@
             </div>
 
             <div class="character-modal-tags" id="modalCharacterTags"></div>
-
-            <div class="character-modal-purchase">
-              <div class="character-modal-price" id="modalCharacterPrice">$14.99</div>
-              <button class="character-modal-buy-btn" id="modalBuyBtn" onclick="purchaseCharacter()">
-                💳 Purchase Character
-              </button>
-            </div>
           </div>
+        </div>
+
+        <div class="character-modal-purchase">
+          <div class="character-modal-price" id="modalCharacterPrice">$14.99</div>
+          <button class="character-modal-buy-btn" id="modalBuyBtn" onclick="purchaseCharacter()">
+            💳 Purchase Character
+          </button>
         </div>
 
         <div class="character-modal-gallery">
@@ -19636,7 +19636,7 @@
                 <div class="character-price">${isOwned ? 'Owned' : (character.price === 0 ? 'Free' : '$' + character.price.toFixed(2))}</div>
                 ${!isOwned && character.price > 0 ? '<div class="character-price-label">one-time</div>' : ''}
               </div>
-              <button class="character-buy-btn ${isOwned ? 'owned' : ''}" onclick="event.stopPropagation(); ${isOwned ? '' : 'openCharacterModal(' + JSON.stringify(character).replace(/"/g, '&quot;') + ')'}">
+              <button class="character-buy-btn ${isOwned ? 'owned' : ''}" onclick="${isOwned ? 'event.stopPropagation()' : ''}">
                 ${isOwned ? '✓ Owned' : 'Buy Now'}
               </button>
             </div>
