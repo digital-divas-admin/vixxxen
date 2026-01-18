@@ -12177,6 +12177,7 @@
       const container = document.querySelector('.container');
       const backBar = document.getElementById('mobileBackBar');
       const currentToolLabel = document.getElementById('mobileCurrentTool');
+      const siteFooter = document.querySelector('.site-footer');
 
       // Hide dashboard
       dashboard.classList.add('hidden');
@@ -12186,6 +12187,9 @@
 
       // Show back bar
       backBar.classList.add('visible');
+
+      // Show footer when tool is active
+      if (siteFooter) siteFooter.style.display = 'flex';
 
       // Update tool name in back bar
       currentToolLabel.textContent = toolDisplayNames[tool] || tool;
@@ -12207,6 +12211,7 @@
       const dashboard = document.getElementById('mobileDashboard');
       const container = document.querySelector('.container');
       const backBar = document.getElementById('mobileBackBar');
+      const siteFooter = document.querySelector('.site-footer');
 
       // Show dashboard
       dashboard.classList.remove('hidden');
@@ -12216,6 +12221,9 @@
 
       // Hide back bar
       backBar.classList.remove('visible');
+
+      // Hide footer when on dashboard
+      if (siteFooter) siteFooter.style.display = 'none';
 
       // Track state
       window.mobileToolActive = false;
@@ -12326,22 +12334,29 @@
       const dashboard = document.getElementById('mobileDashboard');
       const container = document.querySelector('.container');
       const backBar = document.getElementById('mobileBackBar');
+      const siteFooter = document.querySelector('.site-footer');
 
       if (!isMobile) {
         // Switching to desktop - ensure container is visible and dashboard hidden
         if (dashboard) dashboard.classList.add('hidden');
         if (container) container.classList.remove('mobile-tool-active');
         if (backBar) backBar.classList.remove('visible');
+        // Show footer on desktop
+        if (siteFooter) siteFooter.style.display = 'flex';
       } else {
         // Switching to mobile - show dashboard unless tool was active
         if (window.mobileToolActive) {
           if (dashboard) dashboard.classList.add('hidden');
           if (container) container.classList.add('mobile-tool-active');
           if (backBar) backBar.classList.add('visible');
+          // Show footer when tool is active
+          if (siteFooter) siteFooter.style.display = 'flex';
         } else {
           if (dashboard) dashboard.classList.remove('hidden');
           if (container) container.classList.remove('mobile-tool-active');
           if (backBar) backBar.classList.remove('visible');
+          // Hide footer when on dashboard
+          if (siteFooter) siteFooter.style.display = 'none';
         }
       }
     }

@@ -219,11 +219,12 @@ function hideLandingPage() {
 
   // Show main app elements
   if (topNavbar) topNavbar.style.display = 'flex';
-  if (siteFooter) siteFooter.style.display = 'flex';
 
   // On mobile, show dashboard instead of container
   // On desktop, show container
   if (isMobile) {
+    // On mobile, hide footer when showing dashboard (it only shows when a tool is active)
+    if (siteFooter) siteFooter.style.display = 'none';
     // Show mobile dashboard, hide container (CSS will handle the rest)
     if (mobileDashboard) {
       mobileDashboard.style.display = ''; // Clear inline style, let CSS take over
@@ -243,8 +244,9 @@ function hideLandingPage() {
     }
     sessionStorage.removeItem('vixxxen_mobileToolActive');
   } else {
-    // Desktop - show container normally
+    // Desktop - show container and footer normally
     if (container) container.style.display = 'flex';
+    if (siteFooter) siteFooter.style.display = 'flex';
   }
 
   // Restore body overflow for main app (desktop only)

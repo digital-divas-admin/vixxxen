@@ -159,6 +159,13 @@
     padding: 16px;
     margin-top: 0;
     flex-shrink: 0;
+    /* Hide footer by default on mobile - only show when tool is active */
+    display: none !important;
+  }
+
+  /* Show footer when a tool is active (container is visible) */
+  .container.mobile-tool-active ~ .site-footer {
+    display: flex !important;
   }
 
   .site-footer.sidebar-collapsed {
