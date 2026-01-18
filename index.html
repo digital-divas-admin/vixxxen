@@ -432,13 +432,6 @@
       box-shadow: 0 8px 24px rgba(255, 46, 187, 0.4);
     }
 
-    /* Hide mobile-only elements on desktop */
-    .character-modal-sticky-bar,
-    .character-modal-readmore,
-    .character-gallery-toggle {
-      display: none;
-    }
-
     .character-modal-gallery {
       padding: 40px;
     }
@@ -11466,10 +11459,7 @@
           <div class="character-modal-info">
             <div class="character-modal-name" id="modalCharacterName"></div>
             <div class="character-modal-category" id="modalCharacterCategory"></div>
-            <div class="character-modal-description-wrapper">
-              <div class="character-modal-description" id="modalCharacterDescription"></div>
-              <button class="character-modal-readmore" id="modalReadMore" onclick="toggleCharacterDescription()">Read more</button>
-            </div>
+            <div class="character-modal-description" id="modalCharacterDescription"></div>
 
             <div class="character-modal-tags" id="modalCharacterTags"></div>
 
@@ -11483,20 +11473,10 @@
         </div>
 
         <div class="character-modal-gallery">
-          <button class="character-gallery-toggle" id="galleryToggle" onclick="toggleCharacterGallery()">
-            <span class="character-gallery-toggle-text">Example Gallery</span>
-            <span class="character-gallery-toggle-count" id="galleryCount">(0)</span>
-            <span class="character-gallery-toggle-icon">▼</span>
-          </button>
+          <div class="character-modal-gallery-title">Example Gallery</div>
           <div class="character-gallery-grid" id="modalCharacterGallery">
             <!-- Gallery images will be populated here -->
           </div>
-        </div>
-
-        <!-- Mobile sticky purchase bar -->
-        <div class="character-modal-sticky-bar">
-          <div class="sticky-bar-price" id="modalStickyPrice">$14.99</div>
-          <button class="sticky-bar-btn" onclick="purchaseCharacter()">Purchase</button>
         </div>
       </div>
     </div>
@@ -19767,67 +19747,12 @@
         buyBtn.onclick = purchaseCharacter;
       }
 
-      // Mobile: Update sticky bar price and button
-      const stickyPrice = document.getElementById('modalStickyPrice');
-      const stickyBtn = document.querySelector('.sticky-bar-btn');
-      if (stickyPrice) {
-        stickyPrice.textContent = isOwned ? 'Owned' : '$' + character.price.toFixed(2);
-      }
-      if (stickyBtn) {
-        if (isOwned) {
-          stickyBtn.textContent = '✓ Owned';
-          stickyBtn.style.background = '#2a2a2a';
-          stickyBtn.onclick = null;
-        } else {
-          stickyBtn.textContent = 'Purchase';
-          stickyBtn.style.background = 'linear-gradient(135deg, #ff2ebb, #00b2ff)';
-          stickyBtn.onclick = purchaseCharacter;
-        }
-      }
-
-      // Mobile: Update gallery count
-      const galleryCount = document.getElementById('galleryCount');
-      if (galleryCount) {
-        galleryCount.textContent = `(${galleryImages.length})`;
-      }
-
-      // Mobile: Reset expanded states
-      const descEl = document.getElementById('modalCharacterDescription');
-      const readMoreBtn = document.getElementById('modalReadMore');
-      const galleryToggle = document.getElementById('galleryToggle');
-      const galleryGrid = document.getElementById('modalCharacterGallery');
-
-      if (descEl) descEl.classList.remove('expanded');
-      if (readMoreBtn) readMoreBtn.textContent = 'Read more';
-      if (galleryToggle) galleryToggle.classList.remove('expanded');
-      if (galleryGrid) galleryGrid.classList.remove('expanded');
-
       modal.classList.add('active');
     }
 
     function closeCharacterModal() {
       document.getElementById('characterModal').classList.remove('active');
       currentCharacterModal = null;
-    }
-
-    // Mobile: Toggle character description expansion
-    function toggleCharacterDescription() {
-      const desc = document.getElementById('modalCharacterDescription');
-      const btn = document.getElementById('modalReadMore');
-      if (!desc || !btn) return;
-
-      desc.classList.toggle('expanded');
-      btn.textContent = desc.classList.contains('expanded') ? 'Read less' : 'Read more';
-    }
-
-    // Mobile: Toggle gallery expansion
-    function toggleCharacterGallery() {
-      const toggle = document.getElementById('galleryToggle');
-      const grid = document.getElementById('modalCharacterGallery');
-      if (!toggle || !grid) return;
-
-      toggle.classList.toggle('expanded');
-      grid.classList.toggle('expanded');
     }
 
     // Lightbox functionality
