@@ -19788,6 +19788,15 @@
         galleryContainer.parentElement.style.display = 'block';
       }
 
+      // Start with gallery collapsed on mobile
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        galleryContainer.classList.add('collapsed');
+        document.getElementById('galleryToggle').classList.remove('expanded');
+      } else {
+        galleryContainer.classList.remove('collapsed');
+      }
+
       // Update buy button
       const buyBtn = document.getElementById('modalBuyBtn');
       if (isOwned) {
@@ -19819,7 +19828,7 @@
 
       if (description) description.classList.remove('expanded');
       if (readMoreBtn) readMoreBtn.textContent = 'Read more';
-      if (gallery) gallery.classList.remove('expanded');
+      if (gallery) gallery.classList.add('collapsed');
       if (galleryToggle) galleryToggle.classList.remove('expanded');
     }
 
@@ -19842,7 +19851,7 @@
       const gallery = document.getElementById('modalCharacterGallery');
       const galleryToggle = document.getElementById('galleryToggle');
 
-      gallery.classList.toggle('expanded');
+      gallery.classList.toggle('collapsed');
       galleryToggle.classList.toggle('expanded');
     }
 
