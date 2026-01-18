@@ -9462,6 +9462,19 @@
             <input type="file" id="inpaintImageInput" accept="image/*" onchange="handleInpaintImageUpload(event)" style="display: none;">
             <canvas id="inpaintCanvas" style="display: none;"></canvas>
             <canvas id="inpaintMaskCanvas" style="display: none;"></canvas>
+
+            <!-- Mobile touch mode toggle (only visible on mobile) -->
+            <button class="inpaint-touch-mode-toggle" id="inpaintTouchModeToggle" onclick="toggleInpaintTouchMode()" aria-label="Toggle paint/navigate mode">
+              <span class="toggle-icon">🖌️</span>
+              <span class="toggle-label">Paint</span>
+            </button>
+
+            <!-- First-use hint for mobile -->
+            <div class="inpaint-touch-hint" id="inpaintTouchHint">
+              <span>☝️ One finger to paint</span>
+              <span>✌️ Two fingers to scroll</span>
+              <button onclick="dismissInpaintTouchHint()">Got it</button>
+            </div>
           </div>
         </div>
 
@@ -15369,6 +15382,7 @@
 
     function setupCanvasDrawing() {
       let rect = maskCanvas.getBoundingClientRect();
+      let isTwoFingerGesture = false;
 
       // Mouse events
       maskCanvas.addEventListener('mousedown', startDrawing);
@@ -15376,8 +15390,17 @@
       maskCanvas.addEventListener('mouseup', stopDrawing);
       maskCanvas.addEventListener('mouseout', stopDrawing);
 
-      // Touch events for mobile
+      // Touch events for mobile - smart gesture handling
       maskCanvas.addEventListener('touchstart', (e) => {
+        isTwoFingerGesture = e.touches.length >= 2;
+
+        // If in navigate mode or two fingers, allow scrolling
+        if (window.inpaintTouchMode === 'navigate' || isTwoFingerGesture) {
+          isDrawing = false;
+          return;
+        }
+
+        // Single finger painting
         e.preventDefault();
         const touch = e.touches[0];
         const mouseEvent = new MouseEvent('mousedown', {
@@ -15385,22 +15408,54 @@
           clientY: touch.clientY
         });
         maskCanvas.dispatchEvent(mouseEvent);
+        maskCanvas.classList.add('painting');
       });
 
       maskCanvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const mouseEvent = new MouseEvent('mousemove', {
-          clientX: touch.clientX,
-          clientY: touch.clientY
-        });
-        maskCanvas.dispatchEvent(mouseEvent);
+        // If in navigate mode, allow scrolling
+        if (window.inpaintTouchMode === 'navigate') {
+          return;
+        }
+
+        // If second finger added, stop painting and allow scroll
+        if (e.touches.length >= 2) {
+          isTwoFingerGesture = true;
+          isDrawing = false;
+          maskCanvas.classList.remove('painting');
+          return;
+        }
+
+        // If two-finger gesture in progress, continue allowing scroll
+        if (isTwoFingerGesture) {
+          return;
+        }
+
+        // Single finger painting
+        if (isDrawing) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          });
+          maskCanvas.dispatchEvent(mouseEvent);
+        }
       });
 
       maskCanvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
+        if (e.touches.length === 0) {
+          isTwoFingerGesture = false;
+        }
+        isDrawing = false;
+        maskCanvas.classList.remove('painting');
         const mouseEvent = new MouseEvent('mouseup', {});
         maskCanvas.dispatchEvent(mouseEvent);
+      });
+
+      maskCanvas.addEventListener('touchcancel', () => {
+        isTwoFingerGesture = false;
+        isDrawing = false;
+        maskCanvas.classList.remove('painting');
       });
     }
 
@@ -16225,6 +16280,11 @@
       maskCtx.lineCap = 'round';
       maskCtx.lineJoin = 'round';
 
+      // Mobile touch mode: 'auto' (two-finger pan, one-finger paint) or 'paint' (always paint)
+      window.inpaintTouchMode = window.inpaintTouchMode || 'auto';
+      let isTwoFingerGesture = false;
+      let touchStartTime = 0;
+
       // Get scale factor
       function getScale() {
         return canvas.width / canvas.offsetWidth;
@@ -16236,6 +16296,15 @@
         return {
           x: (e.clientX - rect.left) * scale,
           y: (e.clientY - rect.top) * scale
+        };
+      }
+
+      function getTouchPos(touch) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = getScale();
+        return {
+          x: (touch.clientX - rect.left) * scale,
+          y: (touch.clientY - rect.top) * scale
         };
       }
 
@@ -16269,22 +16338,137 @@
         isInpaintDrawing = false;
       };
 
-      // Touch events for mobile
+      // Touch events for mobile - smart gesture handling
       canvas.ontouchstart = function(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        canvas.onmousedown({ clientX: touch.clientX, clientY: touch.clientY });
+        touchStartTime = Date.now();
+        isTwoFingerGesture = e.touches.length >= 2;
+
+        // If in navigate mode, allow all scrolling
+        if (window.inpaintTouchMode === 'navigate') {
+          isInpaintDrawing = false;
+          return; // Don't prevent default - allow scroll
+        }
+
+        // If two fingers, allow native scrolling/zooming
+        if (isTwoFingerGesture) {
+          isInpaintDrawing = false;
+          return; // Don't prevent default - allow scroll
+        }
+
+        // If in auto mode or paint mode with single finger, start painting
+        if (window.inpaintTouchMode === 'auto' || window.inpaintTouchMode === 'paint') {
+          e.preventDefault();
+          const touch = e.touches[0];
+
+          // Save state for undo
+          inpaintMaskHistory.push(maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height));
+          if (inpaintMaskHistory.length > 20) inpaintMaskHistory.shift();
+
+          isInpaintDrawing = true;
+          const pos = getTouchPos(touch);
+          maskCtx.beginPath();
+          maskCtx.moveTo(pos.x, pos.y);
+          maskCtx.lineWidth = inpaintBrushSize * getScale();
+
+          // Visual feedback - add painting class
+          canvas.classList.add('painting');
+        }
       };
 
       canvas.ontouchmove = function(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        canvas.onmousemove({ clientX: touch.clientX, clientY: touch.clientY });
+        // If in navigate mode, allow scrolling
+        if (window.inpaintTouchMode === 'navigate') {
+          return;
+        }
+
+        // If second finger added during gesture, stop painting and allow scroll
+        if (e.touches.length >= 2) {
+          isTwoFingerGesture = true;
+          isInpaintDrawing = false;
+          canvas.classList.remove('painting');
+          return; // Allow native scroll
+        }
+
+        // If we detected two fingers earlier, continue allowing scroll
+        if (isTwoFingerGesture) {
+          return;
+        }
+
+        // Single finger painting
+        if (isInpaintDrawing) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const pos = getTouchPos(touch);
+          maskCtx.lineTo(pos.x, pos.y);
+          maskCtx.stroke();
+          maskCtx.beginPath();
+          maskCtx.moveTo(pos.x, pos.y);
+        }
       };
 
-      canvas.ontouchend = function() {
+      canvas.ontouchend = function(e) {
+        // Reset two-finger flag when all fingers lifted
+        if (e.touches.length === 0) {
+          isTwoFingerGesture = false;
+        }
         isInpaintDrawing = false;
+        canvas.classList.remove('painting');
       };
+
+      canvas.ontouchcancel = function() {
+        isTwoFingerGesture = false;
+        isInpaintDrawing = false;
+        canvas.classList.remove('painting');
+      };
+
+      // Show first-use hint on mobile
+      if (window.innerWidth <= 900 && !localStorage.getItem('vixxxen_inpaint_touch_hint_seen')) {
+        const hint = document.getElementById('inpaintTouchHint');
+        if (hint) {
+          setTimeout(() => {
+            hint.classList.add('visible');
+          }, 500);
+        }
+      }
+    }
+
+    // Toggle between paint and navigate modes on mobile
+    function toggleInpaintTouchMode() {
+      const toggle = document.getElementById('inpaintTouchModeToggle');
+      const canvas = document.getElementById('inpaintCanvas');
+      const wrapper = document.getElementById('inpaintCanvasWrapper');
+
+      if (window.inpaintTouchMode === 'auto' || window.inpaintTouchMode === 'paint') {
+        // Switch to navigate mode
+        window.inpaintTouchMode = 'navigate';
+        toggle.classList.add('navigate-mode');
+        toggle.querySelector('.toggle-icon').textContent = '✋';
+        toggle.querySelector('.toggle-label').textContent = 'Move';
+        if (wrapper) wrapper.classList.add('navigate-mode');
+        if (canvas) canvas.style.touchAction = 'pan-x pan-y';
+      } else {
+        // Switch to paint mode
+        window.inpaintTouchMode = 'paint';
+        toggle.classList.remove('navigate-mode');
+        toggle.querySelector('.toggle-icon').textContent = '🖌️';
+        toggle.querySelector('.toggle-label').textContent = 'Paint';
+        if (wrapper) wrapper.classList.remove('navigate-mode');
+        if (canvas) canvas.style.touchAction = 'none';
+      }
+
+      // Haptic feedback
+      if (typeof triggerHaptic === 'function') {
+        triggerHaptic('light');
+      }
+    }
+
+    // Dismiss the first-use touch hint
+    function dismissInpaintTouchHint() {
+      const hint = document.getElementById('inpaintTouchHint');
+      if (hint) {
+        hint.classList.remove('visible');
+        localStorage.setItem('vixxxen_inpaint_touch_hint_seen', 'true');
+      }
     }
 
     function updateInpaintBrushSize(value) {
