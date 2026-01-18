@@ -20278,14 +20278,18 @@
 
     // Check if we should open overlay when community tab is shown
     function checkMobileCommunityOverlay() {
+      const educationSection = document.getElementById('educationSection');
       const communityContent = document.getElementById('communityContent');
       const educationMemberContent = document.getElementById('educationMemberContent');
       const isMobile = window.innerWidth <= 768;
 
+      // Must check if the main education tab is active first
+      const isEducationTabActive = educationSection && educationSection.classList.contains('active');
       const isCommunityTabActive = communityContent && communityContent.classList.contains('active');
       const isEducationVisible = educationMemberContent && educationMemberContent.style.display !== 'none';
 
       console.log('🔍 checkMobileCommunityOverlay:', {
+        isEducationTabActive,
         isCommunityTabActive,
         isEducationVisible,
         isMobile,
@@ -20294,10 +20298,11 @@
         educationDisplay: educationMemberContent?.style.display
       });
 
-      if (isCommunityTabActive && isEducationVisible && isMobile && !isMobileCommunityOverlayOpen) {
+      // Only open if: main education tab is active AND community subtab is active AND member content visible AND mobile
+      if (isEducationTabActive && isCommunityTabActive && isEducationVisible && isMobile && !isMobileCommunityOverlayOpen) {
         console.log('📱 Opening mobile community overlay');
         openMobileCommunityOverlay();
-      } else if ((!isCommunityTabActive || !isEducationVisible || !isMobile) && isMobileCommunityOverlayOpen) {
+      } else if ((!isEducationTabActive || !isCommunityTabActive || !isEducationVisible || !isMobile) && isMobileCommunityOverlayOpen) {
         console.log('📱 Closing mobile community overlay');
         closeMobileCommunityOverlay();
       }
