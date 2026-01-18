@@ -37,6 +37,13 @@
 
   .navbar-logo {
     height: 36px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  .navbar-logo:active {
+    opacity: 0.7;
+    transform: scale(0.95);
   }
 
   /* Body - flex column to push footer down */

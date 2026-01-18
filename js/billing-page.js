@@ -123,6 +123,28 @@ async function loadTransactions() {
 
 // Go back from billing page
 function goBackFromBilling() {
+  // On mobile, use backToDashboard() to properly handle mobile UI state
+  if (window.innerWidth <= 900) {
+    // Hide billing section first
+    document.getElementById('billingSection').classList.remove('active');
+
+    // Show image section (default) so it's ready when user returns
+    document.getElementById('imageSection').classList.add('active');
+
+    // Activate image nav tab
+    document.querySelectorAll('.nav-tab').forEach(navTab => {
+      navTab.classList.remove('active');
+    });
+    document.querySelector('.nav-tab[onclick*="imageSection"]')?.classList.add('active');
+
+    // Call backToDashboard to handle mobile state (shows dashboard, hides back bar, etc.)
+    if (typeof backToDashboard === 'function') {
+      backToDashboard();
+    }
+    return;
+  }
+
+  // Desktop behavior - just switch tabs
   // Hide billing section
   document.getElementById('billingSection').classList.remove('active');
 
