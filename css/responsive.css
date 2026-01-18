@@ -159,6 +159,13 @@
     padding: 16px;
     margin-top: 0;
     flex-shrink: 0;
+    /* Hide footer by default on mobile - only show when tool is active */
+    display: none !important;
+  }
+
+  /* Show footer when a tool is active (container is visible) */
+  .container.mobile-tool-active ~ .site-footer {
+    display: flex !important;
   }
 
   .site-footer.sidebar-collapsed {
@@ -773,5 +780,990 @@
   /* Reference grid */
   .reference-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =============================================================================
+   MOBILE DASHBOARD - Progressive Disclosure Layout
+   Only shown on mobile devices (<= 900px)
+   ============================================================================= */
+
+/* Hide mobile dashboard on desktop */
+.mobile-dashboard,
+.mobile-account-sheet,
+.mobile-back-bar {
+  display: none;
+}
+
+/* Mobile Dashboard Styles - Only on mobile */
+@media (max-width: 900px) {
+  /* Hide the hamburger button since we have the dashboard */
+  .hamburger-btn {
+    display: none;
+  }
+
+  /* Show the dashboard by default on mobile */
+  .mobile-dashboard {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-primary);
+    z-index: 100;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide dashboard when viewing a tool */
+  .mobile-dashboard.hidden {
+    display: none;
+  }
+
+  /* Hide the main container content by default on mobile - show dashboard first */
+  .container {
+    display: none;
+  }
+
+  /* Show container when a tool is active */
+  .container.mobile-tool-active {
+    display: flex;
+    margin-top: 90px; /* Extra space for back bar */
+  }
+
+  /* Hide the sidebar completely on mobile */
+  .container.mobile-tool-active .main-nav {
+    display: none !important;
+  }
+
+  /* Mobile Back Bar */
+  .mobile-back-bar {
+    display: none;
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 999;
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobile-back-bar.visible {
+    display: flex;
+  }
+
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 0;
+  }
+
+  .mobile-back-arrow {
+    font-size: 1.2rem;
+  }
+
+  .mobile-current-tool {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-back-spacer {
+    width: 60px;
+  }
+
+  /* Dashboard Header */
+  .mobile-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .mobile-dashboard-greeting {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .greeting-text {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .greeting-credits {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-dashboard-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .mobile-dashboard-avatar:active {
+    transform: scale(0.95);
+  }
+
+  /* Tool Cards Grid */
+  .mobile-dashboard-tools {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .mobile-tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mobile-tool-card:active {
+    transform: scale(0.98);
+    background: var(--bg-secondary);
+  }
+
+  .mobile-tool-icon {
+    font-size: 2rem;
+    margin-bottom: 4px;
+  }
+
+  .mobile-tool-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-tool-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* Wide tool card (for Marketplace) */
+  .mobile-tool-card-wide {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-name {
+    text-align: left;
+  }
+
+  .mobile-tool-card-wide .mobile-tool-desc {
+    text-align: left;
+  }
+
+  /* Dashboard Section */
+  .mobile-dashboard-section {
+    margin-bottom: 24px;
+  }
+
+  .mobile-section-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  /* =========================================================================
+     MOBILE ACCOUNT BOTTOM SHEET
+     ========================================================================= */
+
+  .mobile-account-sheet {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+  }
+
+  .mobile-account-sheet.open {
+    display: block;
+  }
+
+  .mobile-sheet-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .mobile-sheet-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 20px 34px;
+    animation: slideUp 0.3s ease;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .mobile-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+
+  .mobile-sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-sheet-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .mobile-sheet-user {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-sheet-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-sheet-email {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-sheet-credits {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-sheet-credits-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-sheet-credits-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-secondary);
+    flex: 1;
+  }
+
+  .mobile-sheet-buy-btn {
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+  }
+
+  .mobile-sheet-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 8px 0;
+  }
+
+  .mobile-sheet-menu {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 4px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+
+  .mobile-sheet-item:active {
+    background: var(--bg-secondary);
+  }
+
+  .mobile-sheet-item-icon {
+    font-size: 1.2rem;
+    width: 28px;
+    text-align: center;
+  }
+
+  .mobile-sheet-item-label {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    flex: 1;
+  }
+
+  .mobile-sheet-item-toggle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-sheet-item-auth {
+    color: var(--accent-primary);
+  }
+
+  .mobile-sheet-item-auth .mobile-sheet-item-label {
+    color: var(--accent-primary);
+  }
+}
+
+/* Smaller phones adjustments */
+@media (max-width: 480px) {
+  .mobile-dashboard {
+    top: 46px;
+    padding: 16px;
+  }
+
+  .mobile-back-bar {
+    top: 46px;
+  }
+
+  .container.mobile-tool-active {
+    margin-top: 90px;
+  }
+
+  .greeting-text {
+    font-size: 1.2rem;
+  }
+
+  .mobile-tool-card {
+    padding: 16px 12px;
+  }
+
+  .mobile-tool-icon {
+    font-size: 1.6rem;
+  }
+
+  .mobile-tool-name {
+    font-size: 0.85rem;
+  }
+
+  .mobile-tool-desc {
+    font-size: 0.7rem;
+  }
+}
+
+/* =============================================================================
+   PHASE 2: MOBILE ENHANCEMENTS
+   ============================================================================= */
+
+@media (max-width: 900px) {
+  /* =========================================
+     OPTION A: TOOL SCREEN OPTIMIZATION
+     Better touch targets and mobile-friendly controls
+     ========================================= */
+
+  /* Larger touch targets for buttons */
+  .generate-btn {
+    min-height: 52px;
+    font-size: 1.05rem;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  /* Better prompt input for mobile */
+  .prompt-input,
+  #promptInput,
+  textarea[id*="prompt" i] {
+    min-height: 100px;
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    padding: 14px;
+    border-radius: 12px;
+    line-height: 1.5;
+  }
+
+  /* Larger select dropdowns for touch */
+  .settings-grid select,
+  .setting-item select {
+    min-height: 48px;
+    font-size: 16px !important;
+    padding: 12px 14px;
+    border-radius: 10px;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  /* Model tabs - better touch targets */
+  .model-tabs {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .model-tab {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    flex: 1 1 auto;
+  }
+
+  /* Content mode toggle - larger buttons */
+  .content-mode-btn {
+    min-height: 40px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+
+  /* Reference upload area - better touch */
+  .reference-upload {
+    min-height: 100px;
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  /* Section labels - clearer hierarchy */
+  .section-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  /* Character dropdown - better touch */
+  #characterSelect {
+    min-height: 48px;
+    font-size: 16px !important;
+    padding: 12px;
+  }
+
+  /* Output images - better sizing */
+  .output-images {
+    gap: 12px;
+  }
+
+  .output-image-container {
+    border-radius: 12px;
+  }
+
+  /* Result actions - larger buttons */
+  .output-image-actions button,
+  .result-actions button {
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+  }
+
+  /* =========================================
+     OPTION B: QUICK ACTIONS SECTION
+     ========================================= */
+
+  .mobile-quick-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 4px 0;
+    min-height: 52px;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobile-quick-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-quick-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    min-height: 44px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+
+  .mobile-quick-action:active {
+    transform: scale(0.96);
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+  }
+
+  .mobile-quick-action-icon {
+    font-size: 1rem;
+  }
+
+  /* =========================================
+     OPTION C: RECENT GENERATIONS SECTION
+     ========================================= */
+
+  .mobile-recent-section {
+    margin-bottom: 24px;
+  }
+
+  .mobile-recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .mobile-recent-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-recent-view-all {
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+    cursor: pointer;
+  }
+
+  .mobile-recent-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .mobile-recent-item {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .mobile-recent-item:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-recent-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .mobile-recent-remix {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 46, 187, 0.9);
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition: all 0.2s;
+  }
+
+  .mobile-recent-remix:active {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
+  .mobile-recent-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    border: 1px dashed var(--border-color);
+  }
+
+  .mobile-recent-empty-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  /* =========================================
+     OPTION D: POLISH & GESTURES
+     ========================================= */
+
+  /* Smooth transitions for all interactive elements */
+  .mobile-dashboard,
+  .mobile-account-sheet,
+  .mobile-back-bar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Pull indicator for swipe gestures */
+  .mobile-swipe-indicator {
+    position: fixed;
+    top: 100px;
+    left: 16px;
+    right: 16px;
+    height: 4px;
+    background: var(--accent-primary);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .mobile-swipe-indicator.active {
+    opacity: 1;
+  }
+
+  /* Better tap feedback */
+  .mobile-tool-card,
+  .mobile-sheet-item,
+  .mobile-quick-action,
+  .mobile-recent-item {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* Pressed state with subtle scale */
+  .mobile-tool-card:active,
+  .mobile-sheet-item:active {
+    transform: scale(0.98);
+  }
+
+  /* Account sheet slide animation improvement */
+  .mobile-account-sheet {
+    transition: none;
+  }
+
+  .mobile-account-sheet .mobile-sheet-content {
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobile-account-sheet.open .mobile-sheet-content {
+    transform: translateY(0);
+  }
+
+  .mobile-account-sheet:not(.open) .mobile-sheet-content {
+    transform: translateY(100%);
+  }
+
+  /* Swipe handle styling for bottom sheet */
+  .mobile-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 8px auto 16px;
+    opacity: 0.6;
+  }
+
+  /* Haptic-ready button states */
+  .mobile-dashboard-avatar,
+  .mobile-back-btn {
+    transition: transform 0.15s, opacity 0.15s;
+  }
+
+  .mobile-dashboard-avatar:active,
+  .mobile-back-btn:active {
+    transform: scale(0.92);
+    opacity: 0.8;
+  }
+
+  /* Improved loading states */
+  /* =========================================
+     SKELETON LOADING STATES
+     ========================================= */
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bg-tertiary) 0%,
+      var(--bg-secondary) 50%,
+      var(--bg-tertiary) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  .skeleton-text {
+    height: 1em;
+    border-radius: 4px;
+  }
+
+  .skeleton-text.short {
+    width: 40%;
+  }
+
+  .skeleton-text.medium {
+    width: 70%;
+  }
+
+  .skeleton-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+  }
+
+  .skeleton-card {
+    height: 100px;
+    border-radius: 12px;
+  }
+
+  .skeleton-image {
+    aspect-ratio: 1;
+    border-radius: 10px;
+  }
+
+  /* Skeleton for tool cards */
+  .mobile-tool-card.skeleton {
+    pointer-events: none;
+  }
+
+  .mobile-tool-card.skeleton .mobile-tool-icon,
+  .mobile-tool-card.skeleton .mobile-tool-name,
+  .mobile-tool-card.skeleton .mobile-tool-desc {
+    visibility: hidden;
+  }
+
+  /* Skeleton for recent images */
+  .mobile-recent-item.skeleton {
+    pointer-events: none;
+  }
+
+  .mobile-recent-item.skeleton img {
+    visibility: hidden;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Fade in animation for loaded content */
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Stagger animation delays for grid items */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
+
+  /* Scale-up animation for images loading */
+  .scale-up {
+    animation: scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes scaleUp {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Pulse animation for active/loading states */
+  .pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Pop animation for successful actions */
+  .pop {
+    animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  /* Slide-in from right for panels */
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Smooth image reveal animation */
+  .image-reveal {
+    animation: imageReveal 0.5s ease-out;
+  }
+
+  @keyframes imageReveal {
+    0% {
+      opacity: 0;
+      clip-path: inset(0 100% 0 0);
+    }
+    100% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* Button press feedback */
+  .mobile-tool-card:active,
+  .mobile-quick-action:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+
+  /* Smooth transitions for interactive elements */
+  .mobile-tool-card,
+  .mobile-quick-action,
+  .mobile-recent-item,
+  .mobile-auth-btn {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  /* Hover lift effect */
+  .mobile-tool-card:hover,
+  .mobile-quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Scroll snap for horizontal scrolling */
+  .mobile-quick-actions {
+    scroll-snap-type: x mandatory;
+  }
+
+  .mobile-quick-action {
+    scroll-snap-align: start;
   }
 }

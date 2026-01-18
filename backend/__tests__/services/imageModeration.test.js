@@ -267,6 +267,67 @@ describe('Image Moderation Service', () => {
       expect(result.hasMinor).toBe(false);
     });
 
+    it('should ignore low-confidence face detections (below 80%)', async () => {
+      // A low-confidence face detection could be a false positive (doll, artwork, etc)
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 10, High: 14 },
+            Confidence: 60 // Below 80% threshold
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(true);
+      expect(result.hasMinor).toBe(false);
+      expect(result.faceDetails.filteredCount).toBe(1);
+    });
+
+    it('should flag high-confidence minor face detections (above 80%)', async () => {
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 10, High: 14 },
+            Confidence: 95 // Above threshold
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data')
+      );
+
+      expect(result.approved).toBe(false);
+      expect(result.hasMinor).toBe(true);
+    });
+
+    it('should use custom face confidence threshold when provided', async () => {
+      // With a custom low threshold, even low-confidence faces are considered
+      mockSend
+        .mockResolvedValueOnce({ CelebrityFaces: [] })
+        .mockResolvedValueOnce({ ModerationLabels: [] })
+        .mockResolvedValueOnce({
+          FaceDetails: [{
+            AgeRange: { Low: 10, High: 14 },
+            Confidence: 60 // Would be filtered at default 80%, but not at 50%
+          }]
+        });
+
+      const result = await imageModeration.screenImage(
+        Buffer.from('fake-image-data'),
+        { faceConfidenceThreshold: 50 }
+      );
+
+      expect(result.approved).toBe(false);
+      expect(result.hasMinor).toBe(true);
+    });
+
     it('should handle base64 input with data URL prefix', async () => {
       mockSend
         .mockResolvedValueOnce({ CelebrityFaces: [] })
@@ -357,7 +418,7 @@ describe('Image Moderation Service', () => {
       expect(result.reasons).toContain('Moderation check failed: AWS Service Unavailable');
     });
 
-    it('should skip moderation when AWS not configured', async () => {
+    it('should block (fail-closed) when AWS not configured', async () => {
       delete process.env.AWS_ACCESS_KEY_ID;
       delete process.env.AWS_SECRET_ACCESS_KEY;
       jest.resetModules();
@@ -365,8 +426,9 @@ describe('Image Moderation Service', () => {
 
       const result = await mod.screenImage(Buffer.from('fake-image-data'));
 
-      expect(result.approved).toBe(true);
-      expect(result.skipped).toBe(true);
+      expect(result.approved).toBe(false);
+      expect(result.serviceUnavailable).toBe(true);
+      expect(result.reasons).toContain('Image moderation service is temporarily unavailable. Please try again later.');
     });
 
     it('should detect multiple minor-related labels', () => {
@@ -457,15 +519,15 @@ describe('Image Moderation Service', () => {
       // Only the valid image should be screened
     });
 
-    it('should skip when AWS not configured', async () => {
+    it('should block (fail-closed) when AWS not configured', async () => {
       delete process.env.AWS_ACCESS_KEY_ID;
       jest.resetModules();
       const mod = require('../../services/imageModeration');
 
       const result = await mod.screenImages([Buffer.from('image')]);
 
-      expect(result.approved).toBe(true);
-      expect(result.skipped).toBe(true);
+      expect(result.approved).toBe(false);
+      expect(result.serviceUnavailable).toBe(true);
     });
 
     it('should handle screening errors gracefully', async () => {

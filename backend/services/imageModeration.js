@@ -12,6 +12,51 @@ const { logger } = require('./logger');
 // Age threshold - flag any face estimated to be under this age
 const MINOR_AGE_THRESHOLD = 18;
 
+// Minimum face detection confidence to consider for age checking
+// Lower confidence faces may be false positives (dolls, artwork, ambiguous shapes)
+const FACE_CONFIDENCE_THRESHOLD = 80;
+
+// Rate limiting for AWS Rekognition calls
+// Each image screening makes up to 3 API calls (celebrity, moderation, faces)
+// With 14 images max per request, that's 42 calls - need to throttle
+const RATE_LIMIT = {
+  MAX_CALLS_PER_MINUTE: 50,      // AWS Rekognition default is 50/second, we're conservative
+  MAX_CONCURRENT_IMAGES: 5,      // Process max 5 images concurrently
+  CALL_DELAY_MS: 100             // Minimum delay between API calls
+};
+
+// Track API calls for rate limiting
+let apiCallCount = 0;
+let apiCallWindowStart = Date.now();
+
+/**
+ * Rate limiter - ensures we don't exceed AWS Rekognition limits
+ */
+async function waitForRateLimit() {
+  const now = Date.now();
+  const windowElapsed = now - apiCallWindowStart;
+
+  // Reset window every minute
+  if (windowElapsed >= 60000) {
+    apiCallCount = 0;
+    apiCallWindowStart = now;
+  }
+
+  // If we're at the limit, wait for the window to reset
+  if (apiCallCount >= RATE_LIMIT.MAX_CALLS_PER_MINUTE) {
+    const waitTime = 60000 - windowElapsed + 100; // Wait for window to reset + buffer
+    logger.warn('Rate limit reached, waiting', { waitTime, callCount: apiCallCount });
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    apiCallCount = 0;
+    apiCallWindowStart = Date.now();
+  }
+
+  apiCallCount++;
+
+  // Small delay between calls to avoid bursts
+  await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.CALL_DELAY_MS));
+}
+
 // Initialize Rekognition client
 let rekognitionClient = null;
 
@@ -57,6 +102,7 @@ function getClient() {
  * @param {boolean} options.checkModeration - Whether to check for inappropriate content (default: true)
  * @param {number} options.celebrityConfidenceThreshold - Min confidence for celebrity detection (default: 90)
  * @param {number} options.moderationConfidenceThreshold - Min confidence for moderation labels (default: 75)
+ * @param {number} options.faceConfidenceThreshold - Min confidence for face detection before age check (default: 80)
  * @returns {Promise<ModerationResult>}
  */
 async function screenImage(image, options = {}) {
@@ -64,22 +110,23 @@ async function screenImage(image, options = {}) {
     checkCelebrities = true,
     checkModeration = true,
     celebrityConfidenceThreshold = 90,
-    moderationConfidenceThreshold = 75
+    moderationConfidenceThreshold = 75,
+    faceConfidenceThreshold = FACE_CONFIDENCE_THRESHOLD
   } = options;
 
   const client = getClient();
 
-  // If client not available, allow image through but log warning
+  // If client not available, BLOCK the image (fail-closed for safety)
   if (!client) {
-    logger.warn('Image moderation skipped - AWS not configured');
+    logger.error('Image moderation unavailable - AWS not configured. Blocking upload.');
     return {
-      approved: true,
+      approved: false,
       hasCelebrity: false,
       hasMinor: false,
-      reasons: [],
+      reasons: ['Image moderation service is temporarily unavailable. Please try again later.'],
       celebrities: [],
       moderationLabels: [],
-      skipped: true
+      serviceUnavailable: true
     };
   }
 
@@ -134,7 +181,7 @@ async function screenImage(image, options = {}) {
     }
 
     // ALWAYS check for faces/age to detect minors
-    checks.push(detectFaces(client, imageBuffer));
+    checks.push(detectFaces(client, imageBuffer, faceConfidenceThreshold));
 
     const results = await Promise.all(checks);
 
@@ -213,6 +260,8 @@ async function screenImage(image, options = {}) {
  * Detect celebrities in an image
  */
 async function detectCelebrities(client, imageBuffer, confidenceThreshold) {
+  await waitForRateLimit();
+
   const command = new RecognizeCelebritiesCommand({
     Image: {
       Bytes: imageBuffer
@@ -237,6 +286,8 @@ async function detectCelebrities(client, imageBuffer, confidenceThreshold) {
  * Detect moderation labels in an image
  */
 async function detectModerationLabels(client, imageBuffer, confidenceThreshold) {
+  await waitForRateLimit();
+
   const command = new DetectModerationLabelsCommand({
     Image: {
       Bytes: imageBuffer
@@ -259,8 +310,13 @@ async function detectModerationLabels(client, imageBuffer, confidenceThreshold) 
 /**
  * Detect faces in an image and estimate ages
  * Used to flag images containing minors
+ * @param {RekognitionClient} client
+ * @param {Buffer} imageBuffer
+ * @param {number} faceConfidenceThreshold - Minimum confidence to consider a face detection (default: FACE_CONFIDENCE_THRESHOLD)
  */
-async function detectFaces(client, imageBuffer) {
+async function detectFaces(client, imageBuffer, faceConfidenceThreshold = FACE_CONFIDENCE_THRESHOLD) {
+  await waitForRateLimit();
+
   const command = new DetectFacesCommand({
     Image: {
       Bytes: imageBuffer
@@ -270,16 +326,29 @@ async function detectFaces(client, imageBuffer) {
 
   const response = await client.send(command);
 
-  const faces = (response.FaceDetails || []).map(face => ({
+  // Filter faces by confidence threshold first
+  // Low-confidence detections may be false positives (dolls, artwork, ambiguous shapes)
+  const allFaces = (response.FaceDetails || []).map(face => ({
     ageRange: face.AgeRange,
     confidence: face.Confidence
   }));
 
-  // Check if any face appears to be a minor - BALANCED MODE
+  const confidentFaces = allFaces.filter(face => face.confidence >= faceConfidenceThreshold);
+
+  // Log if we filtered out low-confidence faces
+  if (allFaces.length > confidentFaces.length) {
+    logger.info('Filtered low-confidence face detections', {
+      total: allFaces.length,
+      aboveThreshold: confidentFaces.length,
+      threshold: faceConfidenceThreshold
+    });
+  }
+
+  // Check if any confident face appears to be a minor - BALANCED MODE
   // Flag if LOW < 18 (could be minor) AND HIGH < 21 (looks young)
   // This catches clear minors but allows adults who just look young
   // Examples: 14-20 (flagged), 15-21 (flagged), 16-22 (OK), 18-24 (OK)
-  const minorFaces = faces.filter(face => {
+  const minorFaces = confidentFaces.filter(face => {
     if (face.ageRange) {
       const { Low, High } = face.ageRange;
       // Flag if the person could be under 18 AND doesn't look clearly adult
@@ -289,10 +358,12 @@ async function detectFaces(client, imageBuffer) {
   });
 
   return {
-    faces,
+    faces: confidentFaces,
+    allFaces, // Include all detected faces for debugging
     hasMinor: minorFaces.length > 0,
     minorFaces,
-    faceCount: faces.length
+    faceCount: confidentFaces.length,
+    filteredCount: allFaces.length - confidentFaces.length
   };
 }
 
@@ -360,55 +431,90 @@ function isEnabled() {
 
 /**
  * Screen multiple images and return combined result
+ * Processes images in batches with concurrency limiting (max 5 at a time)
  * Fails fast - returns rejection as soon as any image fails
- * @param {Array<Buffer|string>} images - Array of images as Buffers or base64 strings
+ * @param {Array<Buffer|string>} images - Array of images as Buffers or base64 strings (up to 14)
  * @param {Object} options - Screening options (same as screenImage)
  * @returns {Promise<{approved: boolean, failedIndex: number|null, reasons: string[]}>}
  */
 async function screenImages(images, options = {}) {
+  // Fail-closed when AWS is not configured
   if (!isEnabled()) {
-    logger.warn('Image moderation skipped - AWS not configured');
-    return { approved: true, failedIndex: null, reasons: [], skipped: true };
+    logger.error('Image moderation unavailable - AWS not configured. Blocking images.');
+    return {
+      approved: false,
+      failedIndex: 0,
+      reasons: ['Image moderation service is temporarily unavailable. Please try again later.'],
+      serviceUnavailable: true
+    };
   }
 
   if (!images || images.length === 0) {
     return { approved: true, failedIndex: null, reasons: [] };
   }
 
-  const allReasons = [];
+  // Warn if too many images (shouldn't happen, but log it)
+  if (images.length > 14) {
+    logger.warn('Large image batch received', { count: images.length });
+  }
 
-  for (let i = 0; i < images.length; i++) {
-    const image = images[i];
-    if (!image) continue;
+  logger.info('Starting batch image screening', { count: images.length });
 
-    try {
-      let result;
-      if (typeof image === 'string' && image.startsWith('http')) {
-        result = await screenImageFromUrl(image, options);
-      } else {
-        result = await screenImage(image, options);
-      }
+  // Process images in batches to limit concurrency
+  const batchSize = RATE_LIMIT.MAX_CONCURRENT_IMAGES;
 
-      if (!result.approved) {
-        logger.warn('Image rejected by moderation', { imageIndex: i, reasons: result.reasons });
+  for (let batchStart = 0; batchStart < images.length; batchStart += batchSize) {
+    const batchEnd = Math.min(batchStart + batchSize, images.length);
+    const batch = images.slice(batchStart, batchEnd);
+
+    logger.info('Processing image batch', {
+      batch: Math.floor(batchStart / batchSize) + 1,
+      images: `${batchStart + 1}-${batchEnd}`,
+      total: images.length
+    });
+
+    // Process batch concurrently
+    const batchResults = await Promise.all(
+      batch.map(async (image, localIndex) => {
+        const globalIndex = batchStart + localIndex;
+        if (!image) return { index: globalIndex, approved: true, skipped: true };
+
+        try {
+          let result;
+          if (typeof image === 'string' && image.startsWith('http')) {
+            result = await screenImageFromUrl(image, options);
+          } else {
+            result = await screenImage(image, options);
+          }
+          return { index: globalIndex, ...result };
+        } catch (error) {
+          logger.error('Image screening failed', { imageIndex: globalIndex, error: error.message });
+          return {
+            index: globalIndex,
+            approved: false,
+            reasons: [`Screening failed for image ${globalIndex + 1}: ${error.message}`]
+          };
+        }
+      })
+    );
+
+    // Check for any failures in this batch
+    for (const result of batchResults) {
+      if (!result.approved && !result.skipped) {
+        logger.warn('Image rejected by moderation', { imageIndex: result.index, reasons: result.reasons });
         return {
           approved: false,
-          failedIndex: i,
+          failedIndex: result.index,
           reasons: result.reasons,
           hasCelebrity: result.hasCelebrity,
-          hasMinor: result.hasMinor
+          hasMinor: result.hasMinor,
+          serviceUnavailable: result.serviceUnavailable
         };
       }
-    } catch (error) {
-      logger.error('Image screening failed', { imageIndex: i, error: error.message });
-      return {
-        approved: false,
-        failedIndex: i,
-        reasons: [`Screening failed for image ${i + 1}: ${error.message}`]
-      };
     }
   }
 
+  logger.info('Batch image screening completed - all approved', { count: images.length });
   return { approved: true, failedIndex: null, reasons: [] };
 }
 

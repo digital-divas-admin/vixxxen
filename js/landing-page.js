@@ -175,6 +175,9 @@ function showLandingPage() {
   const container = document.querySelector('.container');
   const mobileOverlay = document.getElementById('mobileOverlay');
   const siteFooter = document.querySelector('.site-footer');
+  const mobileDashboard = document.getElementById('mobileDashboard');
+  const mobileBackBar = document.getElementById('mobileBackBar');
+  const mobileAccountSheet = document.getElementById('mobileAccountSheet');
 
   if (landingPage) {
     landingPage.style.display = 'block';
@@ -185,6 +188,16 @@ function showLandingPage() {
   if (container) container.style.display = 'none';
   if (mobileOverlay) mobileOverlay.style.display = 'none';
   if (siteFooter) siteFooter.style.display = 'none';
+
+  // Hide mobile dashboard elements
+  if (mobileDashboard) mobileDashboard.style.display = 'none';
+  if (mobileBackBar) mobileBackBar.style.display = 'none';
+  if (mobileAccountSheet) mobileAccountSheet.classList.remove('open');
+
+  // Show Tidio chat on landing page
+  if (typeof showTidioWidget === 'function') {
+    showTidioWidget();
+  }
 
   // Enable scrolling on body for landing page
   document.body.style.overflow = 'auto';
@@ -202,6 +215,8 @@ function hideLandingPage() {
   const topNavbar = document.getElementById('topNavbar');
   const container = document.querySelector('.container');
   const siteFooter = document.querySelector('.site-footer');
+  const mobileDashboard = document.getElementById('mobileDashboard');
+  const isMobile = window.innerWidth <= 900;
 
   if (landingPage) {
     landingPage.style.display = 'none';
@@ -209,12 +224,44 @@ function hideLandingPage() {
 
   // Show main app elements
   if (topNavbar) topNavbar.style.display = 'flex';
-  if (container) container.style.display = 'flex';
-  if (siteFooter) siteFooter.style.display = 'flex';
+
+  // Hide Tidio chat inside the app
+  if (typeof hideTidioWidget === 'function') {
+    hideTidioWidget();
+  }
+
+  // On mobile, show dashboard instead of container
+  // On desktop, show container
+  if (isMobile) {
+    // On mobile, hide footer when showing dashboard (it only shows when a tool is active)
+    if (siteFooter) siteFooter.style.display = 'none';
+    // Show mobile dashboard, hide container (CSS will handle the rest)
+    if (mobileDashboard) {
+      mobileDashboard.style.display = ''; // Clear inline style, let CSS take over
+      mobileDashboard.classList.remove('hidden');
+    }
+    if (container) {
+      container.style.display = ''; // Clear inline style, let CSS take over
+      container.classList.remove('mobile-tool-active');
+    }
+    // Update mobile dashboard with user info
+    if (typeof updateMobileDashboard === 'function') {
+      updateMobileDashboard();
+    }
+    // Reset mobile tool state
+    if (typeof mobileToolActive !== 'undefined') {
+      window.mobileToolActive = false;
+    }
+    sessionStorage.removeItem('vixxxen_mobileToolActive');
+  } else {
+    // Desktop - show container and footer normally
+    if (container) container.style.display = 'flex';
+    if (siteFooter) siteFooter.style.display = 'flex';
+  }
 
   // Restore body overflow for main app (desktop only)
   // On mobile (<=900px), CSS handles scrolling via media queries
-  if (window.innerWidth > 900) {
+  if (!isMobile) {
     document.body.style.overflow = 'hidden';
     document.body.style.height = '100vh';
   } else {
