@@ -8450,6 +8450,10 @@
 
     /* Light theme overrides and cold-start banner now in external css/main.css */
   </style>
+
+  <!-- Responsive CSS - Must load AFTER inline styles to override them -->
+  <link rel="stylesheet" href="css/responsive.css?v=20260118">
+
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Socket.io Client -->
@@ -19771,13 +19775,19 @@
 
       // Render gallery images with lightbox functionality
       const galleryContainer = document.getElementById('modalCharacterGallery');
+      const isMobile = window.innerWidth <= 768;
+
       if (galleryImages.length > 0) {
         galleryContainer.innerHTML = galleryImages.map((url, index) => `
           <div class="character-gallery-item" data-image-index="${index + 1}">
             <img src="${url}" alt="Example ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
           </div>
         `).join('');
-        galleryContainer.parentElement.style.display = 'block';
+
+        // Only show gallery on desktop
+        if (!isMobile) {
+          galleryContainer.parentElement.style.display = 'block';
+        }
 
         // Add click handlers to gallery items
         galleryContainer.querySelectorAll('.character-gallery-item').forEach((item, index) => {
@@ -19785,28 +19795,22 @@
         });
       } else {
         galleryContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No example images yet</div>';
-        galleryContainer.parentElement.style.display = 'block';
-      }
-
-      // Start with gallery collapsed on mobile
-      const isMobile = window.innerWidth <= 768;
-      if (isMobile) {
-        galleryContainer.classList.add('collapsed');
-        document.getElementById('galleryToggle').classList.remove('expanded');
-      } else {
-        galleryContainer.classList.remove('collapsed');
+        if (!isMobile) {
+          galleryContainer.parentElement.style.display = 'block';
+        }
       }
 
       // Update buy button
       const buyBtn = document.getElementById('modalBuyBtn');
       if (isOwned) {
-        buyBtn.textContent = '✓ Already Owned';
+        buyBtn.textContent = '✓ Owned';
         buyBtn.style.background = '#2a2a2a';
         buyBtn.style.color = '#00ff88';
         buyBtn.style.cursor = 'default';
         buyBtn.onclick = null;
       } else {
-        buyBtn.textContent = `💳 Purchase for $${character.price.toFixed(2)}`;
+        // Shorter text on mobile since price is shown separately
+        buyBtn.textContent = isMobile ? 'Purchase' : `💳 Purchase for $${character.price.toFixed(2)}`;
         buyBtn.style.background = 'linear-gradient(135deg, #ff2ebb, #00b2ff)';
         buyBtn.style.color = '#fff';
         buyBtn.style.cursor = 'pointer';
