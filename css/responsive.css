@@ -1234,3 +1234,335 @@
     font-size: 0.7rem;
   }
 }
+
+/* =============================================================================
+   PHASE 2: MOBILE ENHANCEMENTS
+   ============================================================================= */
+
+@media (max-width: 900px) {
+  /* =========================================
+     OPTION A: TOOL SCREEN OPTIMIZATION
+     Better touch targets and mobile-friendly controls
+     ========================================= */
+
+  /* Larger touch targets for buttons */
+  .generate-btn {
+    min-height: 52px;
+    font-size: 1.05rem;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  /* Better prompt input for mobile */
+  .prompt-input,
+  #promptInput,
+  textarea[id*="prompt" i] {
+    min-height: 100px;
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    padding: 14px;
+    border-radius: 12px;
+    line-height: 1.5;
+  }
+
+  /* Larger select dropdowns for touch */
+  .settings-grid select,
+  .setting-item select {
+    min-height: 48px;
+    font-size: 16px !important;
+    padding: 12px 14px;
+    border-radius: 10px;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  /* Model tabs - better touch targets */
+  .model-tabs {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .model-tab {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    flex: 1 1 auto;
+  }
+
+  /* Content mode toggle - larger buttons */
+  .content-mode-btn {
+    min-height: 40px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+
+  /* Reference upload area - better touch */
+  .reference-upload {
+    min-height: 100px;
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  /* Section labels - clearer hierarchy */
+  .section-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  /* Character dropdown - better touch */
+  #characterSelect {
+    min-height: 48px;
+    font-size: 16px !important;
+    padding: 12px;
+  }
+
+  /* Output images - better sizing */
+  .output-images {
+    gap: 12px;
+  }
+
+  .output-image-container {
+    border-radius: 12px;
+  }
+
+  /* Result actions - larger buttons */
+  .output-image-actions button,
+  .result-actions button {
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+  }
+
+  /* =========================================
+     OPTION B: QUICK ACTIONS SECTION
+     ========================================= */
+
+  .mobile-quick-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobile-quick-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-quick-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .mobile-quick-action:active {
+    transform: scale(0.96);
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+  }
+
+  .mobile-quick-action-icon {
+    font-size: 1rem;
+  }
+
+  /* =========================================
+     OPTION C: RECENT GENERATIONS SECTION
+     ========================================= */
+
+  .mobile-recent-section {
+    margin-bottom: 24px;
+  }
+
+  .mobile-recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .mobile-recent-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mobile-recent-view-all {
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+    cursor: pointer;
+  }
+
+  .mobile-recent-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .mobile-recent-item {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .mobile-recent-item:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-recent-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .mobile-recent-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    border: 1px dashed var(--border-color);
+  }
+
+  .mobile-recent-empty-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  /* =========================================
+     OPTION D: POLISH & GESTURES
+     ========================================= */
+
+  /* Smooth transitions for all interactive elements */
+  .mobile-dashboard,
+  .mobile-account-sheet,
+  .mobile-back-bar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Pull indicator for swipe gestures */
+  .mobile-swipe-indicator {
+    position: fixed;
+    top: 100px;
+    left: 16px;
+    right: 16px;
+    height: 4px;
+    background: var(--accent-primary);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .mobile-swipe-indicator.active {
+    opacity: 1;
+  }
+
+  /* Better tap feedback */
+  .mobile-tool-card,
+  .mobile-sheet-item,
+  .mobile-quick-action,
+  .mobile-recent-item {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* Pressed state with subtle scale */
+  .mobile-tool-card:active,
+  .mobile-sheet-item:active {
+    transform: scale(0.98);
+  }
+
+  /* Account sheet slide animation improvement */
+  .mobile-account-sheet {
+    transition: none;
+  }
+
+  .mobile-account-sheet .mobile-sheet-content {
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobile-account-sheet.open .mobile-sheet-content {
+    transform: translateY(0);
+  }
+
+  .mobile-account-sheet:not(.open) .mobile-sheet-content {
+    transform: translateY(100%);
+  }
+
+  /* Swipe handle styling for bottom sheet */
+  .mobile-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 8px auto 16px;
+    opacity: 0.6;
+  }
+
+  /* Haptic-ready button states */
+  .mobile-dashboard-avatar,
+  .mobile-back-btn {
+    transition: transform 0.15s, opacity 0.15s;
+  }
+
+  .mobile-dashboard-avatar:active,
+  .mobile-back-btn:active {
+    transform: scale(0.92);
+    opacity: 0.8;
+  }
+
+  /* Improved loading states */
+  .mobile-loading-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--bg-tertiary) 0%,
+      var(--bg-secondary) 50%,
+      var(--bg-tertiary) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Scroll snap for horizontal scrolling */
+  .mobile-quick-actions {
+    scroll-snap-type: x mandatory;
+  }
+
+  .mobile-quick-action {
+    scroll-snap-align: start;
+  }
+}

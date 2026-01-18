@@ -8546,6 +8546,9 @@
   <!-- Mobile overlay for sidebar -->
   <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
 
+  <!-- Mobile swipe indicator for gesture feedback -->
+  <div class="mobile-swipe-indicator" id="mobileSwipeIndicator"></div>
+
   <!-- Mobile Dashboard - Only shown on mobile when no tool is active -->
   <div class="mobile-dashboard" id="mobileDashboard">
     <div class="mobile-dashboard-header">
@@ -8555,6 +8558,40 @@
       </div>
       <div class="mobile-dashboard-avatar" onclick="openMobileAccountSheet()" id="mobileDashboardAvatar">
         👤
+      </div>
+    </div>
+
+    <!-- Quick Actions - scrollable pills -->
+    <div class="mobile-quick-actions" id="mobileQuickActions">
+      <div class="mobile-quick-action" onclick="quickActionLastPrompt()">
+        <span class="mobile-quick-action-icon">🔄</span>
+        <span>Regenerate</span>
+      </div>
+      <div class="mobile-quick-action" onclick="quickActionFavoriteCharacter()">
+        <span class="mobile-quick-action-icon">⭐</span>
+        <span>Favorite</span>
+      </div>
+      <div class="mobile-quick-action" onclick="openImageLibraryModal()">
+        <span class="mobile-quick-action-icon">🖼️</span>
+        <span>Library</span>
+      </div>
+      <div class="mobile-quick-action" onclick="quickActionRandomPrompt()">
+        <span class="mobile-quick-action-icon">🎲</span>
+        <span>Random</span>
+      </div>
+    </div>
+
+    <!-- Recent Generations -->
+    <div class="mobile-recent-section" id="mobileRecentSection">
+      <div class="mobile-recent-header">
+        <span class="mobile-recent-title">Recent Creations</span>
+        <span class="mobile-recent-view-all" onclick="openImageLibraryModal()">View All</span>
+      </div>
+      <div class="mobile-recent-grid" id="mobileRecentGrid">
+        <div class="mobile-recent-empty">
+          <div class="mobile-recent-empty-icon">🎨</div>
+          <div>Generate your first image!</div>
+        </div>
       </div>
     </div>
 
@@ -12363,6 +12400,325 @@
 
     // Add resize listener for mobile/desktop transitions
     window.addEventListener('resize', handleMobileResize);
+
+    // ===========================================
+    // PHASE 2: QUICK ACTIONS
+    // ===========================================
+
+    // Store last prompt and settings for regenerate
+    let lastGenerationSettings = null;
+
+    function saveLastGenerationSettings(prompt, character, model) {
+      lastGenerationSettings = {
+        prompt,
+        character,
+        model,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('vixxxen_lastGeneration', JSON.stringify(lastGenerationSettings));
+    }
+
+    // Quick action: Regenerate with last prompt
+    function quickActionLastPrompt() {
+      // Try to restore from session storage
+      if (!lastGenerationSettings) {
+        const saved = sessionStorage.getItem('vixxxen_lastGeneration');
+        if (saved) {
+          try {
+            lastGenerationSettings = JSON.parse(saved);
+          } catch (e) {}
+        }
+      }
+
+      if (!lastGenerationSettings || !lastGenerationSettings.prompt) {
+        triggerHaptic('warning');
+        showToast('No recent prompt to regenerate', 'info');
+        return;
+      }
+
+      triggerHaptic('success');
+
+      // Open image tool and set the prompt
+      openToolFromDashboard('image');
+
+      setTimeout(() => {
+        const promptInput = document.getElementById('promptInput');
+        if (promptInput) {
+          promptInput.value = lastGenerationSettings.prompt;
+        }
+        // Optionally set character if it was saved
+        if (lastGenerationSettings.character) {
+          const charSelect = document.getElementById('characterSelect');
+          if (charSelect) {
+            charSelect.value = lastGenerationSettings.character;
+          }
+        }
+      }, 100);
+    }
+
+    // Quick action: Use favorite character
+    function quickActionFavoriteCharacter() {
+      triggerHaptic('light');
+
+      // Get first owned character or default
+      const favoriteChar = ownedCharacters && ownedCharacters.length > 0
+        ? ownedCharacters[0]
+        : 'aika';
+
+      openToolFromDashboard('image');
+
+      setTimeout(() => {
+        const charSelect = document.getElementById('characterSelect');
+        if (charSelect) {
+          charSelect.value = favoriteChar;
+          // Trigger change event
+          charSelect.dispatchEvent(new Event('change'));
+        }
+        showToast(`Selected ${favoriteChar}`, 'success');
+      }, 100);
+    }
+
+    // Quick action: Random prompt suggestion
+    const randomPrompts = [
+      "wearing a flowing summer dress at sunset beach",
+      "in a cozy coffee shop reading a book",
+      "at a rooftop party under city lights",
+      "in a field of wildflowers during golden hour",
+      "wearing elegant evening attire at a gala",
+      "casual streetwear in an urban setting",
+      "in a vintage aesthetic bedroom",
+      "wearing athletic wear at the gym",
+      "poolside in summer vibes",
+      "in a winter wonderland scene"
+    ];
+
+    function quickActionRandomPrompt() {
+      triggerHaptic('light');
+
+      const randomPrompt = randomPrompts[Math.floor(Math.random() * randomPrompts.length)];
+
+      openToolFromDashboard('image');
+
+      setTimeout(() => {
+        const promptInput = document.getElementById('promptInput');
+        if (promptInput) {
+          promptInput.value = randomPrompt;
+          promptInput.focus();
+        }
+      }, 100);
+    }
+
+    // ===========================================
+    // PHASE 2: RECENT GENERATIONS
+    // ===========================================
+
+    // Cache for recent images
+    let recentGenerationsCache = [];
+
+    // Update recent generations grid on dashboard
+    function updateMobileRecentGenerations() {
+      const grid = document.getElementById('mobileRecentGrid');
+      if (!grid) return;
+
+      // Get recent images from the image library cache or fetch
+      const recentImages = recentGenerationsCache.slice(0, 4);
+
+      if (recentImages.length === 0) {
+        grid.innerHTML = `
+          <div class="mobile-recent-empty">
+            <div class="mobile-recent-empty-icon">🎨</div>
+            <div>Generate your first image!</div>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = recentImages.map((img, index) => `
+        <div class="mobile-recent-item" onclick="viewRecentImage(${index})">
+          <img src="${img.thumbnail || img.url}" alt="Recent generation" loading="lazy">
+        </div>
+      `).join('');
+    }
+
+    // Add image to recent generations (called after successful generation)
+    function addToRecentGenerations(imageUrl, thumbnail) {
+      recentGenerationsCache.unshift({
+        url: imageUrl,
+        thumbnail: thumbnail || imageUrl,
+        timestamp: Date.now()
+      });
+
+      // Keep only last 20
+      if (recentGenerationsCache.length > 20) {
+        recentGenerationsCache = recentGenerationsCache.slice(0, 20);
+      }
+
+      // Save to session
+      sessionStorage.setItem('vixxxen_recentGenerations', JSON.stringify(recentGenerationsCache));
+
+      // Update grid if on dashboard
+      updateMobileRecentGenerations();
+    }
+
+    // Load recent generations from session storage
+    function loadRecentGenerations() {
+      const saved = sessionStorage.getItem('vixxxen_recentGenerations');
+      if (saved) {
+        try {
+          recentGenerationsCache = JSON.parse(saved);
+          updateMobileRecentGenerations();
+        } catch (e) {}
+      }
+    }
+
+    // View a recent image
+    function viewRecentImage(index) {
+      const img = recentGenerationsCache[index];
+      if (img && img.url) {
+        triggerHaptic('light');
+        // Open in image viewer or library
+        if (typeof openImageViewer === 'function') {
+          openImageViewer(img.url);
+        } else {
+          window.open(img.url, '_blank');
+        }
+      }
+    }
+
+    // ===========================================
+    // PHASE 2: GESTURES & HAPTICS
+    // ===========================================
+
+    // Haptic feedback helper
+    function triggerHaptic(type = 'light') {
+      if (!navigator.vibrate) return;
+
+      switch (type) {
+        case 'light':
+          navigator.vibrate(10);
+          break;
+        case 'medium':
+          navigator.vibrate(20);
+          break;
+        case 'success':
+          navigator.vibrate([10, 50, 10]);
+          break;
+        case 'warning':
+          navigator.vibrate([20, 30, 20]);
+          break;
+        case 'error':
+          navigator.vibrate([50, 30, 50]);
+          break;
+      }
+    }
+
+    // Swipe gesture handling for back navigation
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    function initMobileGestures() {
+      if (window.innerWidth > 900) return;
+
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+
+    function handleTouchStart(e) {
+      if (window.innerWidth > 900) return;
+
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      isSwiping = false;
+    }
+
+    function handleTouchMove(e) {
+      if (window.innerWidth > 900) return;
+      if (!window.mobileToolActive) return; // Only in tool view
+
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+
+      // Check if horizontal swipe from left edge
+      if (touchStartX < 30 && deltaX > 20 && Math.abs(deltaY) < 50) {
+        isSwiping = true;
+
+        // Show swipe indicator
+        const indicator = document.getElementById('mobileSwipeIndicator');
+        if (indicator) {
+          indicator.classList.add('active');
+          indicator.style.transform = `scaleX(${Math.min(deltaX / 150, 1)})`;
+        }
+
+        // Prevent scrolling during swipe
+        e.preventDefault();
+      }
+    }
+
+    function handleTouchEnd(e) {
+      if (window.innerWidth > 900) return;
+
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+
+      // Hide swipe indicator
+      const indicator = document.getElementById('mobileSwipeIndicator');
+      if (indicator) {
+        indicator.classList.remove('active');
+        indicator.style.transform = 'scaleX(0)';
+      }
+
+      // Complete swipe back if threshold met
+      if (isSwiping && deltaX > 100) {
+        triggerHaptic('medium');
+        backToDashboard();
+      }
+
+      isSwiping = false;
+    }
+
+    // Bottom sheet swipe to close
+    function initBottomSheetGestures() {
+      const sheet = document.getElementById('mobileAccountSheet');
+      const content = sheet?.querySelector('.mobile-sheet-content');
+      if (!content) return;
+
+      let sheetStartY = 0;
+      let sheetDeltaY = 0;
+
+      content.addEventListener('touchstart', (e) => {
+        sheetStartY = e.touches[0].clientY;
+        content.style.transition = 'none';
+      }, { passive: true });
+
+      content.addEventListener('touchmove', (e) => {
+        sheetDeltaY = e.touches[0].clientY - sheetStartY;
+        if (sheetDeltaY > 0) {
+          content.style.transform = `translateY(${sheetDeltaY}px)`;
+        }
+      }, { passive: true });
+
+      content.addEventListener('touchend', () => {
+        content.style.transition = '';
+        if (sheetDeltaY > 100) {
+          triggerHaptic('light');
+          closeMobileAccountSheet();
+        } else {
+          content.style.transform = '';
+        }
+        sheetDeltaY = 0;
+      }, { passive: true });
+    }
+
+    // Initialize gestures when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      initMobileGestures();
+      initBottomSheetGestures();
+      loadRecentGenerations();
+    });
 
     // ===========================================
     // SUPABASE STORAGE FUNCTIONS
@@ -16747,6 +17103,9 @@
           generatedImages.push(newImage);
           replacePlaceholderWithImage(qwenPlaceholders[genIndex], newImage);
 
+          // Add to recent generations for mobile dashboard
+          addToRecentGenerations(imageUrl);
+
           // Upload to Supabase Storage
           uploadImageToStorage(imageUrl, {
             prompt: qwenPrompt,
@@ -16762,6 +17121,10 @@
             }
           });
         }
+
+        // Save settings for quick action regenerate
+        const qwenCharSelect = document.getElementById('qwenGenCharacter');
+        saveLastGenerationSettings(prompt, qwenCharSelect?.value, 'qwen');
 
         // Log generation for compliance
         logGeneration('image', 'qwen', qwenPrompt, isNsfwAtStart, numOutputs);
@@ -17001,6 +17364,10 @@
 
         console.log('Generation successful:', data);
 
+        // Save settings for quick action regenerate
+        const characterSelect = document.getElementById('characterSelect');
+        saveLastGenerationSettings(prompt, characterSelect?.value, capturedModel);
+
         // Log generation for 2257 compliance
         logGeneration('image', capturedModel, prompt, isNsfwAtStart, data.images?.length || 1);
 
@@ -17027,6 +17394,9 @@
             console.log('🔞 Image generated with NSFW flag:', isNsfwAtStart);
             generatedImages.push(newImage);
             replacePlaceholderWithImage(placeholders[i], newImage);
+
+            // Add to recent generations for mobile dashboard
+            addToRecentGenerations(data.images[imageIndex]);
 
             // Upload to Supabase Storage (async, don't block UI)
             uploadImageToStorage(data.images[imageIndex], {
