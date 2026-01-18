@@ -2352,9 +2352,34 @@
     white-space: nowrap;
   }
 
-  /* Hide gallery on mobile - keep it simple */
+  /* Gallery on mobile - small horizontal scroll */
   .character-modal-gallery {
+    padding: 12px;
+    border-top: 1px solid #2a2a2a;
+  }
+
+  .character-modal-gallery-title {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  .character-gallery-grid {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .character-gallery-grid::-webkit-scrollbar {
     display: none;
+  }
+
+  .character-gallery-item {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    overflow: hidden;
   }
 
   /* Hide all the extra mobile optimization elements */
