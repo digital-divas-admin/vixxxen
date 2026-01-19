@@ -440,8 +440,9 @@ router.post('/generate', async (req, res) => {
     }
 
     if (!imageUrl) {
-      logger.error('No image in WaveSpeed response', { response: JSON.stringify(result).substring(0, 500), requestId: req.id });
-      throw new Error('No image in response');
+      const responsePreview = JSON.stringify(result).substring(0, 500);
+      logger.error('No image in WaveSpeed response', { response: responsePreview, requestId: req.id });
+      throw new Error(`No image in response. API returned: ${responsePreview}`);
     }
 
     // Update trial tracking (skip in bypass mode)
