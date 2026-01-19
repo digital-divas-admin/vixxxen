@@ -6,26 +6,115 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { supabase } = require('./services/supabase');
-const { logger, logGeneration, maskIp } = require('./services/logger');
+const { logger, logGeneration } = require('./services/logger');
 
 const router = express.Router();
 
-// OpenRouter API endpoint
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const SEEDREAM_MODEL = 'bytedance-seed/seedream-4.5';
+// Helper to mask IP addresses for logging (e.g., "192.168.1.100" -> "192.168.x.x")
+function maskIp(ip) {
+  if (!ip) return 'unknown';
+  const parts = ip.split('.');
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.x.x`;
+  }
+  // IPv6 or other format - just show first part
+  return ip.substring(0, Math.min(ip.length, 10)) + '...';
+}
+
+// WaveSpeed API endpoint for Seedream 4.5
+const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
+const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5/edit';
+
+// Retry settings for rate limits
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000;
+
+// Development bypass mode (only works in non-production)
+const DEV_BYPASS_ENABLED = process.env.TRIAL_DEV_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+
+if (DEV_BYPASS_ENABLED) {
+  logger.warn('⚠️  TRIAL_DEV_BYPASS is enabled - rate limiting disabled for trials');
+}
 
 // Trial limits
 const MAX_TRIALS_PER_USER = 2;        // Max generations per IP/fingerprint
 const TRIAL_WINDOW_DAYS = 7;          // Reset window in days
 const GLOBAL_DAILY_CAP = 500;         // Max total trial generations per day
 
-// Demo character for trial (hardcoded for safe mode)
-const DEMO_CHARACTER = {
-  name: 'Luna',
-  description: 'A friendly AI companion with flowing silver hair and bright blue eyes',
-  trigger_word: 'luna_character',
-  system_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality'
+// Default character fallback (used if no settings in database)
+const DEFAULT_TRIAL_SETTINGS = {
+  character_name: 'Luna',
+  character_preview_image: null,
+  base_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality',
+  placeholder_text: 'e.g. wearing a red dress, walking in a park at golden hour...',
+  reference_images: [],
+  enabled: true,
+  // Modal text customization
+  modal_title: 'Try AI Image Generation',
+  modal_subtitle: 'See what you can create - no signup required',
+  character_subtitle: 'Demo Character',
+  character_description: 'Generate multiple images with the same character',
+  input_label: 'Describe the scene',
+  generate_button_text: 'Generate',
+  conversion_heading: 'Like what you see?',
+  benefits_list: [
+    '20 free credits every month',
+    'Choose from 50+ unique characters',
+    'Access NSFW content',
+    'Save and download your images'
+  ],
+  cta_button_text: 'Create Free Account',
+  exhausted_heading: "You've used your free trials!",
+  exhausted_description: 'Create a free account to continue generating amazing AI images.'
 };
+
+/**
+ * Get trial settings from database (with fallback to defaults)
+ */
+async function getTrialSettings() {
+  if (!supabase) {
+    return DEFAULT_TRIAL_SETTINGS;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('trial_settings')
+      .select('*')
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      logger.warn('Using default trial settings (no database record)');
+      return DEFAULT_TRIAL_SETTINGS;
+    }
+
+    // Use nullish coalescing (??) to only fall back on null/undefined, not empty strings
+    return {
+      character_id: data.character_id,
+      character_name: data.character_name ?? DEFAULT_TRIAL_SETTINGS.character_name,
+      character_preview_image: data.character_preview_image,
+      base_prompt: data.base_prompt ?? DEFAULT_TRIAL_SETTINGS.base_prompt,
+      placeholder_text: data.placeholder_text ?? DEFAULT_TRIAL_SETTINGS.placeholder_text,
+      reference_images: data.reference_images ?? [],
+      enabled: data.enabled !== false,
+      // Modal text customization
+      modal_title: data.modal_title ?? DEFAULT_TRIAL_SETTINGS.modal_title,
+      modal_subtitle: data.modal_subtitle ?? DEFAULT_TRIAL_SETTINGS.modal_subtitle,
+      character_subtitle: data.character_subtitle ?? DEFAULT_TRIAL_SETTINGS.character_subtitle,
+      character_description: data.character_description ?? DEFAULT_TRIAL_SETTINGS.character_description,
+      input_label: data.input_label ?? DEFAULT_TRIAL_SETTINGS.input_label,
+      generate_button_text: data.generate_button_text ?? DEFAULT_TRIAL_SETTINGS.generate_button_text,
+      conversion_heading: data.conversion_heading ?? DEFAULT_TRIAL_SETTINGS.conversion_heading,
+      benefits_list: data.benefits_list ?? DEFAULT_TRIAL_SETTINGS.benefits_list,
+      cta_button_text: data.cta_button_text ?? DEFAULT_TRIAL_SETTINGS.cta_button_text,
+      exhausted_heading: data.exhausted_heading ?? DEFAULT_TRIAL_SETTINGS.exhausted_heading,
+      exhausted_description: data.exhausted_description ?? DEFAULT_TRIAL_SETTINGS.exhausted_description
+    };
+  } catch (error) {
+    logger.error('Error fetching trial settings', { error: error.message });
+    return DEFAULT_TRIAL_SETTINGS;
+  }
+}
 
 /**
  * Get client IP address (handles proxies)
@@ -210,6 +299,22 @@ async function updateTrialRecord(ipAddress, fingerprint, existingRecord) {
  */
 router.get('/status', async (req, res) => {
   try {
+    // Check for admin bypass
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+    const isAdminBypass = adminKey && authHeader === `Bearer ${adminKey}`;
+
+    // If admin bypass is active, return unlimited trials
+    if (isAdminBypass || DEV_BYPASS_ENABLED) {
+      return res.json({
+        remaining: 999,
+        max: MAX_TRIALS_PER_USER,
+        used: 0,
+        canGenerate: true,
+        bypass: true
+      });
+    }
+
     const ipAddress = getClientIp(req);
     const fingerprint = req.query.fingerprint;
 
@@ -229,15 +334,55 @@ router.get('/status', async (req, res) => {
 });
 
 /**
+ * GET /api/trial/config
+ * Get trial configuration for the frontend (public endpoint)
+ */
+router.get('/config', async (req, res) => {
+  try {
+    const settings = await getTrialSettings();
+
+    // Return only what the frontend needs (don't expose reference images URLs or base_prompt)
+    res.json({
+      enabled: settings.enabled,
+      characterName: settings.character_name,
+      characterPreviewImage: settings.character_preview_image,
+      placeholderText: settings.placeholder_text,
+      hasReferenceImages: settings.reference_images && settings.reference_images.length > 0,
+      // Modal text customization
+      modalTitle: settings.modal_title,
+      modalSubtitle: settings.modal_subtitle,
+      characterSubtitle: settings.character_subtitle,
+      characterDescription: settings.character_description,
+      inputLabel: settings.input_label,
+      generateButtonText: settings.generate_button_text,
+      conversionHeading: settings.conversion_heading,
+      benefitsList: settings.benefits_list,
+      ctaButtonText: settings.cta_button_text,
+      exhaustedHeading: settings.exhausted_heading,
+      exhaustedDescription: settings.exhausted_description
+    });
+  } catch (error) {
+    logger.error('Trial config error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Failed to get trial config' });
+  }
+});
+
+/**
  * GET /api/trial/demo-character
  * Get the demo character info for the trial modal
  */
-router.get('/demo-character', (req, res) => {
-  res.json({
-    name: DEMO_CHARACTER.name,
-    description: DEMO_CHARACTER.description,
-    // Don't expose trigger_word or system_prompt to frontend
-  });
+router.get('/demo-character', async (req, res) => {
+  try {
+    const settings = await getTrialSettings();
+    res.json({
+      name: settings.character_name,
+      description: settings.placeholder_text,
+      // Don't expose base_prompt or reference_images to frontend
+    });
+  } catch (error) {
+    logger.error('Demo character error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get demo character info' });
+  }
 });
 
 /**
@@ -272,53 +417,121 @@ router.post('/generate', async (req, res) => {
       }
     }
 
-    if (!process.env.OPENROUTER_API_KEY) {
+    if (!process.env.WAVESPEED_API_KEY) {
       return res.status(500).json({ error: 'Generation service not configured' });
     }
 
     const ipAddress = getClientIp(req);
 
-    // Check global daily cap first
-    const globalCap = await checkGlobalDailyCap();
-    if (!globalCap.allowed) {
-      return res.status(429).json({
-        error: 'Trial generations are temporarily unavailable. Please try again tomorrow or create a free account.',
-        code: 'GLOBAL_CAP_REACHED'
-      });
-    }
+    // Check for admin bypass via Authorization header
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+    const isAdminBypass = adminKey && authHeader === `Bearer ${adminKey}`;
 
-    // Check user's trial limit
-    const trialRecord = await getTrialRecord(ipAddress, fingerprint);
-    const remaining = MAX_TRIALS_PER_USER - trialRecord.generations_used;
+    // Skip rate limiting in dev bypass mode OR admin bypass
+    let trialRecord = { generations_used: 0, isNew: true };
+    let remaining = MAX_TRIALS_PER_USER;
+    const shouldBypassRateLimit = DEV_BYPASS_ENABLED || isAdminBypass;
 
-    if (remaining <= 0) {
-      return res.status(429).json({
-        error: 'You\'ve used all your free trials. Create a free account to continue generating!',
-        code: 'TRIAL_LIMIT_REACHED',
-        remaining: 0
-      });
+    if (!shouldBypassRateLimit) {
+      // Check global daily cap first
+      const globalCap = await checkGlobalDailyCap();
+      if (!globalCap.allowed) {
+        return res.status(429).json({
+          error: 'Trial generations are temporarily unavailable. Please try again tomorrow or create a free account.',
+          code: 'GLOBAL_CAP_REACHED'
+        });
+      }
+
+      // Check user's trial limit
+      trialRecord = await getTrialRecord(ipAddress, fingerprint);
+      remaining = MAX_TRIALS_PER_USER - trialRecord.generations_used;
+
+      if (remaining <= 0) {
+        return res.status(429).json({
+          error: 'You\'ve used all your free trials. Create a free account to continue generating!',
+          code: 'TRIAL_LIMIT_REACHED',
+          remaining: 0
+        });
+      }
+    } else {
+      logger.info('Trial bypass: skipping rate limit check', { ip: maskIp(ipAddress), isAdmin: isAdminBypass });
     }
 
     logGeneration('trial', 'started', { ip: maskIp(ipAddress), promptLength: prompt.length, remaining: remaining - 1, requestId: req.id });
 
-    // Build the generation prompt with demo character
-    const fullPrompt = `${DEMO_CHARACTER.system_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
+    // Get trial settings from database
+    const trialSettings = await getTrialSettings();
 
-    // Call OpenRouter API
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
-        'X-Title': 'DivaForge Trial'
-      },
-      body: JSON.stringify({
-        model: SEEDREAM_MODEL,
-        messages: [{ role: 'user', content: fullPrompt }],
-        modalities: ['image', 'text']
-      })
+    // Build the generation prompt: base_prompt + user input
+    const fullPrompt = `${trialSettings.base_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
+
+    // Log the prompts for debugging
+    logger.info('Trial generation prompt details', {
+      requestId: req.id,
+      base_prompt: trialSettings.base_prompt ? trialSettings.base_prompt.substring(0, 100) + '...' : '(empty)',
+      user_prompt: prompt.substring(0, 100),
+      full_prompt_preview: fullPrompt.substring(0, 200) + '...'
     });
+
+    // Determine if we should use img2img (if reference images are configured)
+    const hasReferenceImages = trialSettings.reference_images && trialSettings.reference_images.length > 0;
+    const apiEndpoint = hasReferenceImages ? WAVESPEED_IMG2IMG_URL : WAVESPEED_TEXT2IMG_URL;
+
+    // Build request body
+    const requestBody = {
+      prompt: fullPrompt,
+      size: '2048*2048',
+      enable_base64_output: true,
+      enable_sync_mode: true
+    };
+
+    // Add reference images for img2img mode
+    if (hasReferenceImages) {
+      requestBody.images = trialSettings.reference_images;
+    }
+
+    logger.info('Trial generation request', {
+      endpoint: hasReferenceImages ? 'img2img' : 'text2img',
+      referenceImageCount: trialSettings.reference_images?.length || 0,
+      requestId: req.id
+    });
+
+    // Call WaveSpeed API with retry logic
+    let response;
+    let lastError;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.status === 429 && attempt < MAX_RETRIES) {
+          const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+          logger.info(`Trial rate limited, retrying in ${backoffMs}ms`, { attempt: attempt + 1, requestId: req.id });
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt < MAX_RETRIES) {
+          const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        }
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error('Failed to connect to generation service');
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -333,66 +546,78 @@ router.post('/generate', async (req, res) => {
 
     const result = await response.json();
 
-    // Extract image from response
+    // Extract image from WaveSpeed response
     let imageUrl = null;
-    const message = result.choices[0]?.message;
 
-    // Method 1: Check message.images array
-    if (message?.images && message.images.length > 0) {
-      imageUrl = message.images[0].image_url?.url || message.images[0].url;
-    }
-
-    // Method 2: Check content as array of parts
-    if (!imageUrl && Array.isArray(message?.content)) {
-      for (const part of message.content) {
-        if (part.inline_data?.data) {
-          const mimeType = part.inline_data.mime_type || 'image/png';
-          imageUrl = `data:${mimeType};base64,${part.inline_data.data}`;
-          break;
-        }
-        if (part.type === 'image_url' && part.image_url?.url) {
-          imageUrl = part.image_url.url;
-          break;
-        }
+    // WaveSpeed sync mode returns images in data.outputs array
+    if (result.data?.outputs && result.data.outputs.length > 0) {
+      const output = result.data.outputs[0];
+      if (typeof output === 'string') {
+        // Data URL or URL string
+        imageUrl = output;
+      } else if (output.url) {
+        imageUrl = output.url;
+      } else if (output.base64) {
+        imageUrl = `data:image/png;base64,${output.base64}`;
       }
     }
 
-    // Method 3: Check content as string for base64 data
-    if (!imageUrl && message?.content && typeof message.content === 'string') {
-      const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-      if (base64Match) {
-        imageUrl = base64Match[0];
+    // Fallback: check alternative response formats
+    if (!imageUrl && result.data?.url) {
+      imageUrl = result.data.url;
+    }
+    if (!imageUrl && result.data?.base64) {
+      imageUrl = `data:image/png;base64,${result.data.base64}`;
+    }
+    if (!imageUrl && result.outputs && result.outputs.length > 0) {
+      const output = result.outputs[0];
+      if (typeof output === 'string') {
+        imageUrl = output.startsWith('http') ? output : `data:image/png;base64,${output}`;
       }
     }
 
     if (!imageUrl) {
-      // Check if content was filtered
-      if (result.choices[0]?.finish_reason === 'content_filter') {
-        return res.status(400).json({
-          error: 'Content was filtered. Please try a different prompt.'
-        });
-      }
-      throw new Error('No image in response');
+      const responsePreview = JSON.stringify(result).substring(0, 500);
+      logger.error('No image in WaveSpeed response', { response: responsePreview, requestId: req.id });
+      throw new Error(`No image in response. API returned: ${responsePreview}`);
     }
 
-    // Update trial tracking
-    await updateTrialRecord(ipAddress, fingerprint, trialRecord);
-    await incrementGlobalDailyCap();
+    // Update trial tracking (skip in bypass mode)
+    if (!shouldBypassRateLimit) {
+      await updateTrialRecord(ipAddress, fingerprint, trialRecord);
+      await incrementGlobalDailyCap();
+    }
 
-    logGeneration('trial', 'completed', { requestId: req.id });
+    logGeneration('trial', 'completed', { requestId: req.id, bypass: shouldBypassRateLimit });
 
     res.json({
       success: true,
       image: imageUrl,
       remaining: remaining - 1,
-      character: DEMO_CHARACTER.name
+      character: trialSettings.character_name
     });
 
   } catch (error) {
-    logger.error('Trial generation error', { error: error.message, requestId: req.id });
-    res.status(500).json({
-      error: 'Generation failed. Please try again.',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    logger.error('Trial generation error', { error: error.message, stack: error.stack, requestId: req.id });
+
+    // Provide specific error messages based on error type
+    let userMessage = 'Generation failed. Please try again.';
+    let statusCode = 500;
+
+    if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      userMessage = 'Image generation service not properly configured';
+      statusCode = 503;
+    } else if (error.message?.includes('429') || error.message?.includes('rate')) {
+      userMessage = 'Service is busy. Please try again in a moment.';
+      statusCode = 429;
+    } else if (error.message?.includes('No image')) {
+      userMessage = 'Image generation failed. Please try a different prompt.';
+    }
+
+    res.status(statusCode).json({
+      error: userMessage,
+      // Always include error details for debugging (remove in future if needed)
+      debug: error.message
     });
   }
 });
@@ -450,6 +675,272 @@ router.post('/analytics', express.text({ type: '*/*' }), async (req, res) => {
   } catch (error) {
     // Always return 200 for analytics - don't break user experience
     res.status(200).send('ok');
+  }
+});
+
+/**
+ * POST /api/trial/admin/reset
+ * Reset trial records for testing/support purposes
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.post('/admin/reset', async (req, res) => {
+  try {
+    // Check admin key
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey) {
+      return res.status(503).json({ error: 'Admin endpoint not configured' });
+    }
+
+    if (!authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { ip, fingerprint, clearAll } = req.body;
+
+    if (!supabase) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+
+    let deletedCount = 0;
+
+    if (clearAll === true) {
+      // Clear all trial records from the past 7 days
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() - TRIAL_WINDOW_DAYS);
+
+      const { data, error } = await supabase
+        .from('trial_generations')
+        .delete()
+        .gte('created_at', windowStart.toISOString())
+        .select();
+
+      if (error) {
+        throw error;
+      }
+      deletedCount = data?.length || 0;
+      logger.info('Admin: cleared all recent trial records', { deletedCount });
+    } else if (ip || fingerprint) {
+      // Clear specific IP or fingerprint
+      let query = supabase.from('trial_generations').delete();
+
+      if (ip && fingerprint) {
+        query = query.or(`ip_address.eq.${ip},fingerprint.eq.${fingerprint}`);
+      } else if (ip) {
+        query = query.eq('ip_address', ip);
+      } else if (fingerprint) {
+        query = query.eq('fingerprint', fingerprint);
+      }
+
+      const { data, error } = await query.select();
+
+      if (error) {
+        throw error;
+      }
+      deletedCount = data?.length || 0;
+      logger.info('Admin: cleared trial records', { ip: ip ? maskIp(ip) : null, fingerprint: fingerprint ? '***' : null, deletedCount });
+    } else {
+      return res.status(400).json({ error: 'Provide ip, fingerprint, or clearAll: true' });
+    }
+
+    res.json({
+      success: true,
+      deletedCount,
+      message: `Cleared ${deletedCount} trial record(s)`
+    });
+  } catch (error) {
+    logger.error('Admin reset error', { error: error.message });
+    res.status(500).json({ error: 'Failed to reset trial records' });
+  }
+});
+
+/**
+ * GET /api/trial/admin/status
+ * Get trial system status (for debugging)
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.get('/admin/status', async (req, res) => {
+  try {
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey || !authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const globalCap = await checkGlobalDailyCap();
+
+    res.json({
+      devBypassEnabled: DEV_BYPASS_ENABLED,
+      maxTrialsPerUser: MAX_TRIALS_PER_USER,
+      trialWindowDays: TRIAL_WINDOW_DAYS,
+      globalDailyCap: GLOBAL_DAILY_CAP,
+      todayUsage: globalCap,
+      wavespeedConfigured: !!process.env.WAVESPEED_API_KEY
+    });
+  } catch (error) {
+    logger.error('Admin status error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get status' });
+  }
+});
+
+/**
+ * GET /api/trial/admin/settings
+ * Get current trial settings (for admin panel)
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.get('/admin/settings', async (req, res) => {
+  try {
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey || !authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const settings = await getTrialSettings();
+
+    // Also fetch available characters for the dropdown
+    let characters = [];
+    if (supabase) {
+      const { data } = await supabase
+        .from('characters')
+        .select('id, name, avatar_url, profile_image_url')
+        .order('name');
+      characters = data || [];
+    }
+
+    res.json({
+      settings,
+      characters
+    });
+  } catch (error) {
+    logger.error('Admin get settings error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get settings' });
+  }
+});
+
+/**
+ * POST /api/trial/admin/settings
+ * Update trial settings (for admin panel)
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.post('/admin/settings', async (req, res) => {
+  try {
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey || !authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!supabase) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+
+    const {
+      character_id,
+      character_name,
+      character_preview_image,
+      base_prompt,
+      placeholder_text,
+      reference_images,
+      enabled,
+      // Modal text customization
+      modal_title,
+      modal_subtitle,
+      character_subtitle,
+      character_description,
+      input_label,
+      generate_button_text,
+      conversion_heading,
+      benefits_list,
+      cta_button_text,
+      exhausted_heading,
+      exhausted_description
+    } = req.body;
+
+    // Validate arrays
+    if (reference_images && !Array.isArray(reference_images)) {
+      return res.status(400).json({ error: 'reference_images must be an array' });
+    }
+    if (benefits_list && !Array.isArray(benefits_list)) {
+      return res.status(400).json({ error: 'benefits_list must be an array' });
+    }
+
+    // Build update object (only include provided fields)
+    const updateData = {};
+    if (character_id !== undefined) updateData.character_id = character_id;
+    if (character_name !== undefined) updateData.character_name = character_name;
+    if (character_preview_image !== undefined) updateData.character_preview_image = character_preview_image;
+    if (base_prompt !== undefined) updateData.base_prompt = base_prompt;
+    if (placeholder_text !== undefined) updateData.placeholder_text = placeholder_text;
+    if (reference_images !== undefined) updateData.reference_images = reference_images;
+    if (enabled !== undefined) updateData.enabled = enabled;
+    // Modal text fields
+    if (modal_title !== undefined) updateData.modal_title = modal_title;
+    if (modal_subtitle !== undefined) updateData.modal_subtitle = modal_subtitle;
+    if (character_subtitle !== undefined) updateData.character_subtitle = character_subtitle;
+    if (character_description !== undefined) updateData.character_description = character_description;
+    if (input_label !== undefined) updateData.input_label = input_label;
+    if (generate_button_text !== undefined) updateData.generate_button_text = generate_button_text;
+    if (conversion_heading !== undefined) updateData.conversion_heading = conversion_heading;
+    if (benefits_list !== undefined) updateData.benefits_list = benefits_list;
+    if (cta_button_text !== undefined) updateData.cta_button_text = cta_button_text;
+    if (exhausted_heading !== undefined) updateData.exhausted_heading = exhausted_heading;
+    if (exhausted_description !== undefined) updateData.exhausted_description = exhausted_description;
+
+    // Log what we're saving for debugging
+    logger.info('Saving trial settings', {
+      updatedFields: Object.keys(updateData),
+      base_prompt_preview: base_prompt ? base_prompt.substring(0, 100) + '...' : '(not provided)'
+    });
+
+    // Check if a settings row already exists (singleton table)
+    const { data: existing } = await supabase
+      .from('trial_settings')
+      .select('id')
+      .limit(1)
+      .single();
+
+    let savedSettings;
+
+    if (existing) {
+      // Update existing row
+      const { data: updated, error: updateError } = await supabase
+        .from('trial_settings')
+        .update(updateData)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        logger.error('Failed to update trial settings', { error: updateError.message });
+        throw updateError;
+      }
+      savedSettings = updated;
+      logger.info('Trial settings updated successfully', { id: existing.id });
+    } else {
+      // Create new record (first time setup)
+      const { data: created, error: createError } = await supabase
+        .from('trial_settings')
+        .insert(updateData)
+        .select()
+        .single();
+
+      if (createError) {
+        logger.error('Failed to create trial settings', { error: createError.message });
+        throw createError;
+      }
+      savedSettings = created;
+      logger.info('Trial settings created successfully');
+    }
+
+    res.json({ success: true, settings: savedSettings });
+  } catch (error) {
+    logger.error('Admin update settings error', { error: error.message });
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 

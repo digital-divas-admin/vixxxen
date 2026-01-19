@@ -75,6 +75,7 @@ function renderAdminLandingDashboard() {
       <button class="admin-tab" onclick="showAdminLandingTab('pricing')" data-tab="pricing">Pricing</button>
       <button class="admin-tab" onclick="showAdminLandingTab('finalcta')" data-tab="finalcta">Final CTA</button>
       <button class="admin-tab admin-tab--highlight" onclick="showAdminLandingTab('images')" data-tab="images">Image Library</button>
+      <button class="admin-tab admin-tab--highlight" onclick="showAdminLandingTab('trial')" data-tab="trial">Trial Testing</button>
     </div>
 
     <div id="adminLandingTabContent">
@@ -154,6 +155,9 @@ function showAdminLandingTab(tab) {
       loadImageLibrary();
       // Initialize upload handlers after DOM is ready
       setTimeout(initImageUploadHandlers, 50);
+      break;
+    case 'trial':
+      contentContainer.innerHTML = renderTrialTestingSection();
       break;
   }
 }
@@ -553,6 +557,841 @@ function renderFinalCtaSection() {
     </div>
   `;
 }
+
+// ===========================================
+// TRIAL TESTING SECTION
+// ===========================================
+
+// Cache for trial settings
+let trialSettingsCache = null;
+let trialCharactersCache = [];
+
+function renderTrialTestingSection() {
+  const isEnabled = localStorage.getItem('trialAdminKey') ? true : false;
+
+  // Load settings asynchronously
+  if (isEnabled && !trialSettingsCache) {
+    loadTrialSettings();
+  }
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Trial Testing Mode</h3>
+      <p style="color: #888; margin-bottom: 20px;">
+        Enable admin bypass to test the "Try It Now" feature without rate limits.
+        This only affects your browser - real users are still rate limited.
+      </p>
+
+      <div style="background: ${isEnabled ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 68, 68, 0.1)'};
+                  border: 1px solid ${isEnabled ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 68, 68, 0.3)'};
+                  border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: ${isEnabled ? '#00ff88' : '#ff4444'};">
+              ${isEnabled ? '✓ Admin Bypass Enabled' : '✗ Admin Bypass Disabled'}
+            </div>
+            <div style="color: #888; font-size: 0.9rem; margin-top: 4px;">
+              ${isEnabled ? 'You can test unlimited trial generations' : 'You are subject to normal rate limits'}
+            </div>
+          </div>
+          <button
+            class="admin-btn ${isEnabled ? 'admin-btn--danger' : 'admin-btn--primary'}"
+            onclick="toggleTrialAdminBypass()"
+            style="min-width: 120px;"
+          >
+            ${isEnabled ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-form-group">
+        <label>Admin Key</label>
+        <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+          Enter the TRIAL_ADMIN_KEY from your server environment to enable bypass.
+        </p>
+        <input
+          type="password"
+          id="trialAdminKeyInput"
+          class="admin-input"
+          placeholder="Enter your TRIAL_ADMIN_KEY"
+          value="${localStorage.getItem('trialAdminKey') || ''}"
+        >
+      </div>
+
+      ${isEnabled ? `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+          <div>${renderTrialCharacterSettings()}</div>
+          <div>${renderTrialModalPreview()}</div>
+        </div>
+      ` : ''}
+
+      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <h4 style="margin: 0 0 12px; color: #fff;">Quick Actions</h4>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="admin-btn admin-btn--secondary" onclick="resetAllTrials()">
+            Reset All Trials
+          </button>
+          <button class="admin-btn admin-btn--secondary" onclick="viewTrialStatus()">
+            View Status
+          </button>
+        </div>
+      </div>
+
+      <div id="trialTestOutput" style="margin-top: 20px; display: none;">
+        <pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; color: #00ff88;"></pre>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrialCharacterSettings() {
+  const settings = trialSettingsCache || {
+    character_name: 'Luna',
+    character_preview_image: '',
+    base_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality',
+    placeholder_text: 'e.g. wearing a red dress, walking in a park at golden hour...',
+    reference_images: [],
+    // Modal text defaults
+    modal_title: 'Try AI Image Generation',
+    modal_subtitle: 'See what you can create - no signup required',
+    character_subtitle: 'Demo Character',
+    character_description: 'Generate multiple images with the same character',
+    input_label: 'Describe the scene',
+    generate_button_text: 'Generate',
+    conversion_heading: 'Like what you see?',
+    benefits_list: ['20 free credits every month', 'Choose from 50+ unique characters', 'Access NSFW content', 'Save and download your images'],
+    cta_button_text: 'Create Free Account',
+    exhausted_heading: "You've used your free trials!",
+    exhausted_description: 'Create a free account to continue generating amazing AI images.'
+  };
+
+  const referenceImagesHtml = (settings.reference_images || []).map((img, idx) => `
+    <div class="trial-ref-image" style="position: relative; width: 100px; height: 100px;">
+      <img src="${escapeHtml(img)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22>Error</text></svg>'">
+      <button onclick="removeTrialReferenceImage(${idx})" style="position: absolute; top: -8px; right: -8px; background: #ff4444; border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px;">×</button>
+    </div>
+  `).join('');
+
+  const previewImageHtml = settings.character_preview_image
+    ? `<img src="${escapeHtml(settings.character_preview_image)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">`
+    : `<div style="width: 80px; height: 80px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.8rem;">No image</div>`;
+
+  return `
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <h4 style="margin: 0 0 16px; color: #fff;">Demo Character Configuration</h4>
+      <p style="color: #888; margin-bottom: 20px; font-size: 0.9rem;">
+        Configure the character shown in the trial modal. Reference images make the character consistent across generations.
+      </p>
+
+      <div id="trialSettingsForm">
+        <div class="admin-form-group">
+          <label>Character Name</label>
+          <input type="text" id="trialCharacterName" class="admin-input" value="${escapeHtml(settings.character_name || '')}" placeholder="e.g. Luna" oninput="updateTrialPreview()">
+        </div>
+
+        <div class="admin-form-group">
+          <label>Preview Image</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            Profile picture shown in the trial modal header
+          </p>
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div id="trialPreviewImageThumb">
+              ${previewImageHtml}
+            </div>
+            <div style="flex: 1;">
+              <input type="text" id="trialPreviewImage" class="admin-input" value="${escapeHtml(settings.character_preview_image || '')}" placeholder="Image URL..." style="margin-bottom: 8px;" oninput="updateTrialPreview()">
+              <button class="admin-btn admin-btn--secondary" onclick="openImagePickerForTrialPreview()" style="width: 100%;">
+                📁 Select from Library
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-form-group">
+          <label>Base Prompt</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            This is prepended to the user's input (they don't see it)
+          </p>
+          <textarea id="trialBasePrompt" class="admin-input" rows="3" placeholder="Describe the character...">${escapeHtml(settings.base_prompt || '')}</textarea>
+        </div>
+
+        <div class="admin-form-group">
+          <label>Placeholder Text</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            Hint shown in the prompt textarea
+          </p>
+          <input type="text" id="trialPlaceholderText" class="admin-input" value="${escapeHtml(settings.placeholder_text || '')}" placeholder="e.g. wearing a red dress..." oninput="updateTrialPreview()">
+        </div>
+
+        <div class="admin-form-group">
+          <label>Reference Images (for consistent character)</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            Add up to 5 reference images from the library. These are sent to Seedream for img2img to ensure character consistency.
+          </p>
+          <div id="trialReferenceImages" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+            ${referenceImagesHtml || '<span style="color: #666; display: flex; align-items: center; justify-content: center; width: 100%;">No reference images configured</span>'}
+          </div>
+          <button class="admin-btn admin-btn--secondary" onclick="openImagePickerForTrialReference()" ${(settings.reference_images || []).length >= 5 ? 'disabled style="opacity: 0.5;"' : ''}>
+            📁 Add from Library ${(settings.reference_images || []).length >= 5 ? '(Max 5 reached)' : `(${(settings.reference_images || []).length}/5)`}
+          </button>
+        </div>
+
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <h4 style="margin: 0 0 16px; color: #fff;">Modal Text Customization</h4>
+          <p style="color: #888; margin-bottom: 20px; font-size: 0.9rem;">
+            Customize all text shown in the trial popup modal.
+          </p>
+
+          <div class="admin-form-group">
+            <label>Modal Title</label>
+            <input type="text" id="trialModalTitle" class="admin-input" value="${escapeHtml(settings.modal_title || '')}" placeholder="Try AI Image Generation" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Modal Subtitle</label>
+            <input type="text" id="trialModalSubtitle" class="admin-input" value="${escapeHtml(settings.modal_subtitle || '')}" placeholder="See what you can create - no signup required" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Character Subtitle</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Text shown after character name (e.g. "Luna - Demo Character")
+            </p>
+            <input type="text" id="trialCharacterSubtitle" class="admin-input" value="${escapeHtml(settings.character_subtitle || '')}" placeholder="Demo Character" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Character Description</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Description shown below the character name
+            </p>
+            <input type="text" id="trialCharacterDescription" class="admin-input" value="${escapeHtml(settings.character_description || '')}" placeholder="Generate multiple images with the same character" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Input Label</label>
+            <input type="text" id="trialInputLabel" class="admin-input" value="${escapeHtml(settings.input_label || '')}" placeholder="Describe the scene" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Generate Button Text</label>
+            <input type="text" id="trialGenerateButtonText" class="admin-input" value="${escapeHtml(settings.generate_button_text || '')}" placeholder="Generate" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Conversion Heading</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Heading shown above the benefits list
+            </p>
+            <input type="text" id="trialConversionHeading" class="admin-input" value="${escapeHtml(settings.conversion_heading || '')}" placeholder="Like what you see?" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Benefits List</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              One benefit per line (shows as bullet points)
+            </p>
+            <textarea id="trialBenefitsList" class="admin-input" rows="4" placeholder="20 free credits every month&#10;Choose from 50+ unique characters&#10;Access NSFW content&#10;Save and download your images" oninput="updateTrialPreview()">${escapeHtml((settings.benefits_list || []).join('\n'))}</textarea>
+          </div>
+
+          <div class="admin-form-group">
+            <label>CTA Button Text</label>
+            <input type="text" id="trialCtaButtonText" class="admin-input" value="${escapeHtml(settings.cta_button_text || '')}" placeholder="Create Free Account" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Exhausted Heading</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Shown when user has used all their trials
+            </p>
+            <input type="text" id="trialExhaustedHeading" class="admin-input" value="${escapeHtml(settings.exhausted_heading || '')}" placeholder="You've used your free trials!">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Exhausted Description</label>
+            <input type="text" id="trialExhaustedDescription" class="admin-input" value="${escapeHtml(settings.exhausted_description || '')}" placeholder="Create a free account to continue generating amazing AI images.">
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 12px;">
+          <button class="admin-btn admin-btn--primary" onclick="saveTrialSettings()">Save Settings</button>
+          <button class="admin-btn admin-btn--secondary" onclick="loadTrialSettings()">Refresh</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrialModalPreview() {
+  const settings = trialSettingsCache || {
+    character_name: 'Luna',
+    character_preview_image: '',
+    base_prompt: '',
+    placeholder_text: 'e.g. wearing a red dress at sunset...',
+    reference_images: [],
+    modal_title: 'Try AI Image Generation',
+    modal_subtitle: 'See what you can create - no signup required',
+    character_subtitle: 'Demo Character',
+    character_description: 'Generate multiple images with the same character',
+    input_label: 'Describe the scene',
+    generate_button_text: 'Generate'
+  };
+
+  const characterName = settings.character_name || 'Luna';
+  const previewImage = settings.character_preview_image;
+  const placeholderText = settings.placeholder_text || 'e.g. wearing a red dress at sunset...';
+  const refImageCount = (settings.reference_images || []).length;
+  const modalTitle = settings.modal_title || 'Try AI Image Generation';
+  const modalSubtitle = settings.modal_subtitle || 'See what you can create - no signup required';
+  const characterSubtitle = settings.character_subtitle || 'Demo Character';
+  const characterDescription = settings.character_description || 'Generate multiple images with the same character';
+  const inputLabel = settings.input_label || 'Describe the scene';
+  const generateButtonText = settings.generate_button_text || 'Generate';
+
+  const characterImageHtml = previewImage
+    ? `<img src="${escapeHtml(previewImage)}" alt="${escapeHtml(characterName)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`
+    : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px;">✨</div>`;
+
+  return `
+    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+      <h4 style="margin: 0 0 8px; color: #fff;">Live Preview</h4>
+      <p style="color: #666; font-size: 0.85rem; margin-bottom: 16px;">
+        This shows what users see. Changes update live (before saving).
+      </p>
+
+      <div id="trialPreviewContainer" style="background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.1);">
+        <!-- Modal Header -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 id="trialPreviewTitle" style="margin: 0 0 8px; font-size: 1.4rem; color: #fff;">${escapeHtml(modalTitle)}</h2>
+          <p id="trialPreviewSubtitle" style="margin: 0; color: #888; font-size: 0.9rem;">${escapeHtml(modalSubtitle)}</p>
+        </div>
+
+        <!-- Character Info -->
+        <div style="display: flex; align-items: center; gap: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <div id="trialPreviewCharImage" style="width: 64px; height: 64px; flex-shrink: 0;">
+            ${characterImageHtml}
+          </div>
+          <div>
+            <div id="trialPreviewCharName" style="font-weight: 600; color: #fff; font-size: 1.1rem;">${escapeHtml(characterName)} - ${escapeHtml(characterSubtitle)}</div>
+            <div id="trialPreviewCharDesc" style="color: #888; font-size: 0.85rem;">${escapeHtml(characterDescription)}</div>
+          </div>
+        </div>
+
+        <!-- Prompt Form -->
+        <div style="margin-bottom: 16px;">
+          <label id="trialPreviewInputLabel" style="display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem;">${escapeHtml(inputLabel)}</label>
+          <textarea
+            id="trialPreviewPrompt"
+            style="width: 100%; min-height: 80px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95rem; resize: vertical; box-sizing: border-box;"
+            placeholder="${escapeHtml(placeholderText)}"
+          ></textarea>
+        </div>
+
+        <!-- Actions Row -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <span style="color: #888; font-size: 0.85rem;">∞ tries (admin bypass)</span>
+          <button
+            onclick="runTrialPreviewGeneration()"
+            style="background: linear-gradient(135deg, #ff2ebb 0%, #ff6b6b 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+          >
+            ${escapeHtml(generateButtonText)}
+          </button>
+        </div>
+
+        <!-- Reference Images Indicator -->
+        ${refImageCount > 0 ? `
+          <div style="background: rgba(0, 178, 255, 0.1); border: 1px solid rgba(0, 178, 255, 0.3); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px;">
+            <span style="color: #00b2ff; font-size: 0.85rem;">📸 ${refImageCount} reference image${refImageCount > 1 ? 's' : ''} configured (img2img mode)</span>
+          </div>
+        ` : ''}
+
+        <!-- Result Area (hidden until generation) -->
+        <div id="trialPreviewResult" style="display: none;">
+          <div style="position: relative; border-radius: 12px; overflow: hidden; background: #111;">
+            <img id="trialPreviewResultImage" src="" alt="Generated image" style="width: 100%; display: block;">
+          </div>
+          <div style="margin-top: 12px; text-align: center;">
+            <button
+              onclick="clearTrialPreviewResult()"
+              style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;"
+            >
+              Clear Result
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="trialPreviewLoading" style="display: none; text-align: center; padding: 40px;">
+          <div style="width: 40px; height: 40px; border: 3px solid rgba(255,46,187,0.2); border-top-color: #ff2ebb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p style="color: #888; margin: 0;">Generating image...</p>
+        </div>
+      </div>
+
+      <style>
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
+  `;
+}
+
+// Update preview when form fields change
+function updateTrialPreview() {
+  const nameInput = document.getElementById('trialCharacterName');
+  const previewImageInput = document.getElementById('trialPreviewImage');
+  const placeholderInput = document.getElementById('trialPlaceholderText');
+  const modalTitleInput = document.getElementById('trialModalTitle');
+  const modalSubtitleInput = document.getElementById('trialModalSubtitle');
+  const characterSubtitleInput = document.getElementById('trialCharacterSubtitle');
+  const characterDescriptionInput = document.getElementById('trialCharacterDescription');
+  const inputLabelInput = document.getElementById('trialInputLabel');
+  const generateButtonTextInput = document.getElementById('trialGenerateButtonText');
+
+  // Update modal title
+  const previewTitle = document.getElementById('trialPreviewTitle');
+  if (previewTitle && modalTitleInput) {
+    previewTitle.textContent = modalTitleInput.value || 'Try AI Image Generation';
+  }
+
+  // Update modal subtitle
+  const previewSubtitle = document.getElementById('trialPreviewSubtitle');
+  if (previewSubtitle && modalSubtitleInput) {
+    previewSubtitle.textContent = modalSubtitleInput.value || 'See what you can create - no signup required';
+  }
+
+  // Update character name with subtitle
+  const previewName = document.getElementById('trialPreviewCharName');
+  if (previewName && nameInput) {
+    const characterName = nameInput.value || 'Luna';
+    const characterSubtitle = characterSubtitleInput?.value || 'Demo Character';
+    previewName.textContent = characterName + ' - ' + characterSubtitle;
+  }
+
+  // Update character description
+  const previewCharDesc = document.getElementById('trialPreviewCharDesc');
+  if (previewCharDesc && characterDescriptionInput) {
+    previewCharDesc.textContent = characterDescriptionInput.value || 'Generate multiple images with the same character';
+  }
+
+  // Update character image
+  const previewImage = document.getElementById('trialPreviewCharImage');
+  if (previewImage && previewImageInput) {
+    const imgUrl = previewImageInput.value;
+    if (imgUrl) {
+      previewImage.innerHTML = `<img src="${escapeHtml(imgUrl)}" alt="Character" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:linear-gradient(135deg,#ff2ebb,#00b2ff);display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:12px;\\'>✨</div>'">`;
+    } else {
+      previewImage.innerHTML = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px;">✨</div>`;
+    }
+  }
+
+  // Update input label
+  const previewInputLabel = document.getElementById('trialPreviewInputLabel');
+  if (previewInputLabel && inputLabelInput) {
+    previewInputLabel.textContent = inputLabelInput.value || 'Describe the scene';
+  }
+
+  // Update placeholder text
+  const previewPrompt = document.getElementById('trialPreviewPrompt');
+  if (previewPrompt && placeholderInput) {
+    previewPrompt.placeholder = placeholderInput.value || 'e.g. wearing a red dress at sunset...';
+  }
+
+  // Note: Generate button text doesn't have an id in preview, would need a re-render
+}
+
+// Run generation from the preview
+async function runTrialPreviewGeneration() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const promptInput = document.getElementById('trialPreviewPrompt');
+  const userPrompt = promptInput?.value?.trim();
+
+  if (!userPrompt) {
+    showToast('Enter a prompt to generate', 'error');
+    promptInput?.focus();
+    return;
+  }
+
+  const loadingDiv = document.getElementById('trialPreviewLoading');
+  const resultDiv = document.getElementById('trialPreviewResult');
+  const resultImage = document.getElementById('trialPreviewResultImage');
+
+  // Show loading, hide result
+  if (loadingDiv) loadingDiv.style.display = 'block';
+  if (resultDiv) resultDiv.style.display = 'none';
+
+  try {
+    const response = await fetch('/api/trial/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminKey}`
+      },
+      body: JSON.stringify({
+        prompt: userPrompt,
+        fingerprint: 'admin-preview-' + Date.now()
+      })
+    });
+
+    const data = await response.json();
+
+    if (loadingDiv) loadingDiv.style.display = 'none';
+
+    if (response.ok && data.image) {
+      if (resultImage) resultImage.src = data.image;
+      if (resultDiv) resultDiv.style.display = 'block';
+      showToast('Generation complete!', 'success');
+    } else {
+      showToast(data.error || 'Generation failed', 'error');
+      console.error('Generation failed:', data);
+    }
+  } catch (error) {
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    showToast('Generation failed: ' + error.message, 'error');
+    console.error('Generation error:', error);
+  }
+}
+
+// Clear the preview result
+function clearTrialPreviewResult() {
+  const resultDiv = document.getElementById('trialPreviewResult');
+  const resultImage = document.getElementById('trialPreviewResultImage');
+  if (resultDiv) resultDiv.style.display = 'none';
+  if (resultImage) resultImage.src = '';
+}
+
+function toggleTrialAdminBypass() {
+  const input = document.getElementById('trialAdminKeyInput');
+  const currentKey = localStorage.getItem('trialAdminKey');
+
+  if (currentKey) {
+    // Disable - remove key
+    localStorage.removeItem('trialAdminKey');
+    showToast('Trial admin bypass disabled', 'info');
+  } else {
+    // Enable - save key
+    const key = input?.value?.trim();
+    if (!key) {
+      showToast('Please enter your admin key first', 'error');
+      input?.focus();
+      return;
+    }
+    localStorage.setItem('trialAdminKey', key);
+    showToast('Trial admin bypass enabled!', 'success');
+  }
+
+  // Re-render the section
+  showAdminLandingTab('trial');
+}
+
+async function testTrialGeneration() {
+  const outputDiv = document.getElementById('trialTestOutput');
+  const outputPre = outputDiv?.querySelector('pre');
+  if (!outputDiv || !outputPre) return;
+
+  outputDiv.style.display = 'block';
+  outputPre.textContent = 'Testing trial generation...';
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    const adminKey = localStorage.getItem('trialAdminKey');
+    if (adminKey) {
+      headers['Authorization'] = `Bearer ${adminKey}`;
+    }
+
+    const response = await fetch('/api/trial/generate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        prompt: 'smiling, casual outfit, sunny day',
+        fingerprint: 'admin-test-' + Date.now()
+      })
+    });
+
+    const data = await response.json();
+    outputPre.textContent = JSON.stringify(data, null, 2);
+    outputPre.style.color = response.ok ? '#00ff88' : '#ff4444';
+
+    if (response.ok) {
+      showToast('Test generation successful!', 'success');
+    } else {
+      showToast(data.error || 'Generation failed', 'error');
+    }
+  } catch (error) {
+    outputPre.textContent = 'Error: ' + error.message;
+    outputPre.style.color = '#ff4444';
+    showToast('Test failed: ' + error.message, 'error');
+  }
+}
+
+async function resetAllTrials() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const outputDiv = document.getElementById('trialTestOutput');
+  const outputPre = outputDiv?.querySelector('pre');
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Resetting all trials...';
+  }
+
+  try {
+    const response = await fetch('/api/trial/admin/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminKey}`
+      },
+      body: JSON.stringify({ clearAll: true })
+    });
+
+    const data = await response.json();
+    if (outputPre) {
+      outputPre.textContent = JSON.stringify(data, null, 2);
+      outputPre.style.color = response.ok ? '#00ff88' : '#ff4444';
+    }
+
+    if (response.ok) {
+      showToast(`Cleared ${data.deletedCount} trial record(s)`, 'success');
+    } else {
+      showToast(data.error || 'Reset failed', 'error');
+    }
+  } catch (error) {
+    if (outputPre) {
+      outputPre.textContent = 'Error: ' + error.message;
+      outputPre.style.color = '#ff4444';
+    }
+    showToast('Reset failed: ' + error.message, 'error');
+  }
+}
+
+async function viewTrialStatus() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const outputDiv = document.getElementById('trialTestOutput');
+  const outputPre = outputDiv?.querySelector('pre');
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Fetching trial status...';
+  }
+
+  try {
+    const response = await fetch('/api/trial/admin/status', {
+      headers: {
+        'Authorization': `Bearer ${adminKey}`
+      }
+    });
+
+    const data = await response.json();
+    if (outputPre) {
+      outputPre.textContent = JSON.stringify(data, null, 2);
+      outputPre.style.color = response.ok ? '#00ff88' : '#ff4444';
+    }
+
+    if (!response.ok) {
+      showToast(data.error || 'Failed to get status', 'error');
+    }
+  } catch (error) {
+    if (outputPre) {
+      outputPre.textContent = 'Error: ' + error.message;
+      outputPre.style.color = '#ff4444';
+    }
+    showToast('Failed: ' + error.message, 'error');
+  }
+}
+
+async function loadTrialSettings() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/trial/admin/settings', {
+      headers: {
+        'Authorization': `Bearer ${adminKey}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load settings');
+    }
+
+    const data = await response.json();
+    trialSettingsCache = data.settings;
+    trialCharactersCache = data.characters || [];
+
+    // Re-render to show loaded settings
+    showAdminLandingTab('trial');
+    showToast('Settings loaded', 'success');
+  } catch (error) {
+    showToast('Failed to load settings: ' + error.message, 'error');
+  }
+}
+
+async function saveTrialSettings() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const characterSelect = document.getElementById('trialCharacterSelect');
+  const characterName = document.getElementById('trialCharacterName');
+  const previewImage = document.getElementById('trialPreviewImage');
+  const basePrompt = document.getElementById('trialBasePrompt');
+  const placeholderText = document.getElementById('trialPlaceholderText');
+
+  // Modal text fields
+  const modalTitle = document.getElementById('trialModalTitle');
+  const modalSubtitle = document.getElementById('trialModalSubtitle');
+  const characterSubtitle = document.getElementById('trialCharacterSubtitle');
+  const characterDescription = document.getElementById('trialCharacterDescription');
+  const inputLabel = document.getElementById('trialInputLabel');
+  const generateButtonText = document.getElementById('trialGenerateButtonText');
+  const conversionHeading = document.getElementById('trialConversionHeading');
+  const benefitsListText = document.getElementById('trialBenefitsList');
+  const ctaButtonText = document.getElementById('trialCtaButtonText');
+  const exhaustedHeading = document.getElementById('trialExhaustedHeading');
+  const exhaustedDescription = document.getElementById('trialExhaustedDescription');
+
+  // Parse benefits list from textarea (one per line)
+  const benefitsList = (benefitsListText?.value || '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  const settings = {
+    character_id: characterSelect?.value || null,
+    character_name: characterName?.value?.trim() || 'Luna',
+    character_preview_image: previewImage?.value?.trim() || null,
+    base_prompt: basePrompt?.value?.trim() || '',
+    placeholder_text: placeholderText?.value?.trim() || '',
+    reference_images: trialSettingsCache?.reference_images || [],
+    // Modal text customization
+    modal_title: modalTitle?.value?.trim() || 'Try AI Image Generation',
+    modal_subtitle: modalSubtitle?.value?.trim() || 'See what you can create - no signup required',
+    character_subtitle: characterSubtitle?.value?.trim() || 'Demo Character',
+    character_description: characterDescription?.value?.trim() || 'Generate multiple images with the same character',
+    input_label: inputLabel?.value?.trim() || 'Describe the scene',
+    generate_button_text: generateButtonText?.value?.trim() || 'Generate',
+    conversion_heading: conversionHeading?.value?.trim() || 'Like what you see?',
+    benefits_list: benefitsList.length > 0 ? benefitsList : ['20 free credits every month', 'Choose from 50+ unique characters', 'Access NSFW content', 'Save and download your images'],
+    cta_button_text: ctaButtonText?.value?.trim() || 'Create Free Account',
+    exhausted_heading: exhaustedHeading?.value?.trim() || "You've used your free trials!",
+    exhausted_description: exhaustedDescription?.value?.trim() || 'Create a free account to continue generating amazing AI images.'
+  };
+
+  try {
+    const response = await fetch('/api/trial/admin/settings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${adminKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to save');
+    }
+
+    trialSettingsCache = data.settings;
+    showToast('Settings saved!', 'success');
+  } catch (error) {
+    showToast('Failed to save: ' + error.message, 'error');
+  }
+}
+
+// Opens image picker for trial preview image
+function openImagePickerForTrialPreview() {
+  openImagePicker((url) => {
+    const input = document.getElementById('trialPreviewImage');
+    const thumbContainer = document.getElementById('trialPreviewImageThumb');
+
+    if (input) input.value = url;
+    if (thumbContainer) {
+      thumbContainer.innerHTML = `<img src="${escapeHtml(url)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">`;
+    }
+
+    // Update cache
+    if (!trialSettingsCache) {
+      trialSettingsCache = { reference_images: [] };
+    }
+    trialSettingsCache.character_preview_image = url;
+
+    // Update live preview
+    updateTrialPreview();
+  });
+}
+
+// Opens image picker for trial reference images
+function openImagePickerForTrialReference() {
+  if (!trialSettingsCache) {
+    trialSettingsCache = { reference_images: [] };
+  }
+  if (!trialSettingsCache.reference_images) {
+    trialSettingsCache.reference_images = [];
+  }
+
+  if (trialSettingsCache.reference_images.length >= 5) {
+    showToast('Maximum 5 reference images allowed', 'error');
+    return;
+  }
+
+  openImagePicker((url) => {
+    addTrialReferenceImageUrl(url);
+  });
+}
+
+// Adds a reference image URL (called by picker)
+function addTrialReferenceImageUrl(url) {
+  if (!url) return;
+
+  if (!trialSettingsCache) {
+    trialSettingsCache = { reference_images: [] };
+  }
+
+  if (!trialSettingsCache.reference_images) {
+    trialSettingsCache.reference_images = [];
+  }
+
+  if (trialSettingsCache.reference_images.length >= 5) {
+    showToast('Maximum 5 reference images allowed', 'error');
+    return;
+  }
+
+  trialSettingsCache.reference_images.push(url);
+
+  // Re-render to show new image
+  showAdminLandingTab('trial');
+  showToast('Image added (save to apply)', 'info');
+}
+
+function removeTrialReferenceImage(index) {
+  if (!trialSettingsCache?.reference_images) return;
+
+  trialSettingsCache.reference_images.splice(index, 1);
+
+  // Re-render
+  showAdminLandingTab('trial');
+  showToast('Image removed (save to apply)', 'info');
+}
+
 
 // ===========================================
 // IMAGE LIBRARY SECTION
@@ -1851,3 +2690,16 @@ window.copyImageUrl = copyImageUrl;
 window.editImageMetadata = editImageMetadata;
 window.deleteLibraryImage = deleteLibraryImage;
 window.filterImageLibrary = filterImageLibrary;
+// Trial testing exports
+window.toggleTrialAdminBypass = toggleTrialAdminBypass;
+window.testTrialGeneration = testTrialGeneration;
+window.resetAllTrials = resetAllTrials;
+window.viewTrialStatus = viewTrialStatus;
+window.loadTrialSettings = loadTrialSettings;
+window.saveTrialSettings = saveTrialSettings;
+window.openImagePickerForTrialPreview = openImagePickerForTrialPreview;
+window.openImagePickerForTrialReference = openImagePickerForTrialReference;
+window.removeTrialReferenceImage = removeTrialReferenceImage;
+window.updateTrialPreview = updateTrialPreview;
+window.runTrialPreviewGeneration = runTrialPreviewGeneration;
+window.clearTrialPreviewResult = clearTrialPreviewResult;
