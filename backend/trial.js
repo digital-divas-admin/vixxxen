@@ -231,6 +231,22 @@ async function updateTrialRecord(ipAddress, fingerprint, existingRecord) {
  */
 router.get('/status', async (req, res) => {
   try {
+    // Check for admin bypass
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+    const isAdminBypass = adminKey && authHeader === `Bearer ${adminKey}`;
+
+    // If admin bypass is active, return unlimited trials
+    if (isAdminBypass || DEV_BYPASS_ENABLED) {
+      return res.json({
+        remaining: 999,
+        max: MAX_TRIALS_PER_USER,
+        used: 0,
+        canGenerate: true,
+        bypass: true
+      });
+    }
+
     const ipAddress = getClientIp(req);
     const fingerprint = req.query.fingerprint;
 

@@ -943,7 +943,14 @@ async function checkTrialStatus() {
       ? `/api/trial/status?fingerprint=${encodeURIComponent(trialFingerprint)}`
       : '/api/trial/status';
 
-    const response = await fetch(url);
+    // Include admin key if set (for testing bypass)
+    const headers = {};
+    const adminKey = localStorage.getItem('trialAdminKey');
+    if (adminKey) {
+      headers['Authorization'] = `Bearer ${adminKey}`;
+    }
+
+    const response = await fetch(url, { headers });
     if (response.ok) {
       const data = await response.json();
       trialRemaining = data.remaining;
