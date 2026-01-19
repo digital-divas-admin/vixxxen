@@ -433,10 +433,26 @@ router.post('/generate', async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Trial generation error', { error: error.message, requestId: req.id });
-    res.status(500).json({
-      error: 'Generation failed. Please try again.',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    logger.error('Trial generation error', { error: error.message, stack: error.stack, requestId: req.id });
+
+    // Provide specific error messages based on error type
+    let userMessage = 'Generation failed. Please try again.';
+    let statusCode = 500;
+
+    if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      userMessage = 'Image generation service not properly configured';
+      statusCode = 503;
+    } else if (error.message?.includes('429') || error.message?.includes('rate')) {
+      userMessage = 'Service is busy. Please try again in a moment.';
+      statusCode = 429;
+    } else if (error.message?.includes('No image')) {
+      userMessage = 'Image generation failed. Please try a different prompt.';
+    }
+
+    res.status(statusCode).json({
+      error: userMessage,
+      // Always include error details for debugging (remove in future if needed)
+      debug: error.message
     });
   }
 });
