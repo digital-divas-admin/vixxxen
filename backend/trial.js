@@ -6,9 +6,20 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { supabase } = require('./services/supabase');
-const { logger, logGeneration, maskIp } = require('./services/logger');
+const { logger, logGeneration } = require('./services/logger');
 
 const router = express.Router();
+
+// Helper to mask IP addresses for logging (e.g., "192.168.1.100" -> "192.168.x.x")
+function maskIp(ip) {
+  if (!ip) return 'unknown';
+  const parts = ip.split('.');
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.x.x`;
+  }
+  // IPv6 or other format - just show first part
+  return ip.substring(0, Math.min(ip.length, 10)) + '...';
+}
 
 // WaveSpeed API endpoint for Seedream 4.5
 const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
