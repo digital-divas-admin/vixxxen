@@ -10,9 +10,19 @@ const { logger, logGeneration, maskIp } = require('./services/logger');
 
 const router = express.Router();
 
-// OpenRouter API endpoint
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const SEEDREAM_MODEL = 'bytedance-seed/seedream-4.5';
+// WaveSpeed API endpoint for Seedream 4.5
+const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
+
+// Retry settings for rate limits
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000;
+
+// Development bypass mode (only works in non-production)
+const DEV_BYPASS_ENABLED = process.env.TRIAL_DEV_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+
+if (DEV_BYPASS_ENABLED) {
+  logger.warn('⚠️  TRIAL_DEV_BYPASS is enabled - rate limiting disabled for trials');
+}
 
 // Trial limits
 const MAX_TRIALS_PER_USER = 2;        // Max generations per IP/fingerprint
@@ -272,31 +282,39 @@ router.post('/generate', async (req, res) => {
       }
     }
 
-    if (!process.env.OPENROUTER_API_KEY) {
+    if (!process.env.WAVESPEED_API_KEY) {
       return res.status(500).json({ error: 'Generation service not configured' });
     }
 
     const ipAddress = getClientIp(req);
 
-    // Check global daily cap first
-    const globalCap = await checkGlobalDailyCap();
-    if (!globalCap.allowed) {
-      return res.status(429).json({
-        error: 'Trial generations are temporarily unavailable. Please try again tomorrow or create a free account.',
-        code: 'GLOBAL_CAP_REACHED'
-      });
-    }
+    // Skip rate limiting in dev bypass mode
+    let trialRecord = { generations_used: 0, isNew: true };
+    let remaining = MAX_TRIALS_PER_USER;
 
-    // Check user's trial limit
-    const trialRecord = await getTrialRecord(ipAddress, fingerprint);
-    const remaining = MAX_TRIALS_PER_USER - trialRecord.generations_used;
+    if (!DEV_BYPASS_ENABLED) {
+      // Check global daily cap first
+      const globalCap = await checkGlobalDailyCap();
+      if (!globalCap.allowed) {
+        return res.status(429).json({
+          error: 'Trial generations are temporarily unavailable. Please try again tomorrow or create a free account.',
+          code: 'GLOBAL_CAP_REACHED'
+        });
+      }
 
-    if (remaining <= 0) {
-      return res.status(429).json({
-        error: 'You\'ve used all your free trials. Create a free account to continue generating!',
-        code: 'TRIAL_LIMIT_REACHED',
-        remaining: 0
-      });
+      // Check user's trial limit
+      trialRecord = await getTrialRecord(ipAddress, fingerprint);
+      remaining = MAX_TRIALS_PER_USER - trialRecord.generations_used;
+
+      if (remaining <= 0) {
+        return res.status(429).json({
+          error: 'You\'ve used all your free trials. Create a free account to continue generating!',
+          code: 'TRIAL_LIMIT_REACHED',
+          remaining: 0
+        });
+      }
+    } else {
+      logger.info('Trial dev bypass: skipping rate limit check', { ip: maskIp(ipAddress) });
     }
 
     logGeneration('trial', 'started', { ip: maskIp(ipAddress), promptLength: prompt.length, remaining: remaining - 1, requestId: req.id });
@@ -304,21 +322,46 @@ router.post('/generate', async (req, res) => {
     // Build the generation prompt with demo character
     const fullPrompt = `${DEMO_CHARACTER.system_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
 
-    // Call OpenRouter API
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.FRONTEND_URL || 'https://www.digitaldivas.ai',
-        'X-Title': 'DivaForge Trial'
-      },
-      body: JSON.stringify({
-        model: SEEDREAM_MODEL,
-        messages: [{ role: 'user', content: fullPrompt }],
-        modalities: ['image', 'text']
-      })
-    });
+    // Call WaveSpeed API with retry logic
+    let response;
+    let lastError;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        response = await fetch(WAVESPEED_TEXT2IMG_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prompt: fullPrompt,
+            size: '1024*1024',
+            enable_base64_output: true,
+            enable_sync_mode: true
+          })
+        });
+
+        if (response.status === 429 && attempt < MAX_RETRIES) {
+          const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+          logger.info(`Trial rate limited, retrying in ${backoffMs}ms`, { attempt: attempt + 1, requestId: req.id });
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt < MAX_RETRIES) {
+          const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        }
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error('Failed to connect to generation service');
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -333,53 +376,48 @@ router.post('/generate', async (req, res) => {
 
     const result = await response.json();
 
-    // Extract image from response
+    // Extract image from WaveSpeed response
     let imageUrl = null;
-    const message = result.choices[0]?.message;
 
-    // Method 1: Check message.images array
-    if (message?.images && message.images.length > 0) {
-      imageUrl = message.images[0].image_url?.url || message.images[0].url;
-    }
-
-    // Method 2: Check content as array of parts
-    if (!imageUrl && Array.isArray(message?.content)) {
-      for (const part of message.content) {
-        if (part.inline_data?.data) {
-          const mimeType = part.inline_data.mime_type || 'image/png';
-          imageUrl = `data:${mimeType};base64,${part.inline_data.data}`;
-          break;
-        }
-        if (part.type === 'image_url' && part.image_url?.url) {
-          imageUrl = part.image_url.url;
-          break;
-        }
+    // WaveSpeed sync mode returns images in data.outputs array
+    if (result.data?.outputs && result.data.outputs.length > 0) {
+      const output = result.data.outputs[0];
+      if (typeof output === 'string') {
+        // Data URL or URL string
+        imageUrl = output;
+      } else if (output.url) {
+        imageUrl = output.url;
+      } else if (output.base64) {
+        imageUrl = `data:image/png;base64,${output.base64}`;
       }
     }
 
-    // Method 3: Check content as string for base64 data
-    if (!imageUrl && message?.content && typeof message.content === 'string') {
-      const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-      if (base64Match) {
-        imageUrl = base64Match[0];
+    // Fallback: check alternative response formats
+    if (!imageUrl && result.data?.url) {
+      imageUrl = result.data.url;
+    }
+    if (!imageUrl && result.data?.base64) {
+      imageUrl = `data:image/png;base64,${result.data.base64}`;
+    }
+    if (!imageUrl && result.outputs && result.outputs.length > 0) {
+      const output = result.outputs[0];
+      if (typeof output === 'string') {
+        imageUrl = output.startsWith('http') ? output : `data:image/png;base64,${output}`;
       }
     }
 
     if (!imageUrl) {
-      // Check if content was filtered
-      if (result.choices[0]?.finish_reason === 'content_filter') {
-        return res.status(400).json({
-          error: 'Content was filtered. Please try a different prompt.'
-        });
-      }
+      logger.error('No image in WaveSpeed response', { response: JSON.stringify(result).substring(0, 500), requestId: req.id });
       throw new Error('No image in response');
     }
 
-    // Update trial tracking
-    await updateTrialRecord(ipAddress, fingerprint, trialRecord);
-    await incrementGlobalDailyCap();
+    // Update trial tracking (skip in dev bypass mode)
+    if (!DEV_BYPASS_ENABLED) {
+      await updateTrialRecord(ipAddress, fingerprint, trialRecord);
+      await incrementGlobalDailyCap();
+    }
 
-    logGeneration('trial', 'completed', { requestId: req.id });
+    logGeneration('trial', 'completed', { requestId: req.id, devBypass: DEV_BYPASS_ENABLED });
 
     res.json({
       success: true,
@@ -450,6 +488,113 @@ router.post('/analytics', express.text({ type: '*/*' }), async (req, res) => {
   } catch (error) {
     // Always return 200 for analytics - don't break user experience
     res.status(200).send('ok');
+  }
+});
+
+/**
+ * POST /api/trial/admin/reset
+ * Reset trial records for testing/support purposes
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.post('/admin/reset', async (req, res) => {
+  try {
+    // Check admin key
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey) {
+      return res.status(503).json({ error: 'Admin endpoint not configured' });
+    }
+
+    if (!authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { ip, fingerprint, clearAll } = req.body;
+
+    if (!supabase) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+
+    let deletedCount = 0;
+
+    if (clearAll === true) {
+      // Clear all trial records from the past 7 days
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() - TRIAL_WINDOW_DAYS);
+
+      const { data, error } = await supabase
+        .from('trial_generations')
+        .delete()
+        .gte('created_at', windowStart.toISOString())
+        .select();
+
+      if (error) {
+        throw error;
+      }
+      deletedCount = data?.length || 0;
+      logger.info('Admin: cleared all recent trial records', { deletedCount });
+    } else if (ip || fingerprint) {
+      // Clear specific IP or fingerprint
+      let query = supabase.from('trial_generations').delete();
+
+      if (ip && fingerprint) {
+        query = query.or(`ip_address.eq.${ip},fingerprint.eq.${fingerprint}`);
+      } else if (ip) {
+        query = query.eq('ip_address', ip);
+      } else if (fingerprint) {
+        query = query.eq('fingerprint', fingerprint);
+      }
+
+      const { data, error } = await query.select();
+
+      if (error) {
+        throw error;
+      }
+      deletedCount = data?.length || 0;
+      logger.info('Admin: cleared trial records', { ip: ip ? maskIp(ip) : null, fingerprint: fingerprint ? '***' : null, deletedCount });
+    } else {
+      return res.status(400).json({ error: 'Provide ip, fingerprint, or clearAll: true' });
+    }
+
+    res.json({
+      success: true,
+      deletedCount,
+      message: `Cleared ${deletedCount} trial record(s)`
+    });
+  } catch (error) {
+    logger.error('Admin reset error', { error: error.message });
+    res.status(500).json({ error: 'Failed to reset trial records' });
+  }
+});
+
+/**
+ * GET /api/trial/admin/status
+ * Get trial system status (for debugging)
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.get('/admin/status', async (req, res) => {
+  try {
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey || !authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const globalCap = await checkGlobalDailyCap();
+
+    res.json({
+      devBypassEnabled: DEV_BYPASS_ENABLED,
+      maxTrialsPerUser: MAX_TRIALS_PER_USER,
+      trialWindowDays: TRIAL_WINDOW_DAYS,
+      globalDailyCap: GLOBAL_DAILY_CAP,
+      todayUsage: globalCap,
+      wavespeedConfigured: !!process.env.WAVESPEED_API_KEY
+    });
+  } catch (error) {
+    logger.error('Admin status error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get status' });
   }
 });
 
