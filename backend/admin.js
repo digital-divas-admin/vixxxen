@@ -334,7 +334,7 @@ router.get('/users/:userId/characters', async (req, res) => {
     // Get user's owned character IDs
     const { data: userChars, error: userCharsError } = await supabase
       .from('user_characters')
-      .select('id, character_id, purchased_at, amount_paid')
+      .select('id, character_id, purchased_at, amount_paid, purchase_type, granted_by, notes')
       .eq('user_id', userId);
 
     if (userCharsError) {
@@ -366,6 +366,9 @@ router.get('/users/:userId/characters', async (req, res) => {
       id: uc.id,
       purchased_at: uc.purchased_at,
       amount_paid: uc.amount_paid,
+      purchase_type: uc.purchase_type || (uc.amount_paid === 0 ? 'admin_grant' : 'purchase'),
+      granted_by: uc.granted_by,
+      notes: uc.notes,
       character: charMap[uc.character_id] || { id: uc.character_id, name: 'Unknown', category: 'Unknown' }
     }));
 
@@ -414,7 +417,7 @@ router.get('/characters', async (req, res) => {
  */
 router.post('/grant-character', async (req, res) => {
   try {
-    const { userId, characterId } = req.body;
+    const { userId, characterId, notes } = req.body;
 
     if (!userId || !characterId) {
       return res.status(400).json({ error: 'userId and characterId are required' });
@@ -422,6 +425,38 @@ router.post('/grant-character', async (req, res) => {
 
     if (!supabase) {
       return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Validate character exists
+    const { data: character, error: charError } = await supabase
+      .from('marketplace_characters')
+      .select('id, name')
+      .eq('id', characterId)
+      .maybeSingle();
+
+    if (charError) {
+      logger.error('Check character error', { error: charError.message, characterId, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to verify character', details: charError.message });
+    }
+
+    if (!character) {
+      return res.status(404).json({ error: 'Character not found', characterId });
+    }
+
+    // Validate user exists
+    const { data: user, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userError) {
+      logger.error('Check user error', { error: userError.message, userId, requestId: req.id });
+      return res.status(500).json({ error: 'Failed to verify user', details: userError.message });
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found', userId });
     }
 
     // Check if already granted (use maybeSingle to avoid error when no row exists)
@@ -434,42 +469,58 @@ router.post('/grant-character', async (req, res) => {
 
     if (checkError) {
       logger.error('Check existing grant error', { error: checkError.message, requestId: req.id });
-      return res.status(500).json({ error: 'Failed to check existing access' });
+      return res.status(500).json({ error: 'Failed to check existing access', details: checkError.message });
     }
 
     if (existing) {
       return res.status(400).json({ error: 'User already has access to this character' });
     }
 
-    // Grant access (amount_paid = 0 indicates admin grant)
+    // Grant access with purchase_type tracking
     const { data, error } = await supabase
       .from('user_characters')
       .insert({
         user_id: userId,
         character_id: characterId,
-        amount_paid: 0
+        amount_paid: 0,
+        purchase_type: 'admin_grant',
+        granted_by: req.userId,
+        notes: notes || null
       })
       .select()
       .single();
 
     if (error) {
-      logger.error('Grant character error', { error: error.message, requestId: req.id });
-      return res.status(500).json({ error: 'Failed to grant character access', details: error.message });
+      logger.error('Grant character error', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        userId,
+        characterId,
+        requestId: req.id
+      });
+      return res.status(500).json({
+        error: 'Failed to grant character access',
+        details: error.message,
+        code: error.code
+      });
     }
 
     logAdminAction(req.user.email, 'Granted character access', {
       characterId,
+      characterName: character.name,
       userId: maskUserId(userId)
     });
 
     res.json({
       success: true,
-      message: 'Character access granted',
+      message: `Character "${character.name}" access granted`,
       grant: data
     });
   } catch (error) {
-    logger.error('Grant character error', { error: error.message, requestId: req.id });
-    res.status(500).json({ error: 'Failed to grant character access' });
+    logger.error('Grant character error', { error: error.message, stack: error.stack, requestId: req.id });
+    res.status(500).json({ error: 'Failed to grant character access', details: error.message });
   }
 });
 
