@@ -651,16 +651,16 @@ function renderTrialCharacterSettings() {
     reference_images: []
   };
 
-  const characterOptions = trialCharactersCache.map(c =>
-    `<option value="${c.id}" ${settings.character_id === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
-  ).join('');
-
   const referenceImagesHtml = (settings.reference_images || []).map((img, idx) => `
     <div class="trial-ref-image" style="position: relative; width: 100px; height: 100px;">
-      <img src="${escapeHtml(img)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+      <img src="${escapeHtml(img)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text fill=%22%23666%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22>Error</text></svg>'">
       <button onclick="removeTrialReferenceImage(${idx})" style="position: absolute; top: -8px; right: -8px; background: #ff4444; border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px;">×</button>
     </div>
   `).join('');
+
+  const previewImageHtml = settings.character_preview_image
+    ? `<img src="${escapeHtml(settings.character_preview_image)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">`
+    : `<div style="width: 80px; height: 80px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.8rem;">No image</div>`;
 
   return `
     <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -670,26 +670,27 @@ function renderTrialCharacterSettings() {
       </p>
 
       <div id="trialSettingsForm">
-        <div class="admin-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div class="admin-form-group">
-            <label>Select Character</label>
-            <select id="trialCharacterSelect" class="admin-input" onchange="onTrialCharacterSelect()">
-              <option value="">Custom Character</option>
-              ${characterOptions}
-            </select>
-          </div>
-          <div class="admin-form-group">
-            <label>Character Name</label>
-            <input type="text" id="trialCharacterName" class="admin-input" value="${escapeHtml(settings.character_name || '')}" placeholder="e.g. Luna">
-          </div>
+        <div class="admin-form-group">
+          <label>Character Name</label>
+          <input type="text" id="trialCharacterName" class="admin-input" value="${escapeHtml(settings.character_name || '')}" placeholder="e.g. Luna">
         </div>
 
         <div class="admin-form-group">
-          <label>Preview Image URL</label>
+          <label>Preview Image</label>
           <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
-            Image shown in the trial modal header (optional)
+            Profile picture shown in the trial modal header
           </p>
-          <input type="text" id="trialPreviewImage" class="admin-input" value="${escapeHtml(settings.character_preview_image || '')}" placeholder="https://...">
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div id="trialPreviewImageThumb">
+              ${previewImageHtml}
+            </div>
+            <div style="flex: 1;">
+              <input type="text" id="trialPreviewImage" class="admin-input" value="${escapeHtml(settings.character_preview_image || '')}" placeholder="Image URL..." style="margin-bottom: 8px;">
+              <button class="admin-btn admin-btn--secondary" onclick="openImagePickerForTrialPreview()" style="width: 100%;">
+                📁 Select from Library
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="admin-form-group">
@@ -711,15 +712,14 @@ function renderTrialCharacterSettings() {
         <div class="admin-form-group">
           <label>Reference Images (for consistent character)</label>
           <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
-            Add up to 3 reference images. These are sent to Seedream for img2img to ensure character consistency.
+            Add up to 5 reference images from the library. These are sent to Seedream for img2img to ensure character consistency.
           </p>
-          <div id="trialReferenceImages" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
-            ${referenceImagesHtml || '<span style="color: #666;">No reference images configured</span>'}
+          <div id="trialReferenceImages" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+            ${referenceImagesHtml || '<span style="color: #666; display: flex; align-items: center; justify-content: center; width: 100%;">No reference images configured</span>'}
           </div>
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <input type="text" id="trialNewRefImage" class="admin-input" style="flex: 1;" placeholder="Paste image URL...">
-            <button class="admin-btn admin-btn--secondary" onclick="addTrialReferenceImage()">Add</button>
-          </div>
+          <button class="admin-btn admin-btn--secondary" onclick="openImagePickerForTrialReference()" ${(settings.reference_images || []).length >= 5 ? 'disabled style="opacity: 0.5;"' : ''}>
+            📁 Add from Library ${(settings.reference_images || []).length >= 5 ? '(Max 5 reached)' : `(${(settings.reference_images || []).length}/5)`}
+          </button>
         </div>
 
         <div style="margin-top: 20px; display: flex; gap: 12px;">
@@ -952,19 +952,47 @@ async function saveTrialSettings() {
   }
 }
 
-function addTrialReferenceImage() {
-  const input = document.getElementById('trialNewRefImage');
-  const url = input?.value?.trim();
+// Opens image picker for trial preview image
+function openImagePickerForTrialPreview() {
+  openImagePicker((url) => {
+    const input = document.getElementById('trialPreviewImage');
+    const thumbContainer = document.getElementById('trialPreviewImageThumb');
 
-  if (!url) {
-    showToast('Enter an image URL', 'error');
+    if (input) input.value = url;
+    if (thumbContainer) {
+      thumbContainer.innerHTML = `<img src="${escapeHtml(url)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">`;
+    }
+
+    // Update cache
+    if (!trialSettingsCache) {
+      trialSettingsCache = { reference_images: [] };
+    }
+    trialSettingsCache.character_preview_image = url;
+  });
+}
+
+// Opens image picker for trial reference images
+function openImagePickerForTrialReference() {
+  if (!trialSettingsCache) {
+    trialSettingsCache = { reference_images: [] };
+  }
+  if (!trialSettingsCache.reference_images) {
+    trialSettingsCache.reference_images = [];
+  }
+
+  if (trialSettingsCache.reference_images.length >= 5) {
+    showToast('Maximum 5 reference images allowed', 'error');
     return;
   }
 
-  if (!url.startsWith('http') && !url.startsWith('data:')) {
-    showToast('Invalid URL format', 'error');
-    return;
-  }
+  openImagePicker((url) => {
+    addTrialReferenceImageUrl(url);
+  });
+}
+
+// Adds a reference image URL (called by picker)
+function addTrialReferenceImageUrl(url) {
+  if (!url) return;
 
   if (!trialSettingsCache) {
     trialSettingsCache = { reference_images: [] };
@@ -974,13 +1002,12 @@ function addTrialReferenceImage() {
     trialSettingsCache.reference_images = [];
   }
 
-  if (trialSettingsCache.reference_images.length >= 3) {
-    showToast('Maximum 3 reference images allowed', 'error');
+  if (trialSettingsCache.reference_images.length >= 5) {
+    showToast('Maximum 5 reference images allowed', 'error');
     return;
   }
 
   trialSettingsCache.reference_images.push(url);
-  input.value = '';
 
   // Re-render to show new image
   showAdminLandingTab('trial');
@@ -997,26 +1024,6 @@ function removeTrialReferenceImage(index) {
   showToast('Image removed (save to apply)', 'info');
 }
 
-function onTrialCharacterSelect() {
-  const select = document.getElementById('trialCharacterSelect');
-  const characterId = select?.value;
-
-  if (characterId && trialCharactersCache.length > 0) {
-    const character = trialCharactersCache.find(c => c.id === characterId);
-    if (character) {
-      // Auto-fill character name and preview image
-      const nameInput = document.getElementById('trialCharacterName');
-      const previewInput = document.getElementById('trialPreviewImage');
-
-      if (nameInput) nameInput.value = character.name;
-      if (previewInput && character.avatar_url) {
-        previewInput.value = character.avatar_url;
-      } else if (previewInput && character.profile_image_url) {
-        previewInput.value = character.profile_image_url;
-      }
-    }
-  }
-}
 
 // ===========================================
 // IMAGE LIBRARY SECTION
@@ -2322,6 +2329,6 @@ window.resetAllTrials = resetAllTrials;
 window.viewTrialStatus = viewTrialStatus;
 window.loadTrialSettings = loadTrialSettings;
 window.saveTrialSettings = saveTrialSettings;
-window.addTrialReferenceImage = addTrialReferenceImage;
+window.openImagePickerForTrialPreview = openImagePickerForTrialPreview;
+window.openImagePickerForTrialReference = openImagePickerForTrialReference;
 window.removeTrialReferenceImage = removeTrialReferenceImage;
-window.onTrialCharacterSelect = onTrialCharacterSelect;
