@@ -650,7 +650,19 @@ function renderTrialCharacterSettings() {
     character_preview_image: '',
     base_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality',
     placeholder_text: 'e.g. wearing a red dress, walking in a park at golden hour...',
-    reference_images: []
+    reference_images: [],
+    // Modal text defaults
+    modal_title: 'Try AI Image Generation',
+    modal_subtitle: 'See what you can create - no signup required',
+    character_subtitle: 'Demo Character',
+    character_description: 'Generate multiple images with the same character',
+    input_label: 'Describe the scene',
+    generate_button_text: 'Generate',
+    conversion_heading: 'Like what you see?',
+    benefits_list: ['20 free credits every month', 'Choose from 50+ unique characters', 'Access NSFW content', 'Save and download your images'],
+    cta_button_text: 'Create Free Account',
+    exhausted_heading: "You've used your free trials!",
+    exhausted_description: 'Create a free account to continue generating amazing AI images.'
   };
 
   const referenceImagesHtml = (settings.reference_images || []).map((img, idx) => `
@@ -724,6 +736,83 @@ function renderTrialCharacterSettings() {
           </button>
         </div>
 
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <h4 style="margin: 0 0 16px; color: #fff;">Modal Text Customization</h4>
+          <p style="color: #888; margin-bottom: 20px; font-size: 0.9rem;">
+            Customize all text shown in the trial popup modal.
+          </p>
+
+          <div class="admin-form-group">
+            <label>Modal Title</label>
+            <input type="text" id="trialModalTitle" class="admin-input" value="${escapeHtml(settings.modal_title || '')}" placeholder="Try AI Image Generation" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Modal Subtitle</label>
+            <input type="text" id="trialModalSubtitle" class="admin-input" value="${escapeHtml(settings.modal_subtitle || '')}" placeholder="See what you can create - no signup required" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Character Subtitle</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Text shown after character name (e.g. "Luna - Demo Character")
+            </p>
+            <input type="text" id="trialCharacterSubtitle" class="admin-input" value="${escapeHtml(settings.character_subtitle || '')}" placeholder="Demo Character" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Character Description</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Description shown below the character name
+            </p>
+            <input type="text" id="trialCharacterDescription" class="admin-input" value="${escapeHtml(settings.character_description || '')}" placeholder="Generate multiple images with the same character" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Input Label</label>
+            <input type="text" id="trialInputLabel" class="admin-input" value="${escapeHtml(settings.input_label || '')}" placeholder="Describe the scene" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Generate Button Text</label>
+            <input type="text" id="trialGenerateButtonText" class="admin-input" value="${escapeHtml(settings.generate_button_text || '')}" placeholder="Generate" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Conversion Heading</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Heading shown above the benefits list
+            </p>
+            <input type="text" id="trialConversionHeading" class="admin-input" value="${escapeHtml(settings.conversion_heading || '')}" placeholder="Like what you see?" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Benefits List</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              One benefit per line (shows as bullet points)
+            </p>
+            <textarea id="trialBenefitsList" class="admin-input" rows="4" placeholder="20 free credits every month&#10;Choose from 50+ unique characters&#10;Access NSFW content&#10;Save and download your images" oninput="updateTrialPreview()">${escapeHtml((settings.benefits_list || []).join('\n'))}</textarea>
+          </div>
+
+          <div class="admin-form-group">
+            <label>CTA Button Text</label>
+            <input type="text" id="trialCtaButtonText" class="admin-input" value="${escapeHtml(settings.cta_button_text || '')}" placeholder="Create Free Account" oninput="updateTrialPreview()">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Exhausted Heading</label>
+            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+              Shown when user has used all their trials
+            </p>
+            <input type="text" id="trialExhaustedHeading" class="admin-input" value="${escapeHtml(settings.exhausted_heading || '')}" placeholder="You've used your free trials!">
+          </div>
+
+          <div class="admin-form-group">
+            <label>Exhausted Description</label>
+            <input type="text" id="trialExhaustedDescription" class="admin-input" value="${escapeHtml(settings.exhausted_description || '')}" placeholder="Create a free account to continue generating amazing AI images.">
+          </div>
+        </div>
+
         <div style="margin-top: 20px; display: flex; gap: 12px;">
           <button class="admin-btn admin-btn--primary" onclick="saveTrialSettings()">Save Settings</button>
           <button class="admin-btn admin-btn--secondary" onclick="loadTrialSettings()">Refresh</button>
@@ -739,13 +828,25 @@ function renderTrialModalPreview() {
     character_preview_image: '',
     base_prompt: '',
     placeholder_text: 'e.g. wearing a red dress at sunset...',
-    reference_images: []
+    reference_images: [],
+    modal_title: 'Try AI Image Generation',
+    modal_subtitle: 'See what you can create - no signup required',
+    character_subtitle: 'Demo Character',
+    character_description: 'Generate multiple images with the same character',
+    input_label: 'Describe the scene',
+    generate_button_text: 'Generate'
   };
 
   const characterName = settings.character_name || 'Luna';
   const previewImage = settings.character_preview_image;
   const placeholderText = settings.placeholder_text || 'e.g. wearing a red dress at sunset...';
   const refImageCount = (settings.reference_images || []).length;
+  const modalTitle = settings.modal_title || 'Try AI Image Generation';
+  const modalSubtitle = settings.modal_subtitle || 'See what you can create - no signup required';
+  const characterSubtitle = settings.character_subtitle || 'Demo Character';
+  const characterDescription = settings.character_description || 'Generate multiple images with the same character';
+  const inputLabel = settings.input_label || 'Describe the scene';
+  const generateButtonText = settings.generate_button_text || 'Generate';
 
   const characterImageHtml = previewImage
     ? `<img src="${escapeHtml(previewImage)}" alt="${escapeHtml(characterName)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`
@@ -761,8 +862,8 @@ function renderTrialModalPreview() {
       <div id="trialPreviewContainer" style="background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.1);">
         <!-- Modal Header -->
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="margin: 0 0 8px; font-size: 1.4rem; color: #fff;">Try AI Image Generation</h2>
-          <p style="margin: 0; color: #888; font-size: 0.9rem;">See what you can create - no signup required</p>
+          <h2 id="trialPreviewTitle" style="margin: 0 0 8px; font-size: 1.4rem; color: #fff;">${escapeHtml(modalTitle)}</h2>
+          <p id="trialPreviewSubtitle" style="margin: 0; color: #888; font-size: 0.9rem;">${escapeHtml(modalSubtitle)}</p>
         </div>
 
         <!-- Character Info -->
@@ -771,14 +872,14 @@ function renderTrialModalPreview() {
             ${characterImageHtml}
           </div>
           <div>
-            <div id="trialPreviewCharName" style="font-weight: 600; color: #fff; font-size: 1.1rem;">${escapeHtml(characterName)} - Demo Character</div>
-            <div style="color: #888; font-size: 0.85rem;">Generate multiple images with the same character</div>
+            <div id="trialPreviewCharName" style="font-weight: 600; color: #fff; font-size: 1.1rem;">${escapeHtml(characterName)} - ${escapeHtml(characterSubtitle)}</div>
+            <div id="trialPreviewCharDesc" style="color: #888; font-size: 0.85rem;">${escapeHtml(characterDescription)}</div>
           </div>
         </div>
 
         <!-- Prompt Form -->
         <div style="margin-bottom: 16px;">
-          <label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem;">Describe the scene</label>
+          <label id="trialPreviewInputLabel" style="display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem;">${escapeHtml(inputLabel)}</label>
           <textarea
             id="trialPreviewPrompt"
             style="width: 100%; min-height: 80px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95rem; resize: vertical; box-sizing: border-box;"
@@ -793,7 +894,7 @@ function renderTrialModalPreview() {
             onclick="runTrialPreviewGeneration()"
             style="background: linear-gradient(135deg, #ff2ebb 0%, #ff6b6b 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
           >
-            Generate
+            ${escapeHtml(generateButtonText)}
           </button>
         </div>
 
@@ -840,11 +941,37 @@ function updateTrialPreview() {
   const nameInput = document.getElementById('trialCharacterName');
   const previewImageInput = document.getElementById('trialPreviewImage');
   const placeholderInput = document.getElementById('trialPlaceholderText');
+  const modalTitleInput = document.getElementById('trialModalTitle');
+  const modalSubtitleInput = document.getElementById('trialModalSubtitle');
+  const characterSubtitleInput = document.getElementById('trialCharacterSubtitle');
+  const characterDescriptionInput = document.getElementById('trialCharacterDescription');
+  const inputLabelInput = document.getElementById('trialInputLabel');
+  const generateButtonTextInput = document.getElementById('trialGenerateButtonText');
 
-  // Update character name
+  // Update modal title
+  const previewTitle = document.getElementById('trialPreviewTitle');
+  if (previewTitle && modalTitleInput) {
+    previewTitle.textContent = modalTitleInput.value || 'Try AI Image Generation';
+  }
+
+  // Update modal subtitle
+  const previewSubtitle = document.getElementById('trialPreviewSubtitle');
+  if (previewSubtitle && modalSubtitleInput) {
+    previewSubtitle.textContent = modalSubtitleInput.value || 'See what you can create - no signup required';
+  }
+
+  // Update character name with subtitle
   const previewName = document.getElementById('trialPreviewCharName');
   if (previewName && nameInput) {
-    previewName.textContent = (nameInput.value || 'Luna') + ' - Demo Character';
+    const characterName = nameInput.value || 'Luna';
+    const characterSubtitle = characterSubtitleInput?.value || 'Demo Character';
+    previewName.textContent = characterName + ' - ' + characterSubtitle;
+  }
+
+  // Update character description
+  const previewCharDesc = document.getElementById('trialPreviewCharDesc');
+  if (previewCharDesc && characterDescriptionInput) {
+    previewCharDesc.textContent = characterDescriptionInput.value || 'Generate multiple images with the same character';
   }
 
   // Update character image
@@ -858,11 +985,19 @@ function updateTrialPreview() {
     }
   }
 
+  // Update input label
+  const previewInputLabel = document.getElementById('trialPreviewInputLabel');
+  if (previewInputLabel && inputLabelInput) {
+    previewInputLabel.textContent = inputLabelInput.value || 'Describe the scene';
+  }
+
   // Update placeholder text
   const previewPrompt = document.getElementById('trialPreviewPrompt');
   if (previewPrompt && placeholderInput) {
     previewPrompt.placeholder = placeholderInput.value || 'e.g. wearing a red dress at sunset...';
   }
+
+  // Note: Generate button text doesn't have an id in preview, would need a re-render
 }
 
 // Run generation from the preview
@@ -1120,13 +1255,44 @@ async function saveTrialSettings() {
   const basePrompt = document.getElementById('trialBasePrompt');
   const placeholderText = document.getElementById('trialPlaceholderText');
 
+  // Modal text fields
+  const modalTitle = document.getElementById('trialModalTitle');
+  const modalSubtitle = document.getElementById('trialModalSubtitle');
+  const characterSubtitle = document.getElementById('trialCharacterSubtitle');
+  const characterDescription = document.getElementById('trialCharacterDescription');
+  const inputLabel = document.getElementById('trialInputLabel');
+  const generateButtonText = document.getElementById('trialGenerateButtonText');
+  const conversionHeading = document.getElementById('trialConversionHeading');
+  const benefitsListText = document.getElementById('trialBenefitsList');
+  const ctaButtonText = document.getElementById('trialCtaButtonText');
+  const exhaustedHeading = document.getElementById('trialExhaustedHeading');
+  const exhaustedDescription = document.getElementById('trialExhaustedDescription');
+
+  // Parse benefits list from textarea (one per line)
+  const benefitsList = (benefitsListText?.value || '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
   const settings = {
     character_id: characterSelect?.value || null,
     character_name: characterName?.value?.trim() || 'Luna',
     character_preview_image: previewImage?.value?.trim() || null,
     base_prompt: basePrompt?.value?.trim() || '',
     placeholder_text: placeholderText?.value?.trim() || '',
-    reference_images: trialSettingsCache?.reference_images || []
+    reference_images: trialSettingsCache?.reference_images || [],
+    // Modal text customization
+    modal_title: modalTitle?.value?.trim() || 'Try AI Image Generation',
+    modal_subtitle: modalSubtitle?.value?.trim() || 'See what you can create - no signup required',
+    character_subtitle: characterSubtitle?.value?.trim() || 'Demo Character',
+    character_description: characterDescription?.value?.trim() || 'Generate multiple images with the same character',
+    input_label: inputLabel?.value?.trim() || 'Describe the scene',
+    generate_button_text: generateButtonText?.value?.trim() || 'Generate',
+    conversion_heading: conversionHeading?.value?.trim() || 'Like what you see?',
+    benefits_list: benefitsList.length > 0 ? benefitsList : ['20 free credits every month', 'Choose from 50+ unique characters', 'Access NSFW content', 'Save and download your images'],
+    cta_button_text: ctaButtonText?.value?.trim() || 'Create Free Account',
+    exhausted_heading: exhaustedHeading?.value?.trim() || "You've used your free trials!",
+    exhausted_description: exhaustedDescription?.value?.trim() || 'Create a free account to continue generating amazing AI images.'
   };
 
   try {

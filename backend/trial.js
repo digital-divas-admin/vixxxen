@@ -48,7 +48,24 @@ const DEFAULT_TRIAL_SETTINGS = {
   base_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality',
   placeholder_text: 'e.g. wearing a red dress, walking in a park at golden hour...',
   reference_images: [],
-  enabled: true
+  enabled: true,
+  // Modal text customization
+  modal_title: 'Try AI Image Generation',
+  modal_subtitle: 'See what you can create - no signup required',
+  character_subtitle: 'Demo Character',
+  character_description: 'Generate multiple images with the same character',
+  input_label: 'Describe the scene',
+  generate_button_text: 'Generate',
+  conversion_heading: 'Like what you see?',
+  benefits_list: [
+    '20 free credits every month',
+    'Choose from 50+ unique characters',
+    'Access NSFW content',
+    'Save and download your images'
+  ],
+  cta_button_text: 'Create Free Account',
+  exhausted_heading: "You've used your free trials!",
+  exhausted_description: 'Create a free account to continue generating amazing AI images.'
 };
 
 /**
@@ -79,7 +96,19 @@ async function getTrialSettings() {
       base_prompt: data.base_prompt ?? DEFAULT_TRIAL_SETTINGS.base_prompt,
       placeholder_text: data.placeholder_text ?? DEFAULT_TRIAL_SETTINGS.placeholder_text,
       reference_images: data.reference_images ?? [],
-      enabled: data.enabled !== false
+      enabled: data.enabled !== false,
+      // Modal text customization
+      modal_title: data.modal_title ?? DEFAULT_TRIAL_SETTINGS.modal_title,
+      modal_subtitle: data.modal_subtitle ?? DEFAULT_TRIAL_SETTINGS.modal_subtitle,
+      character_subtitle: data.character_subtitle ?? DEFAULT_TRIAL_SETTINGS.character_subtitle,
+      character_description: data.character_description ?? DEFAULT_TRIAL_SETTINGS.character_description,
+      input_label: data.input_label ?? DEFAULT_TRIAL_SETTINGS.input_label,
+      generate_button_text: data.generate_button_text ?? DEFAULT_TRIAL_SETTINGS.generate_button_text,
+      conversion_heading: data.conversion_heading ?? DEFAULT_TRIAL_SETTINGS.conversion_heading,
+      benefits_list: data.benefits_list ?? DEFAULT_TRIAL_SETTINGS.benefits_list,
+      cta_button_text: data.cta_button_text ?? DEFAULT_TRIAL_SETTINGS.cta_button_text,
+      exhausted_heading: data.exhausted_heading ?? DEFAULT_TRIAL_SETTINGS.exhausted_heading,
+      exhausted_description: data.exhausted_description ?? DEFAULT_TRIAL_SETTINGS.exhausted_description
     };
   } catch (error) {
     logger.error('Error fetching trial settings', { error: error.message });
@@ -312,13 +341,25 @@ router.get('/config', async (req, res) => {
   try {
     const settings = await getTrialSettings();
 
-    // Return only what the frontend needs (don't expose reference images URLs)
+    // Return only what the frontend needs (don't expose reference images URLs or base_prompt)
     res.json({
       enabled: settings.enabled,
       characterName: settings.character_name,
       characterPreviewImage: settings.character_preview_image,
       placeholderText: settings.placeholder_text,
-      hasReferenceImages: settings.reference_images && settings.reference_images.length > 0
+      hasReferenceImages: settings.reference_images && settings.reference_images.length > 0,
+      // Modal text customization
+      modalTitle: settings.modal_title,
+      modalSubtitle: settings.modal_subtitle,
+      characterSubtitle: settings.character_subtitle,
+      characterDescription: settings.character_description,
+      inputLabel: settings.input_label,
+      generateButtonText: settings.generate_button_text,
+      conversionHeading: settings.conversion_heading,
+      benefitsList: settings.benefits_list,
+      ctaButtonText: settings.cta_button_text,
+      exhaustedHeading: settings.exhausted_heading,
+      exhaustedDescription: settings.exhausted_description
     });
   } catch (error) {
     logger.error('Trial config error', { error: error.message, requestId: req.id });
@@ -805,12 +846,27 @@ router.post('/admin/settings', async (req, res) => {
       base_prompt,
       placeholder_text,
       reference_images,
-      enabled
+      enabled,
+      // Modal text customization
+      modal_title,
+      modal_subtitle,
+      character_subtitle,
+      character_description,
+      input_label,
+      generate_button_text,
+      conversion_heading,
+      benefits_list,
+      cta_button_text,
+      exhausted_heading,
+      exhausted_description
     } = req.body;
 
-    // Validate reference_images is an array
+    // Validate arrays
     if (reference_images && !Array.isArray(reference_images)) {
       return res.status(400).json({ error: 'reference_images must be an array' });
+    }
+    if (benefits_list && !Array.isArray(benefits_list)) {
+      return res.status(400).json({ error: 'benefits_list must be an array' });
     }
 
     // Build update object (only include provided fields)
@@ -822,6 +878,18 @@ router.post('/admin/settings', async (req, res) => {
     if (placeholder_text !== undefined) updateData.placeholder_text = placeholder_text;
     if (reference_images !== undefined) updateData.reference_images = reference_images;
     if (enabled !== undefined) updateData.enabled = enabled;
+    // Modal text fields
+    if (modal_title !== undefined) updateData.modal_title = modal_title;
+    if (modal_subtitle !== undefined) updateData.modal_subtitle = modal_subtitle;
+    if (character_subtitle !== undefined) updateData.character_subtitle = character_subtitle;
+    if (character_description !== undefined) updateData.character_description = character_description;
+    if (input_label !== undefined) updateData.input_label = input_label;
+    if (generate_button_text !== undefined) updateData.generate_button_text = generate_button_text;
+    if (conversion_heading !== undefined) updateData.conversion_heading = conversion_heading;
+    if (benefits_list !== undefined) updateData.benefits_list = benefits_list;
+    if (cta_button_text !== undefined) updateData.cta_button_text = cta_button_text;
+    if (exhausted_heading !== undefined) updateData.exhausted_heading = exhausted_heading;
+    if (exhausted_description !== undefined) updateData.exhausted_description = exhausted_description;
 
     // Log what we're saving for debugging
     logger.info('Saving trial settings', {

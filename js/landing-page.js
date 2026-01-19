@@ -1020,7 +1020,7 @@ async function openTrialModal() {
 
   // Show exhausted state if no trials remaining
   if (status.remaining <= 0) {
-    modal.innerHTML = createTrialExhaustedHTML();
+    modal.innerHTML = createTrialExhaustedHTML(config);
   } else {
     modal.innerHTML = createTrialFormHTML(status.remaining, config);
   }
@@ -1046,10 +1046,29 @@ function createTrialFormHTML(remaining, config = {}) {
   const placeholderText = config.placeholderText || 'e.g. wearing a red dress at sunset, smiling warmly at the camera...';
   const previewImage = config.characterPreviewImage;
 
+  // Configurable modal text
+  const modalTitle = config.modalTitle || 'Try AI Image Generation';
+  const modalSubtitle = config.modalSubtitle || 'See what you can create - no signup required';
+  const characterSubtitle = config.characterSubtitle || 'Demo Character';
+  const characterDescription = config.characterDescription || 'Generate multiple images with the same character';
+  const inputLabel = config.inputLabel || 'Describe the scene';
+  const generateButtonText = config.generateButtonText || 'Generate';
+  const conversionHeading = config.conversionHeading || 'Like what you see?';
+  const benefitsList = config.benefitsList || [
+    '20 free credits every month',
+    'Choose from 50+ unique characters',
+    'Access NSFW content',
+    'Save and download your images'
+  ];
+  const ctaButtonText = config.ctaButtonText || 'Create Free Account';
+
   // Character image - use preview if available, otherwise gradient placeholder
   const characterImageHtml = previewImage
     ? `<img src="${previewImage}" alt="${characterName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`
     : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 12px;">&#10024;</div>`;
+
+  // Build benefits list HTML
+  const benefitsHtml = benefitsList.map(b => `<li>${b}</li>`).join('\n            ');
 
   return `
     <div class="landing-modal__overlay"></div>
@@ -1058,8 +1077,8 @@ function createTrialFormHTML(remaining, config = {}) {
 
       <div class="trial-modal">
         <div class="trial-modal__header">
-          <h2>Try AI Image Generation</h2>
-          <p>See what you can create - no signup required</p>
+          <h2>${modalTitle}</h2>
+          <p>${modalSubtitle}</p>
         </div>
 
         <div class="trial-modal__character">
@@ -1067,14 +1086,14 @@ function createTrialFormHTML(remaining, config = {}) {
             ${characterImageHtml}
           </div>
           <div class="trial-modal__character-info">
-            <div class="trial-modal__character-name">${characterName} - Demo Character</div>
-            <div class="trial-modal__character-desc">Generate multiple images with the same character</div>
+            <div class="trial-modal__character-name">${characterName} - ${characterSubtitle}</div>
+            <div class="trial-modal__character-desc">${characterDescription}</div>
           </div>
         </div>
 
         <div class="trial-modal__form" id="trialForm">
           <div class="trial-modal__input-group">
-            <label for="trialPrompt">Describe the scene</label>
+            <label for="trialPrompt">${inputLabel}</label>
             <textarea
               id="trialPrompt"
               class="trial-modal__textarea"
@@ -1088,7 +1107,7 @@ function createTrialFormHTML(remaining, config = {}) {
               ${remaining} free ${remaining === 1 ? 'try' : 'tries'} remaining
             </span>
             <button class="trial-modal__generate-btn" id="trialGenerateBtn">
-              Generate
+              ${generateButtonText}
             </button>
           </div>
         </div>
@@ -1103,15 +1122,12 @@ function createTrialFormHTML(remaining, config = {}) {
         </div>
 
         <div class="trial-modal__conversion" id="trialConversion">
-          <h3>Like what you see?</h3>
+          <h3>${conversionHeading}</h3>
           <ul class="trial-modal__benefits">
-            <li>20 free credits every month</li>
-            <li>Choose from 50+ unique characters</li>
-            <li>Access NSFW content</li>
-            <li>Save and download your images</li>
+            ${benefitsHtml}
           </ul>
           <button class="trial-modal__conversion-btn" id="trialSignupBtn">
-            Create Free Account
+            ${ctaButtonText}
           </button>
         </div>
       </div>
@@ -1122,7 +1138,18 @@ function createTrialFormHTML(remaining, config = {}) {
 /**
  * Create the exhausted state HTML
  */
-function createTrialExhaustedHTML() {
+function createTrialExhaustedHTML(config = {}) {
+  const exhaustedHeading = config.exhaustedHeading || "You've used your free trials!";
+  const exhaustedDescription = config.exhaustedDescription || 'Create a free account to continue generating amazing AI images.';
+  const ctaButtonText = config.ctaButtonText || 'Create Free Account';
+  const benefitsList = config.benefitsList || [
+    '20 free credits every month',
+    'Choose from 50+ unique characters',
+    'Access NSFW content',
+    'Save and download your images'
+  ];
+  const benefitsHtml = benefitsList.map(b => `<li>${b}</li>`).join('\n              ');
+
   return `
     <div class="landing-modal__overlay"></div>
     <div class="landing-modal__content landing-modal__content--trial">
@@ -1131,18 +1158,15 @@ function createTrialExhaustedHTML() {
       <div class="trial-modal">
         <div class="trial-modal__exhausted trial-modal__exhausted--visible">
           <div class="trial-modal__exhausted-icon">&#128275;</div>
-          <h3>You've used your free trials!</h3>
-          <p>Create a free account to continue generating amazing AI images.</p>
+          <h3>${exhaustedHeading}</h3>
+          <p>${exhaustedDescription}</p>
           <button class="trial-modal__conversion-btn" id="trialSignupBtn">
-            Create Free Account
+            ${ctaButtonText}
           </button>
 
           <div style="margin-top: 24px;">
             <ul class="trial-modal__benefits">
-              <li>20 free credits every month</li>
-              <li>Choose from 50+ unique characters</li>
-              <li>Access NSFW content</li>
-              <li>Save and download your images</li>
+              ${benefitsHtml}
             </ul>
           </div>
         </div>
@@ -1325,6 +1349,19 @@ function showTrialExhausted() {
   const modal = document.getElementById('trialModal');
   if (!modal) return;
 
+  // Use cached config for text customization
+  const config = trialConfig || {};
+  const exhaustedHeading = config.exhaustedHeading || "You've used your free trials!";
+  const exhaustedDescription = config.exhaustedDescription || 'Create a free account to continue generating amazing AI images.';
+  const ctaButtonText = config.ctaButtonText || 'Create Free Account';
+  const benefitsList = config.benefitsList || [
+    '20 free credits every month',
+    'Choose from 50+ unique characters',
+    'Access NSFW content',
+    'Save and download your images'
+  ];
+  const benefitsHtml = benefitsList.map(b => `<li>${b}</li>`).join('\n              ');
+
   const content = modal.querySelector('.landing-modal__content');
   if (content) {
     content.innerHTML = `
@@ -1332,17 +1369,14 @@ function showTrialExhausted() {
       <div class="trial-modal">
         <div class="trial-modal__exhausted trial-modal__exhausted--visible">
           <div class="trial-modal__exhausted-icon">&#128275;</div>
-          <h3>You've used your free trials!</h3>
-          <p>Create a free account to continue generating amazing AI images.</p>
+          <h3>${exhaustedHeading}</h3>
+          <p>${exhaustedDescription}</p>
           <button class="trial-modal__conversion-btn" id="trialSignupBtn">
-            Create Free Account
+            ${ctaButtonText}
           </button>
           <div style="margin-top: 24px;">
             <ul class="trial-modal__benefits">
-              <li>20 free credits every month</li>
-              <li>Choose from 50+ unique characters</li>
-              <li>Access NSFW content</li>
-              <li>Save and download your images</li>
+              ${benefitsHtml}
             </ul>
           </div>
         </div>
