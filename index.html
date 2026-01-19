@@ -8962,6 +8962,13 @@
             </div>
 
             <div class="facelock-content" id="facelockContent" style="display: none;">
+              <!-- Character Selector -->
+              <div class="facelock-character-select">
+                <select id="facelockCharacterSelect" onchange="onFacelockCharacterChange()">
+                  <option value="">Select a character...</option>
+                </select>
+              </div>
+
               <!-- Mode Selector -->
               <div class="facelock-mode-switch">
                 <button class="facelock-mode-btn active" id="facelockSfwBtn" onclick="setFacelockMode('sfw')">SFW</button>
@@ -14650,10 +14657,12 @@
       if (facelockEnabled) {
         content.style.display = 'block';
         control.classList.add('active');
+        // Load characters if not already loaded
+        loadFacelockCharacters();
         // Load face lock images if we have a character selected
-        const characterSelect = document.getElementById('characterSelect');
-        if (characterSelect && characterSelect.value) {
-          loadFacelockImages(characterSelect.value);
+        const characterId = getFacelockCharacterId();
+        if (characterId) {
+          loadFacelockImages(characterId);
         }
       } else {
         content.style.display = 'none';
@@ -14814,8 +14823,8 @@
       modal.id = 'facelockManagerModal';
       modal.className = 'facelock-manager-modal';
 
-      const characterSelect = document.getElementById('characterSelect');
-      const characterName = characterSelect ? characterSelect.options[characterSelect.selectedIndex]?.text : 'Character';
+      const facelockSelect = document.getElementById('facelockCharacterSelect');
+      const characterName = facelockSelect ? facelockSelect.options[facelockSelect.selectedIndex]?.text : 'Character';
 
       modal.innerHTML = `
         <div class="facelock-manager-backdrop" onclick="closeFacelockManager()"></div>
@@ -14902,11 +14911,11 @@
 
     // Remove a face lock image
     async function removeFacelockImage(facelockId, mode) {
-      const characterSelect = document.getElementById('characterSelect');
-      if (!characterSelect || !characterSelect.value) return;
+      const characterId = getFacelockCharacterId();
+      if (!characterId) return;
 
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/facelock/${characterSelect.value}/${facelockId}`, {
+        const response = await authFetch(`${API_BASE_URL}/api/facelock/${characterId}/${facelockId}`, {
           method: 'DELETE'
         });
 
@@ -14916,7 +14925,7 @@
 
         // Reload images
         currentFacelockCharacter = null;
-        await loadFacelockImages(characterSelect.value);
+        await loadFacelockImages(characterId);
         updateFacelockManagerContent();
 
         showToast('Removed from Face Lock');
@@ -14941,14 +14950,14 @@
 
     // Add image to face lock (called from image library or image actions)
     async function addToFacelock(imageUrl, imageId = null) {
-      const characterSelect = document.getElementById('characterSelect');
-      if (!characterSelect || !characterSelect.value) {
-        showToast('Please select a character first', 'error');
+      const characterId = getFacelockCharacterId();
+      if (!characterId) {
+        showToast('Please select a character in Face Lock first', 'error');
         return;
       }
 
       // Show mode selection sheet
-      showFacelockAddSheet(imageUrl, imageId, characterSelect.value);
+      showFacelockAddSheet(imageUrl, imageId, characterId);
     }
 
     // Show the "Add to Face Lock" bottom sheet
@@ -15078,18 +15087,94 @@
       // Load saved preferences
       const savedEnabled = localStorage.getItem('facelockEnabled');
       const savedMode = localStorage.getItem('facelockMode');
-
-      if (savedEnabled === 'true') {
-        const checkbox = document.getElementById('facelockEnabled');
-        if (checkbox) {
-          checkbox.checked = true;
-          toggleFaceLock();
-        }
-      }
+      const savedCharacter = localStorage.getItem('facelockCharacter');
 
       if (savedMode) {
         setFacelockMode(savedMode);
       }
+
+      // Load characters will happen after auth check
+      // The toggle will be restored after characters are loaded
+      window.facelockSavedEnabled = savedEnabled === 'true';
+      window.facelockSavedCharacter = savedCharacter;
+    }
+
+    // Load characters for Face Lock dropdown
+    async function loadFacelockCharacters() {
+      const select = document.getElementById('facelockCharacterSelect');
+      if (!select || !isUserLoggedIn) return;
+
+      try {
+        // Fetch user's owned characters
+        const response = await authFetch(`${API_BASE_URL}/api/characters`);
+        if (!response.ok) throw new Error('Failed to load characters');
+
+        const data = await response.json();
+        const characters = data.characters || [];
+
+        // Filter to owned characters only
+        const ownedCharacters = characters.filter(c => c.isOwned);
+
+        // Clear and populate dropdown
+        select.innerHTML = '<option value="">Select a character...</option>';
+
+        if (ownedCharacters.length === 0) {
+          select.innerHTML = '<option value="">No characters owned</option>';
+          return;
+        }
+
+        ownedCharacters.forEach(char => {
+          const option = document.createElement('option');
+          option.value = char.id;
+          option.textContent = char.name;
+          select.appendChild(option);
+        });
+
+        // Restore saved character if exists
+        if (window.facelockSavedCharacter) {
+          select.value = window.facelockSavedCharacter;
+          if (select.value) {
+            loadFacelockImages(select.value);
+          }
+        }
+
+        // Restore enabled state after characters load
+        if (window.facelockSavedEnabled) {
+          const checkbox = document.getElementById('facelockEnabled');
+          if (checkbox && select.value) {
+            checkbox.checked = true;
+            toggleFaceLock();
+          }
+        }
+      } catch (error) {
+        console.error('Error loading facelock characters:', error);
+        select.innerHTML = '<option value="">Error loading characters</option>';
+      }
+    }
+
+    // Handle character selection change
+    function onFacelockCharacterChange() {
+      const select = document.getElementById('facelockCharacterSelect');
+      if (!select) return;
+
+      const characterId = select.value;
+
+      // Save selection
+      if (characterId) {
+        localStorage.setItem('facelockCharacter', characterId);
+        loadFacelockImages(characterId);
+      } else {
+        localStorage.removeItem('facelockCharacter');
+        facelockImages = { sfw: [], nsfw: [] };
+        currentFacelockCharacter = null;
+        updateFacelockThumbnails();
+      }
+    }
+
+    // Get the selected facelock character ID
+    function getFacelockCharacterId() {
+      const select = document.getElementById('facelockCharacterSelect');
+      return select ? select.value : null;
     }
 
     function selectModel(model) {
@@ -18896,13 +18981,13 @@
       const menu = element.closest('.send-to-menu');
       if (menu) menu.classList.remove('active');
       // Load face lock images for current character first
-      const characterSelect = document.getElementById('characterSelect');
-      if (characterSelect && characterSelect.value) {
-        loadFacelockImages(characterSelect.value).then(() => {
+      const characterId = getFacelockCharacterId();
+      if (characterId) {
+        loadFacelockImages(characterId).then(() => {
           addToFacelock(data.url, data.id);
         });
       } else {
-        showToast('Please select a character first', 'error');
+        showToast('Enable Face Lock and select a character first', 'error');
       }
     }
 
