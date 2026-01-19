@@ -71,13 +71,14 @@ async function getTrialSettings() {
       return DEFAULT_TRIAL_SETTINGS;
     }
 
+    // Use nullish coalescing (??) to only fall back on null/undefined, not empty strings
     return {
       character_id: data.character_id,
-      character_name: data.character_name || DEFAULT_TRIAL_SETTINGS.character_name,
+      character_name: data.character_name ?? DEFAULT_TRIAL_SETTINGS.character_name,
       character_preview_image: data.character_preview_image,
-      base_prompt: data.base_prompt || DEFAULT_TRIAL_SETTINGS.base_prompt,
-      placeholder_text: data.placeholder_text || DEFAULT_TRIAL_SETTINGS.placeholder_text,
-      reference_images: data.reference_images || [],
+      base_prompt: data.base_prompt ?? DEFAULT_TRIAL_SETTINGS.base_prompt,
+      placeholder_text: data.placeholder_text ?? DEFAULT_TRIAL_SETTINGS.placeholder_text,
+      reference_images: data.reference_images ?? [],
       enabled: data.enabled !== false
     };
   } catch (error) {
@@ -329,12 +330,18 @@ router.get('/config', async (req, res) => {
  * GET /api/trial/demo-character
  * Get the demo character info for the trial modal
  */
-router.get('/demo-character', (req, res) => {
-  res.json({
-    name: DEMO_CHARACTER.name,
-    description: DEMO_CHARACTER.description,
-    // Don't expose trigger_word or system_prompt to frontend
-  });
+router.get('/demo-character', async (req, res) => {
+  try {
+    const settings = await getTrialSettings();
+    res.json({
+      name: settings.character_name,
+      description: settings.placeholder_text,
+      // Don't expose base_prompt or reference_images to frontend
+    });
+  } catch (error) {
+    logger.error('Demo character error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get demo character info' });
+  }
 });
 
 /**
@@ -417,6 +424,14 @@ router.post('/generate', async (req, res) => {
 
     // Build the generation prompt: base_prompt + user input
     const fullPrompt = `${trialSettings.base_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
+
+    // Log the prompts for debugging
+    logger.info('Trial generation prompt details', {
+      requestId: req.id,
+      base_prompt: trialSettings.base_prompt ? trialSettings.base_prompt.substring(0, 100) + '...' : '(empty)',
+      user_prompt: prompt.substring(0, 100),
+      full_prompt_preview: fullPrompt.substring(0, 200) + '...'
+    });
 
     // Determine if we should use img2img (if reference images are configured)
     const hasReferenceImages = trialSettings.reference_images && trialSettings.reference_images.length > 0;
@@ -808,46 +823,53 @@ router.post('/admin/settings', async (req, res) => {
     if (reference_images !== undefined) updateData.reference_images = reference_images;
     if (enabled !== undefined) updateData.enabled = enabled;
 
-    // Upsert the settings (create if not exists, update if exists)
-    const { data, error } = await supabase
+    // Log what we're saving for debugging
+    logger.info('Saving trial settings', {
+      updatedFields: Object.keys(updateData),
+      base_prompt_preview: base_prompt ? base_prompt.substring(0, 100) + '...' : '(not provided)'
+    });
+
+    // Check if a settings row already exists (singleton table)
+    const { data: existing } = await supabase
       .from('trial_settings')
-      .upsert(updateData, { onConflict: 'id' })
-      .select()
+      .select('id')
+      .limit(1)
       .single();
 
-    if (error) {
-      // If upsert fails, try to update by selecting first
-      const { data: existing } = await supabase
+    let savedSettings;
+
+    if (existing) {
+      // Update existing row
+      const { data: updated, error: updateError } = await supabase
         .from('trial_settings')
-        .select('id')
-        .limit(1)
+        .update(updateData)
+        .eq('id', existing.id)
+        .select()
         .single();
 
-      if (existing) {
-        const { data: updated, error: updateError } = await supabase
-          .from('trial_settings')
-          .update(updateData)
-          .eq('id', existing.id)
-          .select()
-          .single();
-
-        if (updateError) throw updateError;
-        return res.json({ success: true, settings: updated });
-      } else {
-        // Create new record
-        const { data: created, error: createError } = await supabase
-          .from('trial_settings')
-          .insert(updateData)
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        return res.json({ success: true, settings: created });
+      if (updateError) {
+        logger.error('Failed to update trial settings', { error: updateError.message });
+        throw updateError;
       }
+      savedSettings = updated;
+      logger.info('Trial settings updated successfully', { id: existing.id });
+    } else {
+      // Create new record (first time setup)
+      const { data: created, error: createError } = await supabase
+        .from('trial_settings')
+        .insert(updateData)
+        .select()
+        .single();
+
+      if (createError) {
+        logger.error('Failed to create trial settings', { error: createError.message });
+        throw createError;
+      }
+      savedSettings = created;
+      logger.info('Trial settings created successfully');
     }
 
-    logger.info('Trial settings updated', { updatedFields: Object.keys(updateData) });
-    res.json({ success: true, settings: data });
+    res.json({ success: true, settings: savedSettings });
   } catch (error) {
     logger.error('Admin update settings error', { error: error.message });
     res.status(500).json({ error: 'Failed to update settings' });
