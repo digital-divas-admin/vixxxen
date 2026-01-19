@@ -8947,6 +8947,48 @@
           ></textarea>
         </div>
 
+        <!-- Face Lock Section (Seedream & Nano Banana only) -->
+        <div class="section facelock-section" id="facelockSection" style="display: none;">
+          <div class="facelock-control">
+            <div class="facelock-header">
+              <div class="facelock-title">
+                <span class="facelock-icon">🔒</span>
+                <span>Face Lock</span>
+              </div>
+              <label class="facelock-toggle">
+                <input type="checkbox" id="facelockEnabled" onchange="toggleFaceLock()">
+                <span class="facelock-toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="facelock-content" id="facelockContent" style="display: none;">
+              <!-- Mode Selector -->
+              <div class="facelock-mode-switch">
+                <button class="facelock-mode-btn active" id="facelockSfwBtn" onclick="setFacelockMode('sfw')">SFW</button>
+                <button class="facelock-mode-btn" id="facelockNsfwBtn" onclick="setFacelockMode('nsfw')">NSFW</button>
+              </div>
+
+              <!-- Nano Warning -->
+              <div class="facelock-warning" id="facelockNanoWarning" style="display: none;">
+                ⚠️ Using SFW images (Nano Banana Pro doesn't support NSFW references)
+              </div>
+
+              <!-- Thumbnail Strip -->
+              <div class="facelock-thumbnails" id="facelockThumbnails">
+                <div class="facelock-empty" id="facelockEmpty">
+                  <span>No images yet</span>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="facelock-footer">
+                <span class="facelock-count" id="facelockCount">0/5</span>
+                <button class="facelock-manage-btn" onclick="openFacelockManager()">Manage</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Settings (Nano Banana & Seedream) -->
         <div class="section" id="standardSettings">
           <div class="section-label">Settings</div>
@@ -13858,6 +13900,12 @@
     let qwenImages = []; // For Qwen Image Edit
     let isGenerating = false;
 
+    // Face Lock state
+    let facelockEnabled = false;
+    let facelockMode = 'sfw'; // 'sfw' or 'nsfw'
+    let facelockImages = { sfw: [], nsfw: [] }; // Cached face lock images per mode
+    let currentFacelockCharacter = null; // Currently loaded character ID
+
     // Resolution lookup table: aspectRatio + quality -> { width, height }
     const RESOLUTION_TABLE = {
       '1:1': {
@@ -14457,6 +14505,9 @@
     // Initialize content mode when DOM is ready
     document.addEventListener('DOMContentLoaded', initContentMode);
 
+    // Initialize Face Lock when DOM is ready
+    document.addEventListener('DOMContentLoaded', initFacelock);
+
     // Initialize mobile dashboard when DOM is ready
     document.addEventListener('DOMContentLoaded', initMobileDashboard);
 
@@ -14584,6 +14635,463 @@
       if (adminStarthereBtn) adminStarthereBtn.classList.remove('visible');
     }
 
+    // ===========================================
+    // FACE LOCK FUNCTIONS
+    // ===========================================
+
+    // Toggle Face Lock on/off
+    function toggleFaceLock() {
+      const checkbox = document.getElementById('facelockEnabled');
+      facelockEnabled = checkbox.checked;
+
+      const content = document.getElementById('facelockContent');
+      const control = document.querySelector('.facelock-control');
+
+      if (facelockEnabled) {
+        content.style.display = 'block';
+        control.classList.add('active');
+        // Load face lock images if we have a character selected
+        const characterSelect = document.getElementById('characterSelect');
+        if (characterSelect && characterSelect.value) {
+          loadFacelockImages(characterSelect.value);
+        }
+      } else {
+        content.style.display = 'none';
+        control.classList.remove('active');
+      }
+
+      // Save preference
+      localStorage.setItem('facelockEnabled', facelockEnabled);
+      updateFacelockWarning();
+    }
+
+    // Set Face Lock mode (SFW/NSFW)
+    function setFacelockMode(mode) {
+      facelockMode = mode;
+
+      // Update UI
+      const sfwBtn = document.getElementById('facelockSfwBtn');
+      const nsfwBtn = document.getElementById('facelockNsfwBtn');
+
+      sfwBtn.classList.toggle('active', mode === 'sfw');
+      nsfwBtn.classList.toggle('active', mode === 'nsfw');
+      nsfwBtn.classList.toggle('nsfw', mode === 'nsfw');
+
+      // Save preference
+      localStorage.setItem('facelockMode', mode);
+
+      // Update thumbnails and warning
+      updateFacelockThumbnails();
+      updateFacelockWarning();
+    }
+
+    // Update warning message for Nano + NSFW
+    function updateFacelockWarning() {
+      const warning = document.getElementById('facelockNanoWarning');
+      if (!warning) return;
+
+      // Show warning if Nano Banana is selected AND NSFW mode is selected
+      if (currentModel === 'nano-banana' && facelockMode === 'nsfw' && facelockEnabled) {
+        warning.style.display = 'block';
+      } else {
+        warning.style.display = 'none';
+      }
+    }
+
+    // Load face lock images for a character
+    async function loadFacelockImages(characterId) {
+      if (!characterId || !isUserLoggedIn) return;
+
+      // Skip if already loaded for this character
+      if (currentFacelockCharacter === characterId && facelockImages.sfw.length > 0) {
+        updateFacelockThumbnails();
+        return;
+      }
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/facelock/${characterId}`);
+        if (!response.ok) {
+          throw new Error('Failed to load face lock images');
+        }
+
+        const data = await response.json();
+        facelockImages = {
+          sfw: data.sfw || [],
+          nsfw: data.nsfw || []
+        };
+        currentFacelockCharacter = characterId;
+
+        updateFacelockThumbnails();
+      } catch (error) {
+        console.error('Error loading face lock images:', error);
+        facelockImages = { sfw: [], nsfw: [] };
+        updateFacelockThumbnails();
+      }
+    }
+
+    // Update the thumbnail strip display
+    function updateFacelockThumbnails() {
+      const container = document.getElementById('facelockThumbnails');
+      const countEl = document.getElementById('facelockCount');
+      const emptyEl = document.getElementById('facelockEmpty');
+      if (!container) return;
+
+      // Get images for current mode (or SFW if Nano + NSFW)
+      const effectiveMode = (currentModel === 'nano-banana' && facelockMode === 'nsfw') ? 'sfw' : facelockMode;
+      const images = facelockImages[effectiveMode] || [];
+
+      // Clear existing thumbnails (except empty placeholder)
+      container.querySelectorAll('.facelock-thumb, .facelock-thumb-add').forEach(el => el.remove());
+
+      if (images.length === 0) {
+        if (emptyEl) emptyEl.style.display = 'flex';
+      } else {
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        images.forEach(img => {
+          const thumb = document.createElement('div');
+          thumb.className = 'facelock-thumb';
+          thumb.innerHTML = `<img src="${img.imageUrl}" alt="Face Lock">`;
+          thumb.onclick = () => viewFacelockImage(img.imageUrl);
+          container.appendChild(thumb);
+        });
+      }
+
+      // Add "+" button if not full
+      if (images.length < 5) {
+        const addBtn = document.createElement('div');
+        addBtn.className = 'facelock-thumb-add';
+        addBtn.innerHTML = '+';
+        addBtn.onclick = () => openFacelockManager();
+        container.appendChild(addBtn);
+      }
+
+      // Update count
+      if (countEl) {
+        countEl.textContent = `${images.length}/5`;
+      }
+    }
+
+    // View a face lock image (simple lightbox)
+    function viewFacelockImage(imageUrl) {
+      // Use existing lightbox if available
+      const lightbox = document.getElementById('lightboxModal');
+      if (lightbox) {
+        const lightboxImage = document.getElementById('lightboxImage');
+        if (lightboxImage) {
+          lightboxImage.src = imageUrl;
+          lightbox.classList.add('active');
+        }
+      }
+    }
+
+    // Open Face Lock manager modal
+    function openFacelockManager() {
+      // Create modal if it doesn't exist
+      let modal = document.getElementById('facelockManagerModal');
+      if (!modal) {
+        modal = createFacelockManagerModal();
+        document.body.appendChild(modal);
+      }
+
+      // Update content
+      updateFacelockManagerContent();
+
+      modal.classList.add('active');
+    }
+
+    // Close Face Lock manager
+    function closeFacelockManager() {
+      const modal = document.getElementById('facelockManagerModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    }
+
+    // Create Face Lock manager modal
+    function createFacelockManagerModal() {
+      const modal = document.createElement('div');
+      modal.id = 'facelockManagerModal';
+      modal.className = 'facelock-manager-modal';
+
+      const characterSelect = document.getElementById('characterSelect');
+      const characterName = characterSelect ? characterSelect.options[characterSelect.selectedIndex]?.text : 'Character';
+
+      modal.innerHTML = `
+        <div class="facelock-manager-backdrop" onclick="closeFacelockManager()"></div>
+        <div class="facelock-manager-content">
+          <div class="facelock-manager-handle"></div>
+          <div class="facelock-manager-header">
+            <span class="facelock-manager-title">Face Lock - ${characterName}</span>
+            <button class="facelock-manager-close" onclick="closeFacelockManager()">&times;</button>
+          </div>
+          <div class="facelock-manager-body">
+            <div class="facelock-manager-tabs">
+              <button class="facelock-manager-tab active" id="facelockManagerSfwTab" onclick="switchFacelockManagerTab('sfw')">SFW</button>
+              <button class="facelock-manager-tab" id="facelockManagerNsfwTab" onclick="switchFacelockManagerTab('nsfw')">NSFW</button>
+            </div>
+            <div class="facelock-manager-grid" id="facelockManagerGrid"></div>
+            <div class="facelock-manager-count" id="facelockManagerCount">0/5 images</div>
+          </div>
+          <div class="facelock-manager-footer">
+            <button class="facelock-manager-done" onclick="closeFacelockManager()">Done</button>
+          </div>
+        </div>
+      `;
+
+      return modal;
+    }
+
+    // Switch tab in manager
+    function switchFacelockManagerTab(mode) {
+      const sfwTab = document.getElementById('facelockManagerSfwTab');
+      const nsfwTab = document.getElementById('facelockManagerNsfwTab');
+
+      sfwTab.classList.toggle('active', mode === 'sfw');
+      nsfwTab.classList.toggle('active', mode === 'nsfw');
+      nsfwTab.classList.toggle('nsfw', mode === 'nsfw');
+
+      // Temporarily switch mode for display
+      const tempMode = facelockMode;
+      facelockMode = mode;
+      updateFacelockManagerContent();
+      facelockMode = tempMode;
+    }
+
+    // Update manager grid content
+    function updateFacelockManagerContent() {
+      const grid = document.getElementById('facelockManagerGrid');
+      const countEl = document.getElementById('facelockManagerCount');
+      if (!grid) return;
+
+      // Get current tab mode from active tab
+      const nsfwTab = document.getElementById('facelockManagerNsfwTab');
+      const currentTabMode = nsfwTab && nsfwTab.classList.contains('active') ? 'nsfw' : 'sfw';
+
+      const images = facelockImages[currentTabMode] || [];
+
+      grid.innerHTML = '';
+
+      // Add existing images
+      images.forEach(img => {
+        const item = document.createElement('div');
+        item.className = 'facelock-manager-item';
+        item.innerHTML = `
+          <img src="${img.imageUrl}" alt="Face Lock">
+          <button class="facelock-manager-remove" onclick="removeFacelockImage('${img.id}', '${currentTabMode}')">&times;</button>
+        `;
+        grid.appendChild(item);
+      });
+
+      // Add "add" button if not full
+      if (images.length < 5) {
+        const addItem = document.createElement('div');
+        addItem.className = 'facelock-manager-add';
+        addItem.onclick = () => openImageLibraryForFacelock(currentTabMode);
+        addItem.innerHTML = `
+          <span class="facelock-manager-add-icon">+</span>
+          <span class="facelock-manager-add-text">Add Image</span>
+        `;
+        grid.appendChild(addItem);
+      }
+
+      if (countEl) {
+        countEl.textContent = `${images.length}/5 images`;
+      }
+    }
+
+    // Remove a face lock image
+    async function removeFacelockImage(facelockId, mode) {
+      const characterSelect = document.getElementById('characterSelect');
+      if (!characterSelect || !characterSelect.value) return;
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/facelock/${characterSelect.value}/${facelockId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to remove image');
+        }
+
+        // Reload images
+        currentFacelockCharacter = null;
+        await loadFacelockImages(characterSelect.value);
+        updateFacelockManagerContent();
+
+        showToast('Removed from Face Lock');
+      } catch (error) {
+        console.error('Error removing face lock image:', error);
+        showToast('Failed to remove image', 'error');
+      }
+    }
+
+    // Open image library to pick images for face lock
+    function openImageLibraryForFacelock(mode) {
+      // Store the mode we're adding to
+      window.facelockAddMode = mode;
+
+      // Open the image library modal
+      if (typeof openImageLibrary === 'function') {
+        openImageLibrary('facelock');
+      } else {
+        showToast('Image library not available', 'error');
+      }
+    }
+
+    // Add image to face lock (called from image library or image actions)
+    async function addToFacelock(imageUrl, imageId = null) {
+      const characterSelect = document.getElementById('characterSelect');
+      if (!characterSelect || !characterSelect.value) {
+        showToast('Please select a character first', 'error');
+        return;
+      }
+
+      // Show mode selection sheet
+      showFacelockAddSheet(imageUrl, imageId, characterSelect.value);
+    }
+
+    // Show the "Add to Face Lock" bottom sheet
+    function showFacelockAddSheet(imageUrl, imageId, characterId) {
+      // Create sheet if doesn't exist
+      let sheet = document.getElementById('facelockAddSheet');
+      if (!sheet) {
+        sheet = document.createElement('div');
+        sheet.id = 'facelockAddSheet';
+        sheet.className = 'facelock-add-sheet';
+
+        sheet.innerHTML = `
+          <div class="facelock-add-backdrop" onclick="closeFacelockAddSheet()"></div>
+          <div class="facelock-add-content">
+            <div class="facelock-add-handle"></div>
+            <div class="facelock-add-title">Add to Face Lock</div>
+            <div class="facelock-add-options">
+              <button class="facelock-add-option" id="facelockAddSfwBtn">Add to SFW</button>
+              <button class="facelock-add-option" id="facelockAddNsfwBtn">Add to NSFW</button>
+            </div>
+            <button class="facelock-add-cancel" onclick="closeFacelockAddSheet()">Cancel</button>
+          </div>
+        `;
+
+        document.body.appendChild(sheet);
+      }
+
+      // Update button states
+      const sfwBtn = document.getElementById('facelockAddSfwBtn');
+      const nsfwBtn = document.getElementById('facelockAddNsfwBtn');
+
+      const sfwCount = facelockImages.sfw?.length || 0;
+      const nsfwCount = facelockImages.nsfw?.length || 0;
+
+      sfwBtn.textContent = sfwCount >= 5 ? 'SFW Full (5/5)' : `Add to SFW (${sfwCount}/5)`;
+      sfwBtn.disabled = sfwCount >= 5;
+      sfwBtn.classList.toggle('full', sfwCount >= 5);
+
+      nsfwBtn.textContent = nsfwCount >= 5 ? 'NSFW Full (5/5)' : `Add to NSFW (${nsfwCount}/5)`;
+      nsfwBtn.disabled = nsfwCount >= 5;
+      nsfwBtn.classList.toggle('full', nsfwCount >= 5);
+
+      // Set up click handlers
+      sfwBtn.onclick = () => confirmAddToFacelock(characterId, imageUrl, imageId, 'sfw');
+      nsfwBtn.onclick = () => confirmAddToFacelock(characterId, imageUrl, imageId, 'nsfw');
+
+      sheet.classList.add('active');
+    }
+
+    // Close Face Lock add sheet
+    function closeFacelockAddSheet() {
+      const sheet = document.getElementById('facelockAddSheet');
+      if (sheet) {
+        sheet.classList.remove('active');
+      }
+    }
+
+    // Confirm adding image to face lock
+    async function confirmAddToFacelock(characterId, imageUrl, imageId, mode) {
+      closeFacelockAddSheet();
+
+      try {
+        const body = { mode };
+        if (imageId) {
+          body.imageId = imageId;
+        } else {
+          body.imageUrl = imageUrl;
+        }
+
+        const response = await authFetch(`${API_BASE_URL}/api/facelock/${characterId}`, {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || data.error || 'Failed to add to Face Lock');
+        }
+
+        // Reload images
+        currentFacelockCharacter = null;
+        await loadFacelockImages(characterId);
+
+        showToast(data.message || `Added to ${mode.toUpperCase()} Face Lock`);
+
+        // If manager is open, update it
+        const modal = document.getElementById('facelockManagerModal');
+        if (modal && modal.classList.contains('active')) {
+          updateFacelockManagerContent();
+        }
+      } catch (error) {
+        console.error('Error adding to face lock:', error);
+        showToast(error.message || 'Failed to add to Face Lock', 'error');
+      }
+    }
+
+    // Get face lock images to include in generation
+    function getFacelockImagesForGeneration() {
+      if (!facelockEnabled) return [];
+
+      // For Nano Banana, always use SFW images
+      const effectiveMode = (currentModel === 'nano-banana' && facelockMode === 'nsfw') ? 'sfw' : facelockMode;
+      const images = facelockImages[effectiveMode] || [];
+
+      // Return just the URLs
+      return images.map(img => img.imageUrl);
+    }
+
+    // Update Face Lock section visibility based on model
+    function updateFacelockVisibility() {
+      const facelockSection = document.getElementById('facelockSection');
+      if (!facelockSection) return;
+
+      // Show for Seedream and Nano Banana, hide for Qwen
+      if (currentModel === 'qwen') {
+        facelockSection.style.display = 'none';
+      } else {
+        facelockSection.style.display = 'block';
+      }
+
+      updateFacelockWarning();
+    }
+
+    // Initialize Face Lock from saved preferences
+    function initFacelock() {
+      // Load saved preferences
+      const savedEnabled = localStorage.getItem('facelockEnabled');
+      const savedMode = localStorage.getItem('facelockMode');
+
+      if (savedEnabled === 'true') {
+        const checkbox = document.getElementById('facelockEnabled');
+        if (checkbox) {
+          checkbox.checked = true;
+          toggleFaceLock();
+        }
+      }
+
+      if (savedMode) {
+        setFacelockMode(savedMode);
+      }
+    }
+
     function selectModel(model) {
       currentModel = model;
       const nanoTab = document.getElementById('nanoTab');
@@ -14631,6 +15139,9 @@
         referenceSection.style.display = 'none';
         qwenGenSettings.style.display = 'block';
       }
+
+      // Update Face Lock visibility
+      updateFacelockVisibility();
 
       // Update button cost display
       updateImageGenerateButtonCost();
@@ -17831,9 +18342,14 @@
           };
           console.log(`🌊 Seedream request: ${seedreamWidth}x${seedreamHeight}`);
 
-          // Add reference images if any are uploaded
-          if (referenceImages.length > 0) {
-            payload.referenceImages = referenceImages.map(img => img.dataUrl);
+          // Combine Face Lock images + manual reference images
+          const facelockUrls = getFacelockImagesForGeneration();
+          const manualRefs = referenceImages.map(img => img.dataUrl);
+          const allReferenceImages = [...facelockUrls, ...manualRefs];
+
+          if (allReferenceImages.length > 0) {
+            payload.referenceImages = allReferenceImages;
+            console.log(`   🔒 Face Lock: ${facelockUrls.length} images, Manual: ${manualRefs.length} images`);
           }
         } else {
           // Nano Banana Pro - only supports aspect ratio, not custom dimensions
@@ -17845,9 +18361,14 @@
           };
           console.log(`🍌 Nano Banana request: AR=${aspectRatio}`);
 
-          // Add reference images if any are uploaded
-          if (referenceImages.length > 0) {
-            payload.referenceImages = referenceImages.map(img => img.dataUrl);
+          // Combine Face Lock images + manual reference images
+          const facelockUrls = getFacelockImagesForGeneration();
+          const manualRefs = referenceImages.map(img => img.dataUrl);
+          const allReferenceImages = [...facelockUrls, ...manualRefs];
+
+          if (allReferenceImages.length > 0) {
+            payload.referenceImages = allReferenceImages;
+            console.log(`   🔒 Face Lock: ${facelockUrls.length} images, Manual: ${manualRefs.length} images`);
           }
         }
 
@@ -18150,6 +18671,7 @@
                 <button class="send-to-option" onclick="sendToEditFromParent(this, event)">✂️ Send to Edit</button>
                 <button class="send-to-option" onclick="sendToCaptionFromParent(this, event)">💬 Send to Caption</button>
                 <button class="send-to-option" onclick="sendToInpaintFromParent(this, event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="addToFacelockFromParent(this, event)">🔒 Add to Face Lock</button>
               </div>
             </div>
             <button class="report-btn" onclick="event.stopPropagation(); openReportModalFromParent(this)" title="Report">
@@ -18205,6 +18727,7 @@
                 <button class="send-to-option" onclick="sendToEditFromParent(this, event)">✂️ Send to Edit</button>
                 <button class="send-to-option" onclick="sendToCaptionFromParent(this, event)">💬 Send to Caption</button>
                 <button class="send-to-option" onclick="sendToInpaintFromParent(this, event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="addToFacelockFromParent(this, event)">🔒 Add to Face Lock</button>
               </div>
             </div>
             <button class="report-btn" onclick="event.stopPropagation(); openReportModalFromParent(this)" title="Report">
@@ -18364,6 +18887,23 @@
     function sendToInpaintFromParent(element, event) {
       const data = getImageDataFromParent(element);
       sendToInpaint(data.url, event);
+    }
+
+    function addToFacelockFromParent(element, event) {
+      if (event) event.stopPropagation();
+      const data = getImageDataFromParent(element);
+      // Close the send-to menu
+      const menu = element.closest('.send-to-menu');
+      if (menu) menu.classList.remove('active');
+      // Load face lock images for current character first
+      const characterSelect = document.getElementById('characterSelect');
+      if (characterSelect && characterSelect.value) {
+        loadFacelockImages(characterSelect.value).then(() => {
+          addToFacelock(data.url, data.id);
+        });
+      } else {
+        showToast('Please select a character first', 'error');
+      }
     }
 
     function openReportModalFromParent(element) {
