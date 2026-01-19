@@ -95,11 +95,11 @@
 .landing-hero__logo {
   max-width: 280px;
   height: auto;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
 }
 
 .landing-hero__headline {
-  font-size: 28px;
+  font-size: 42px;
   font-weight: 800;
   line-height: 1.2;
   margin-bottom: 20px;
