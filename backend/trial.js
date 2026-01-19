@@ -369,7 +369,7 @@ router.post('/generate', async (req, res) => {
           },
           body: JSON.stringify({
             prompt: fullPrompt,
-            size: '1024*1024',
+            size: '2048*2048',
             enable_base64_output: true,
             enable_sync_mode: true
           })
