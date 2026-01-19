@@ -75,6 +75,7 @@ function renderAdminLandingDashboard() {
       <button class="admin-tab" onclick="showAdminLandingTab('pricing')" data-tab="pricing">Pricing</button>
       <button class="admin-tab" onclick="showAdminLandingTab('finalcta')" data-tab="finalcta">Final CTA</button>
       <button class="admin-tab admin-tab--highlight" onclick="showAdminLandingTab('images')" data-tab="images">Image Library</button>
+      <button class="admin-tab admin-tab--highlight" onclick="showAdminLandingTab('trial')" data-tab="trial">Trial Testing</button>
     </div>
 
     <div id="adminLandingTabContent">
@@ -154,6 +155,9 @@ function showAdminLandingTab(tab) {
       loadImageLibrary();
       // Initialize upload handlers after DOM is ready
       setTimeout(initImageUploadHandlers, 50);
+      break;
+    case 'trial':
+      contentContainer.innerHTML = renderTrialTestingSection();
       break;
   }
 }
@@ -552,6 +556,226 @@ function renderFinalCtaSection() {
       <button class="admin-save-btn" onclick="saveFinalCtaSection()">Save Final CTA</button>
     </div>
   `;
+}
+
+// ===========================================
+// TRIAL TESTING SECTION
+// ===========================================
+
+function renderTrialTestingSection() {
+  const isEnabled = localStorage.getItem('trialAdminKey') ? true : false;
+
+  return `
+    <div class="admin-section-card">
+      <h3 class="admin-section-title">Trial Testing Mode</h3>
+      <p style="color: #888; margin-bottom: 20px;">
+        Enable admin bypass to test the "Try It Now" feature without rate limits.
+        This only affects your browser - real users are still rate limited.
+      </p>
+
+      <div style="background: ${isEnabled ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 68, 68, 0.1)'};
+                  border: 1px solid ${isEnabled ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 68, 68, 0.3)'};
+                  border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: ${isEnabled ? '#00ff88' : '#ff4444'};">
+              ${isEnabled ? '✓ Admin Bypass Enabled' : '✗ Admin Bypass Disabled'}
+            </div>
+            <div style="color: #888; font-size: 0.9rem; margin-top: 4px;">
+              ${isEnabled ? 'You can test unlimited trial generations' : 'You are subject to normal rate limits'}
+            </div>
+          </div>
+          <button
+            class="admin-btn ${isEnabled ? 'admin-btn--danger' : 'admin-btn--primary'}"
+            onclick="toggleTrialAdminBypass()"
+            style="min-width: 120px;"
+          >
+            ${isEnabled ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-form-group">
+        <label>Admin Key</label>
+        <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+          Enter the TRIAL_ADMIN_KEY from your server environment to enable bypass.
+        </p>
+        <input
+          type="password"
+          id="trialAdminKeyInput"
+          class="admin-input"
+          placeholder="Enter your TRIAL_ADMIN_KEY"
+          value="${localStorage.getItem('trialAdminKey') || ''}"
+        >
+      </div>
+
+      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <h4 style="margin: 0 0 12px; color: #fff;">Quick Actions</h4>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="admin-btn admin-btn--secondary" onclick="testTrialGeneration()">
+            Test Generation
+          </button>
+          <button class="admin-btn admin-btn--secondary" onclick="resetAllTrials()">
+            Reset All Trials
+          </button>
+          <button class="admin-btn admin-btn--secondary" onclick="viewTrialStatus()">
+            View Status
+          </button>
+        </div>
+      </div>
+
+      <div id="trialTestOutput" style="margin-top: 20px; display: none;">
+        <pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; color: #00ff88;"></pre>
+      </div>
+    </div>
+  `;
+}
+
+function toggleTrialAdminBypass() {
+  const input = document.getElementById('trialAdminKeyInput');
+  const currentKey = localStorage.getItem('trialAdminKey');
+
+  if (currentKey) {
+    // Disable - remove key
+    localStorage.removeItem('trialAdminKey');
+    showToast('Trial admin bypass disabled', 'info');
+  } else {
+    // Enable - save key
+    const key = input?.value?.trim();
+    if (!key) {
+      showToast('Please enter your admin key first', 'error');
+      input?.focus();
+      return;
+    }
+    localStorage.setItem('trialAdminKey', key);
+    showToast('Trial admin bypass enabled!', 'success');
+  }
+
+  // Re-render the section
+  showAdminLandingTab('trial');
+}
+
+async function testTrialGeneration() {
+  const outputDiv = document.getElementById('trialTestOutput');
+  const outputPre = outputDiv?.querySelector('pre');
+  if (!outputDiv || !outputPre) return;
+
+  outputDiv.style.display = 'block';
+  outputPre.textContent = 'Testing trial generation...';
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    const adminKey = localStorage.getItem('trialAdminKey');
+    if (adminKey) {
+      headers['Authorization'] = `Bearer ${adminKey}`;
+    }
+
+    const response = await fetch('/api/trial/generate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        prompt: 'smiling, casual outfit, sunny day',
+        fingerprint: 'admin-test-' + Date.now()
+      })
+    });
+
+    const data = await response.json();
+    outputPre.textContent = JSON.stringify(data, null, 2);
+    outputPre.style.color = response.ok ? '#00ff88' : '#ff4444';
+
+    if (response.ok) {
+      showToast('Test generation successful!', 'success');
+    } else {
+      showToast(data.error || 'Generation failed', 'error');
+    }
+  } catch (error) {
+    outputPre.textContent = 'Error: ' + error.message;
+    outputPre.style.color = '#ff4444';
+    showToast('Test failed: ' + error.message, 'error');
+  }
+}
+
+async function resetAllTrials() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const outputDiv = document.getElementById('trialTestOutput');
+  const outputPre = outputDiv?.querySelector('pre');
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Resetting all trials...';
+  }
+
+  try {
+    const response = await fetch('/api/trial/admin/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminKey}`
+      },
+      body: JSON.stringify({ clearAll: true })
+    });
+
+    const data = await response.json();
+    if (outputPre) {
+      outputPre.textContent = JSON.stringify(data, null, 2);
+      outputPre.style.color = response.ok ? '#00ff88' : '#ff4444';
+    }
+
+    if (response.ok) {
+      showToast(`Cleared ${data.deletedCount} trial record(s)`, 'success');
+    } else {
+      showToast(data.error || 'Reset failed', 'error');
+    }
+  } catch (error) {
+    if (outputPre) {
+      outputPre.textContent = 'Error: ' + error.message;
+      outputPre.style.color = '#ff4444';
+    }
+    showToast('Reset failed: ' + error.message, 'error');
+  }
+}
+
+async function viewTrialStatus() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const outputDiv = document.getElementById('trialTestOutput');
+  const outputPre = outputDiv?.querySelector('pre');
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Fetching trial status...';
+  }
+
+  try {
+    const response = await fetch('/api/trial/admin/status', {
+      headers: {
+        'Authorization': `Bearer ${adminKey}`
+      }
+    });
+
+    const data = await response.json();
+    if (outputPre) {
+      outputPre.textContent = JSON.stringify(data, null, 2);
+      outputPre.style.color = response.ok ? '#00ff88' : '#ff4444';
+    }
+
+    if (!response.ok) {
+      showToast(data.error || 'Failed to get status', 'error');
+    }
+  } catch (error) {
+    if (outputPre) {
+      outputPre.textContent = 'Error: ' + error.message;
+      outputPre.style.color = '#ff4444';
+    }
+    showToast('Failed: ' + error.message, 'error');
+  }
 }
 
 // ===========================================
@@ -1851,3 +2075,8 @@ window.copyImageUrl = copyImageUrl;
 window.editImageMetadata = editImageMetadata;
 window.deleteLibraryImage = deleteLibraryImage;
 window.filterImageLibrary = filterImageLibrary;
+// Trial testing exports
+window.toggleTrialAdminBypass = toggleTrialAdminBypass;
+window.testTrialGeneration = testTrialGeneration;
+window.resetAllTrials = resetAllTrials;
+window.viewTrialStatus = viewTrialStatus;
