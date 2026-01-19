@@ -618,14 +618,16 @@ function renderTrialTestingSection() {
         >
       </div>
 
-      ${isEnabled ? renderTrialCharacterSettings() : ''}
+      ${isEnabled ? `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+          <div>${renderTrialCharacterSettings()}</div>
+          <div>${renderTrialModalPreview()}</div>
+        </div>
+      ` : ''}
 
       <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
         <h4 style="margin: 0 0 12px; color: #fff;">Quick Actions</h4>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <button class="admin-btn admin-btn--secondary" onclick="testTrialGeneration()">
-            Test Generation
-          </button>
           <button class="admin-btn admin-btn--secondary" onclick="resetAllTrials()">
             Reset All Trials
           </button>
@@ -672,7 +674,7 @@ function renderTrialCharacterSettings() {
       <div id="trialSettingsForm">
         <div class="admin-form-group">
           <label>Character Name</label>
-          <input type="text" id="trialCharacterName" class="admin-input" value="${escapeHtml(settings.character_name || '')}" placeholder="e.g. Luna">
+          <input type="text" id="trialCharacterName" class="admin-input" value="${escapeHtml(settings.character_name || '')}" placeholder="e.g. Luna" oninput="updateTrialPreview()">
         </div>
 
         <div class="admin-form-group">
@@ -685,7 +687,7 @@ function renderTrialCharacterSettings() {
               ${previewImageHtml}
             </div>
             <div style="flex: 1;">
-              <input type="text" id="trialPreviewImage" class="admin-input" value="${escapeHtml(settings.character_preview_image || '')}" placeholder="Image URL..." style="margin-bottom: 8px;">
+              <input type="text" id="trialPreviewImage" class="admin-input" value="${escapeHtml(settings.character_preview_image || '')}" placeholder="Image URL..." style="margin-bottom: 8px;" oninput="updateTrialPreview()">
               <button class="admin-btn admin-btn--secondary" onclick="openImagePickerForTrialPreview()" style="width: 100%;">
                 📁 Select from Library
               </button>
@@ -706,7 +708,7 @@ function renderTrialCharacterSettings() {
           <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
             Hint shown in the prompt textarea
           </p>
-          <input type="text" id="trialPlaceholderText" class="admin-input" value="${escapeHtml(settings.placeholder_text || '')}" placeholder="e.g. wearing a red dress...">
+          <input type="text" id="trialPlaceholderText" class="admin-input" value="${escapeHtml(settings.placeholder_text || '')}" placeholder="e.g. wearing a red dress..." oninput="updateTrialPreview()">
         </div>
 
         <div class="admin-form-group">
@@ -729,6 +731,203 @@ function renderTrialCharacterSettings() {
       </div>
     </div>
   `;
+}
+
+function renderTrialModalPreview() {
+  const settings = trialSettingsCache || {
+    character_name: 'Luna',
+    character_preview_image: '',
+    base_prompt: '',
+    placeholder_text: 'e.g. wearing a red dress at sunset...',
+    reference_images: []
+  };
+
+  const characterName = settings.character_name || 'Luna';
+  const previewImage = settings.character_preview_image;
+  const placeholderText = settings.placeholder_text || 'e.g. wearing a red dress at sunset...';
+  const refImageCount = (settings.reference_images || []).length;
+
+  const characterImageHtml = previewImage
+    ? `<img src="${escapeHtml(previewImage)}" alt="${escapeHtml(characterName)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`
+    : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px;">✨</div>`;
+
+  return `
+    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+      <h4 style="margin: 0 0 8px; color: #fff;">Live Preview</h4>
+      <p style="color: #666; font-size: 0.85rem; margin-bottom: 16px;">
+        This shows what users see. Changes update live (before saving).
+      </p>
+
+      <div id="trialPreviewContainer" style="background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.1);">
+        <!-- Modal Header -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="margin: 0 0 8px; font-size: 1.4rem; color: #fff;">Try AI Image Generation</h2>
+          <p style="margin: 0; color: #888; font-size: 0.9rem;">See what you can create - no signup required</p>
+        </div>
+
+        <!-- Character Info -->
+        <div style="display: flex; align-items: center; gap: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <div id="trialPreviewCharImage" style="width: 64px; height: 64px; flex-shrink: 0;">
+            ${characterImageHtml}
+          </div>
+          <div>
+            <div id="trialPreviewCharName" style="font-weight: 600; color: #fff; font-size: 1.1rem;">${escapeHtml(characterName)} - Demo Character</div>
+            <div style="color: #888; font-size: 0.85rem;">Generate multiple images with the same character</div>
+          </div>
+        </div>
+
+        <!-- Prompt Form -->
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem;">Describe the scene</label>
+          <textarea
+            id="trialPreviewPrompt"
+            style="width: 100%; min-height: 80px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95rem; resize: vertical; box-sizing: border-box;"
+            placeholder="${escapeHtml(placeholderText)}"
+          ></textarea>
+        </div>
+
+        <!-- Actions Row -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <span style="color: #888; font-size: 0.85rem;">∞ tries (admin bypass)</span>
+          <button
+            onclick="runTrialPreviewGeneration()"
+            style="background: linear-gradient(135deg, #ff2ebb 0%, #ff6b6b 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+          >
+            Generate
+          </button>
+        </div>
+
+        <!-- Reference Images Indicator -->
+        ${refImageCount > 0 ? `
+          <div style="background: rgba(0, 178, 255, 0.1); border: 1px solid rgba(0, 178, 255, 0.3); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px;">
+            <span style="color: #00b2ff; font-size: 0.85rem;">📸 ${refImageCount} reference image${refImageCount > 1 ? 's' : ''} configured (img2img mode)</span>
+          </div>
+        ` : ''}
+
+        <!-- Result Area (hidden until generation) -->
+        <div id="trialPreviewResult" style="display: none;">
+          <div style="position: relative; border-radius: 12px; overflow: hidden; background: #111;">
+            <img id="trialPreviewResultImage" src="" alt="Generated image" style="width: 100%; display: block;">
+          </div>
+          <div style="margin-top: 12px; text-align: center;">
+            <button
+              onclick="clearTrialPreviewResult()"
+              style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;"
+            >
+              Clear Result
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="trialPreviewLoading" style="display: none; text-align: center; padding: 40px;">
+          <div style="width: 40px; height: 40px; border: 3px solid rgba(255,46,187,0.2); border-top-color: #ff2ebb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p style="color: #888; margin: 0;">Generating image...</p>
+        </div>
+      </div>
+
+      <style>
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
+  `;
+}
+
+// Update preview when form fields change
+function updateTrialPreview() {
+  const nameInput = document.getElementById('trialCharacterName');
+  const previewImageInput = document.getElementById('trialPreviewImage');
+  const placeholderInput = document.getElementById('trialPlaceholderText');
+
+  // Update character name
+  const previewName = document.getElementById('trialPreviewCharName');
+  if (previewName && nameInput) {
+    previewName.textContent = (nameInput.value || 'Luna') + ' - Demo Character';
+  }
+
+  // Update character image
+  const previewImage = document.getElementById('trialPreviewCharImage');
+  if (previewImage && previewImageInput) {
+    const imgUrl = previewImageInput.value;
+    if (imgUrl) {
+      previewImage.innerHTML = `<img src="${escapeHtml(imgUrl)}" alt="Character" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:linear-gradient(135deg,#ff2ebb,#00b2ff);display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:12px;\\'>✨</div>'">`;
+    } else {
+      previewImage.innerHTML = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px;">✨</div>`;
+    }
+  }
+
+  // Update placeholder text
+  const previewPrompt = document.getElementById('trialPreviewPrompt');
+  if (previewPrompt && placeholderInput) {
+    previewPrompt.placeholder = placeholderInput.value || 'e.g. wearing a red dress at sunset...';
+  }
+}
+
+// Run generation from the preview
+async function runTrialPreviewGeneration() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const promptInput = document.getElementById('trialPreviewPrompt');
+  const userPrompt = promptInput?.value?.trim();
+
+  if (!userPrompt) {
+    showToast('Enter a prompt to generate', 'error');
+    promptInput?.focus();
+    return;
+  }
+
+  const loadingDiv = document.getElementById('trialPreviewLoading');
+  const resultDiv = document.getElementById('trialPreviewResult');
+  const resultImage = document.getElementById('trialPreviewResultImage');
+
+  // Show loading, hide result
+  if (loadingDiv) loadingDiv.style.display = 'block';
+  if (resultDiv) resultDiv.style.display = 'none';
+
+  try {
+    const response = await fetch('/api/trial/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminKey}`
+      },
+      body: JSON.stringify({
+        prompt: userPrompt,
+        fingerprint: 'admin-preview-' + Date.now()
+      })
+    });
+
+    const data = await response.json();
+
+    if (loadingDiv) loadingDiv.style.display = 'none';
+
+    if (response.ok && data.image) {
+      if (resultImage) resultImage.src = data.image;
+      if (resultDiv) resultDiv.style.display = 'block';
+      showToast('Generation complete!', 'success');
+    } else {
+      showToast(data.error || 'Generation failed', 'error');
+      console.error('Generation failed:', data);
+    }
+  } catch (error) {
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    showToast('Generation failed: ' + error.message, 'error');
+    console.error('Generation error:', error);
+  }
+}
+
+// Clear the preview result
+function clearTrialPreviewResult() {
+  const resultDiv = document.getElementById('trialPreviewResult');
+  const resultImage = document.getElementById('trialPreviewResultImage');
+  if (resultDiv) resultDiv.style.display = 'none';
+  if (resultImage) resultImage.src = '';
 }
 
 function toggleTrialAdminBypass() {
@@ -968,6 +1167,9 @@ function openImagePickerForTrialPreview() {
       trialSettingsCache = { reference_images: [] };
     }
     trialSettingsCache.character_preview_image = url;
+
+    // Update live preview
+    updateTrialPreview();
   });
 }
 
@@ -2332,3 +2534,6 @@ window.saveTrialSettings = saveTrialSettings;
 window.openImagePickerForTrialPreview = openImagePickerForTrialPreview;
 window.openImagePickerForTrialReference = openImagePickerForTrialReference;
 window.removeTrialReferenceImage = removeTrialReferenceImage;
+window.updateTrialPreview = updateTrialPreview;
+window.runTrialPreviewGeneration = runTrialPreviewGeneration;
+window.clearTrialPreviewResult = clearTrialPreviewResult;
