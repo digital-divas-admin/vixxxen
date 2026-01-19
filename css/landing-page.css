@@ -92,6 +92,12 @@
   max-width: 800px;
 }
 
+.landing-hero__logo {
+  max-width: 280px;
+  height: auto;
+  margin-bottom: 30px;
+}
+
 .landing-hero__headline {
   font-size: 36px;
   font-weight: 800;
