@@ -1161,9 +1161,16 @@ async function handleTrialGenerate() {
   generateBtn.disabled = true;
 
   try {
+    // Build headers - include admin key if set (for testing)
+    const headers = { 'Content-Type': 'application/json' };
+    const adminKey = localStorage.getItem('trialAdminKey');
+    if (adminKey) {
+      headers['Authorization'] = `Bearer ${adminKey}`;
+    }
+
     const response = await fetch('/api/trial/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         prompt,
         fingerprint: trialFingerprint

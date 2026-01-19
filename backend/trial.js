@@ -288,11 +288,17 @@ router.post('/generate', async (req, res) => {
 
     const ipAddress = getClientIp(req);
 
-    // Skip rate limiting in dev bypass mode
+    // Check for admin bypass via Authorization header
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+    const isAdminBypass = adminKey && authHeader === `Bearer ${adminKey}`;
+
+    // Skip rate limiting in dev bypass mode OR admin bypass
     let trialRecord = { generations_used: 0, isNew: true };
     let remaining = MAX_TRIALS_PER_USER;
+    const shouldBypassRateLimit = DEV_BYPASS_ENABLED || isAdminBypass;
 
-    if (!DEV_BYPASS_ENABLED) {
+    if (!shouldBypassRateLimit) {
       // Check global daily cap first
       const globalCap = await checkGlobalDailyCap();
       if (!globalCap.allowed) {
@@ -314,7 +320,7 @@ router.post('/generate', async (req, res) => {
         });
       }
     } else {
-      logger.info('Trial dev bypass: skipping rate limit check', { ip: maskIp(ipAddress) });
+      logger.info('Trial bypass: skipping rate limit check', { ip: maskIp(ipAddress), isAdmin: isAdminBypass });
     }
 
     logGeneration('trial', 'started', { ip: maskIp(ipAddress), promptLength: prompt.length, remaining: remaining - 1, requestId: req.id });
@@ -411,13 +417,13 @@ router.post('/generate', async (req, res) => {
       throw new Error('No image in response');
     }
 
-    // Update trial tracking (skip in dev bypass mode)
-    if (!DEV_BYPASS_ENABLED) {
+    // Update trial tracking (skip in bypass mode)
+    if (!shouldBypassRateLimit) {
       await updateTrialRecord(ipAddress, fingerprint, trialRecord);
       await incrementGlobalDailyCap();
     }
 
-    logGeneration('trial', 'completed', { requestId: req.id, devBypass: DEV_BYPASS_ENABLED });
+    logGeneration('trial', 'completed', { requestId: req.id, bypass: shouldBypassRateLimit });
 
     res.json({
       success: true,
