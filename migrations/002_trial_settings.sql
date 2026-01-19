@@ -5,8 +5,8 @@
 CREATE TABLE IF NOT EXISTS trial_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  -- Character configuration
-  character_id UUID REFERENCES characters(id) ON DELETE SET NULL,
+  -- Character configuration (no FK constraint - validated at application level)
+  character_id UUID,
   character_name TEXT DEFAULT 'Luna',
   character_preview_image TEXT,  -- URL shown in modal
 
@@ -67,5 +67,5 @@ INSERT INTO trial_settings (
 ) ON CONFLICT DO NOTHING;
 
 COMMENT ON TABLE trial_settings IS 'Configuration for the trial generation feature';
-COMMENT ON COLUMN trial_settings.character_id IS 'Optional FK to characters table for demo character';
+COMMENT ON COLUMN trial_settings.character_id IS 'Optional character ID for demo character (no FK - validated at app level)';
 COMMENT ON COLUMN trial_settings.reference_images IS 'Array of image URLs sent to Seedream for consistent character generation';
