@@ -1064,8 +1064,8 @@ function createTrialFormHTML(remaining, config = {}) {
 
   // Character image - use preview if available, otherwise gradient placeholder
   const characterImageHtml = previewImage
-    ? `<img src="${previewImage}" alt="${characterName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`
-    : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 12px;">&#10024;</div>`;
+    ? `<img src="${previewImage}" alt="${characterName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+    : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 50%;">&#10024;</div>`;
 
   // Build benefits list HTML
   const benefitsHtml = benefitsList.map(b => `<li>${b}</li>`).join('\n            ');
