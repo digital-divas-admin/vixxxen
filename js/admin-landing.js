@@ -562,8 +562,17 @@ function renderFinalCtaSection() {
 // TRIAL TESTING SECTION
 // ===========================================
 
+// Cache for trial settings
+let trialSettingsCache = null;
+let trialCharactersCache = [];
+
 function renderTrialTestingSection() {
   const isEnabled = localStorage.getItem('trialAdminKey') ? true : false;
+
+  // Load settings asynchronously
+  if (isEnabled && !trialSettingsCache) {
+    loadTrialSettings();
+  }
 
   return `
     <div class="admin-section-card">
@@ -609,6 +618,8 @@ function renderTrialTestingSection() {
         >
       </div>
 
+      ${isEnabled ? renderTrialCharacterSettings() : ''}
+
       <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
         <h4 style="margin: 0 0 12px; color: #fff;">Quick Actions</h4>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -626,6 +637,95 @@ function renderTrialTestingSection() {
 
       <div id="trialTestOutput" style="margin-top: 20px; display: none;">
         <pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; color: #00ff88;"></pre>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrialCharacterSettings() {
+  const settings = trialSettingsCache || {
+    character_name: 'Luna',
+    character_preview_image: '',
+    base_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality',
+    placeholder_text: 'e.g. wearing a red dress, walking in a park at golden hour...',
+    reference_images: []
+  };
+
+  const characterOptions = trialCharactersCache.map(c =>
+    `<option value="${c.id}" ${settings.character_id === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  const referenceImagesHtml = (settings.reference_images || []).map((img, idx) => `
+    <div class="trial-ref-image" style="position: relative; width: 100px; height: 100px;">
+      <img src="${escapeHtml(img)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+      <button onclick="removeTrialReferenceImage(${idx})" style="position: absolute; top: -8px; right: -8px; background: #ff4444; border: none; color: white; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px;">×</button>
+    </div>
+  `).join('');
+
+  return `
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <h4 style="margin: 0 0 16px; color: #fff;">Demo Character Configuration</h4>
+      <p style="color: #888; margin-bottom: 20px; font-size: 0.9rem;">
+        Configure the character shown in the trial modal. Reference images make the character consistent across generations.
+      </p>
+
+      <div id="trialSettingsForm">
+        <div class="admin-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-form-group">
+            <label>Select Character</label>
+            <select id="trialCharacterSelect" class="admin-input" onchange="onTrialCharacterSelect()">
+              <option value="">Custom Character</option>
+              ${characterOptions}
+            </select>
+          </div>
+          <div class="admin-form-group">
+            <label>Character Name</label>
+            <input type="text" id="trialCharacterName" class="admin-input" value="${escapeHtml(settings.character_name || '')}" placeholder="e.g. Luna">
+          </div>
+        </div>
+
+        <div class="admin-form-group">
+          <label>Preview Image URL</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            Image shown in the trial modal header (optional)
+          </p>
+          <input type="text" id="trialPreviewImage" class="admin-input" value="${escapeHtml(settings.character_preview_image || '')}" placeholder="https://...">
+        </div>
+
+        <div class="admin-form-group">
+          <label>Base Prompt</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            This is prepended to the user's input (they don't see it)
+          </p>
+          <textarea id="trialBasePrompt" class="admin-input" rows="3" placeholder="Describe the character...">${escapeHtml(settings.base_prompt || '')}</textarea>
+        </div>
+
+        <div class="admin-form-group">
+          <label>Placeholder Text</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            Hint shown in the prompt textarea
+          </p>
+          <input type="text" id="trialPlaceholderText" class="admin-input" value="${escapeHtml(settings.placeholder_text || '')}" placeholder="e.g. wearing a red dress...">
+        </div>
+
+        <div class="admin-form-group">
+          <label>Reference Images (for consistent character)</label>
+          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            Add up to 3 reference images. These are sent to Seedream for img2img to ensure character consistency.
+          </p>
+          <div id="trialReferenceImages" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+            ${referenceImagesHtml || '<span style="color: #666;">No reference images configured</span>'}
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="text" id="trialNewRefImage" class="admin-input" style="flex: 1;" placeholder="Paste image URL...">
+            <button class="admin-btn admin-btn--secondary" onclick="addTrialReferenceImage()">Add</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 12px;">
+          <button class="admin-btn admin-btn--primary" onclick="saveTrialSettings()">Save Settings</button>
+          <button class="admin-btn admin-btn--secondary" onclick="loadTrialSettings()">Refresh</button>
+        </div>
       </div>
     </div>
   `;
@@ -775,6 +875,146 @@ async function viewTrialStatus() {
       outputPre.style.color = '#ff4444';
     }
     showToast('Failed: ' + error.message, 'error');
+  }
+}
+
+async function loadTrialSettings() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/trial/admin/settings', {
+      headers: {
+        'Authorization': `Bearer ${adminKey}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load settings');
+    }
+
+    const data = await response.json();
+    trialSettingsCache = data.settings;
+    trialCharactersCache = data.characters || [];
+
+    // Re-render to show loaded settings
+    showAdminLandingTab('trial');
+    showToast('Settings loaded', 'success');
+  } catch (error) {
+    showToast('Failed to load settings: ' + error.message, 'error');
+  }
+}
+
+async function saveTrialSettings() {
+  const adminKey = localStorage.getItem('trialAdminKey');
+  if (!adminKey) {
+    showToast('Enable admin bypass first', 'error');
+    return;
+  }
+
+  const characterSelect = document.getElementById('trialCharacterSelect');
+  const characterName = document.getElementById('trialCharacterName');
+  const previewImage = document.getElementById('trialPreviewImage');
+  const basePrompt = document.getElementById('trialBasePrompt');
+  const placeholderText = document.getElementById('trialPlaceholderText');
+
+  const settings = {
+    character_id: characterSelect?.value || null,
+    character_name: characterName?.value?.trim() || 'Luna',
+    character_preview_image: previewImage?.value?.trim() || null,
+    base_prompt: basePrompt?.value?.trim() || '',
+    placeholder_text: placeholderText?.value?.trim() || '',
+    reference_images: trialSettingsCache?.reference_images || []
+  };
+
+  try {
+    const response = await fetch('/api/trial/admin/settings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${adminKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to save');
+    }
+
+    trialSettingsCache = data.settings;
+    showToast('Settings saved!', 'success');
+  } catch (error) {
+    showToast('Failed to save: ' + error.message, 'error');
+  }
+}
+
+function addTrialReferenceImage() {
+  const input = document.getElementById('trialNewRefImage');
+  const url = input?.value?.trim();
+
+  if (!url) {
+    showToast('Enter an image URL', 'error');
+    return;
+  }
+
+  if (!url.startsWith('http') && !url.startsWith('data:')) {
+    showToast('Invalid URL format', 'error');
+    return;
+  }
+
+  if (!trialSettingsCache) {
+    trialSettingsCache = { reference_images: [] };
+  }
+
+  if (!trialSettingsCache.reference_images) {
+    trialSettingsCache.reference_images = [];
+  }
+
+  if (trialSettingsCache.reference_images.length >= 3) {
+    showToast('Maximum 3 reference images allowed', 'error');
+    return;
+  }
+
+  trialSettingsCache.reference_images.push(url);
+  input.value = '';
+
+  // Re-render to show new image
+  showAdminLandingTab('trial');
+  showToast('Image added (save to apply)', 'info');
+}
+
+function removeTrialReferenceImage(index) {
+  if (!trialSettingsCache?.reference_images) return;
+
+  trialSettingsCache.reference_images.splice(index, 1);
+
+  // Re-render
+  showAdminLandingTab('trial');
+  showToast('Image removed (save to apply)', 'info');
+}
+
+function onTrialCharacterSelect() {
+  const select = document.getElementById('trialCharacterSelect');
+  const characterId = select?.value;
+
+  if (characterId && trialCharactersCache.length > 0) {
+    const character = trialCharactersCache.find(c => c.id === characterId);
+    if (character) {
+      // Auto-fill character name and preview image
+      const nameInput = document.getElementById('trialCharacterName');
+      const previewInput = document.getElementById('trialPreviewImage');
+
+      if (nameInput) nameInput.value = character.name;
+      if (previewInput && character.avatar_url) {
+        previewInput.value = character.avatar_url;
+      } else if (previewInput && character.profile_image_url) {
+        previewInput.value = character.profile_image_url;
+      }
+    }
   }
 }
 
@@ -2080,3 +2320,8 @@ window.toggleTrialAdminBypass = toggleTrialAdminBypass;
 window.testTrialGeneration = testTrialGeneration;
 window.resetAllTrials = resetAllTrials;
 window.viewTrialStatus = viewTrialStatus;
+window.loadTrialSettings = loadTrialSettings;
+window.saveTrialSettings = saveTrialSettings;
+window.addTrialReferenceImage = addTrialReferenceImage;
+window.removeTrialReferenceImage = removeTrialReferenceImage;
+window.onTrialCharacterSelect = onTrialCharacterSelect;

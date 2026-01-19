@@ -23,6 +23,7 @@ function maskIp(ip) {
 
 // WaveSpeed API endpoint for Seedream 4.5
 const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
+const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5/edit';
 
 // Retry settings for rate limits
 const MAX_RETRIES = 3;
@@ -40,13 +41,50 @@ const MAX_TRIALS_PER_USER = 2;        // Max generations per IP/fingerprint
 const TRIAL_WINDOW_DAYS = 7;          // Reset window in days
 const GLOBAL_DAILY_CAP = 500;         // Max total trial generations per day
 
-// Demo character for trial (hardcoded for safe mode)
-const DEMO_CHARACTER = {
-  name: 'Luna',
-  description: 'A friendly AI companion with flowing silver hair and bright blue eyes',
-  trigger_word: 'luna_character',
-  system_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality'
+// Default character fallback (used if no settings in database)
+const DEFAULT_TRIAL_SETTINGS = {
+  character_name: 'Luna',
+  character_preview_image: null,
+  base_prompt: 'beautiful young woman with flowing silver hair and bright blue eyes, elegant, photorealistic, high quality',
+  placeholder_text: 'e.g. wearing a red dress, walking in a park at golden hour...',
+  reference_images: [],
+  enabled: true
 };
+
+/**
+ * Get trial settings from database (with fallback to defaults)
+ */
+async function getTrialSettings() {
+  if (!supabase) {
+    return DEFAULT_TRIAL_SETTINGS;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('trial_settings')
+      .select('*')
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      logger.warn('Using default trial settings (no database record)');
+      return DEFAULT_TRIAL_SETTINGS;
+    }
+
+    return {
+      character_id: data.character_id,
+      character_name: data.character_name || DEFAULT_TRIAL_SETTINGS.character_name,
+      character_preview_image: data.character_preview_image,
+      base_prompt: data.base_prompt || DEFAULT_TRIAL_SETTINGS.base_prompt,
+      placeholder_text: data.placeholder_text || DEFAULT_TRIAL_SETTINGS.placeholder_text,
+      reference_images: data.reference_images || [],
+      enabled: data.enabled !== false
+    };
+  } catch (error) {
+    logger.error('Error fetching trial settings', { error: error.message });
+    return DEFAULT_TRIAL_SETTINGS;
+  }
+}
 
 /**
  * Get client IP address (handles proxies)
@@ -266,6 +304,28 @@ router.get('/status', async (req, res) => {
 });
 
 /**
+ * GET /api/trial/config
+ * Get trial configuration for the frontend (public endpoint)
+ */
+router.get('/config', async (req, res) => {
+  try {
+    const settings = await getTrialSettings();
+
+    // Return only what the frontend needs (don't expose reference images URLs)
+    res.json({
+      enabled: settings.enabled,
+      characterName: settings.character_name,
+      characterPreviewImage: settings.character_preview_image,
+      placeholderText: settings.placeholder_text,
+      hasReferenceImages: settings.reference_images && settings.reference_images.length > 0
+    });
+  } catch (error) {
+    logger.error('Trial config error', { error: error.message, requestId: req.id });
+    res.status(500).json({ error: 'Failed to get trial config' });
+  }
+});
+
+/**
  * GET /api/trial/demo-character
  * Get the demo character info for the trial modal
  */
@@ -352,8 +412,34 @@ router.post('/generate', async (req, res) => {
 
     logGeneration('trial', 'started', { ip: maskIp(ipAddress), promptLength: prompt.length, remaining: remaining - 1, requestId: req.id });
 
-    // Build the generation prompt with demo character
-    const fullPrompt = `${DEMO_CHARACTER.system_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
+    // Get trial settings from database
+    const trialSettings = await getTrialSettings();
+
+    // Build the generation prompt: base_prompt + user input
+    const fullPrompt = `${trialSettings.base_prompt}, ${prompt}. High quality, detailed, professional photography style.`;
+
+    // Determine if we should use img2img (if reference images are configured)
+    const hasReferenceImages = trialSettings.reference_images && trialSettings.reference_images.length > 0;
+    const apiEndpoint = hasReferenceImages ? WAVESPEED_IMG2IMG_URL : WAVESPEED_TEXT2IMG_URL;
+
+    // Build request body
+    const requestBody = {
+      prompt: fullPrompt,
+      size: '2048*2048',
+      enable_base64_output: true,
+      enable_sync_mode: true
+    };
+
+    // Add reference images for img2img mode
+    if (hasReferenceImages) {
+      requestBody.images = trialSettings.reference_images;
+    }
+
+    logger.info('Trial generation request', {
+      endpoint: hasReferenceImages ? 'img2img' : 'text2img',
+      referenceImageCount: trialSettings.reference_images?.length || 0,
+      requestId: req.id
+    });
 
     // Call WaveSpeed API with retry logic
     let response;
@@ -361,18 +447,13 @@ router.post('/generate', async (req, res) => {
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        response = await fetch(WAVESPEED_TEXT2IMG_URL, {
+        response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            prompt: fullPrompt,
-            size: '2048*2048',
-            enable_base64_output: true,
-            enable_sync_mode: true
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (response.status === 429 && attempt < MAX_RETRIES) {
@@ -457,7 +538,7 @@ router.post('/generate', async (req, res) => {
       success: true,
       image: imageUrl,
       remaining: remaining - 1,
-      character: DEMO_CHARACTER.name
+      character: trialSettings.character_name
     });
 
   } catch (error) {
@@ -645,6 +726,131 @@ router.get('/admin/status', async (req, res) => {
   } catch (error) {
     logger.error('Admin status error', { error: error.message });
     res.status(500).json({ error: 'Failed to get status' });
+  }
+});
+
+/**
+ * GET /api/trial/admin/settings
+ * Get current trial settings (for admin panel)
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.get('/admin/settings', async (req, res) => {
+  try {
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey || !authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const settings = await getTrialSettings();
+
+    // Also fetch available characters for the dropdown
+    let characters = [];
+    if (supabase) {
+      const { data } = await supabase
+        .from('characters')
+        .select('id, name, avatar_url, profile_image_url')
+        .order('name');
+      characters = data || [];
+    }
+
+    res.json({
+      settings,
+      characters
+    });
+  } catch (error) {
+    logger.error('Admin get settings error', { error: error.message });
+    res.status(500).json({ error: 'Failed to get settings' });
+  }
+});
+
+/**
+ * POST /api/trial/admin/settings
+ * Update trial settings (for admin panel)
+ * Requires TRIAL_ADMIN_KEY in Authorization header
+ */
+router.post('/admin/settings', async (req, res) => {
+  try {
+    const adminKey = process.env.TRIAL_ADMIN_KEY;
+    const authHeader = req.headers.authorization;
+
+    if (!adminKey || !authHeader || authHeader !== `Bearer ${adminKey}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!supabase) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+
+    const {
+      character_id,
+      character_name,
+      character_preview_image,
+      base_prompt,
+      placeholder_text,
+      reference_images,
+      enabled
+    } = req.body;
+
+    // Validate reference_images is an array
+    if (reference_images && !Array.isArray(reference_images)) {
+      return res.status(400).json({ error: 'reference_images must be an array' });
+    }
+
+    // Build update object (only include provided fields)
+    const updateData = {};
+    if (character_id !== undefined) updateData.character_id = character_id;
+    if (character_name !== undefined) updateData.character_name = character_name;
+    if (character_preview_image !== undefined) updateData.character_preview_image = character_preview_image;
+    if (base_prompt !== undefined) updateData.base_prompt = base_prompt;
+    if (placeholder_text !== undefined) updateData.placeholder_text = placeholder_text;
+    if (reference_images !== undefined) updateData.reference_images = reference_images;
+    if (enabled !== undefined) updateData.enabled = enabled;
+
+    // Upsert the settings (create if not exists, update if exists)
+    const { data, error } = await supabase
+      .from('trial_settings')
+      .upsert(updateData, { onConflict: 'id' })
+      .select()
+      .single();
+
+    if (error) {
+      // If upsert fails, try to update by selecting first
+      const { data: existing } = await supabase
+        .from('trial_settings')
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (existing) {
+        const { data: updated, error: updateError } = await supabase
+          .from('trial_settings')
+          .update(updateData)
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return res.json({ success: true, settings: updated });
+      } else {
+        // Create new record
+        const { data: created, error: createError } = await supabase
+          .from('trial_settings')
+          .insert(updateData)
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        return res.json({ success: true, settings: created });
+      }
+    }
+
+    logger.info('Trial settings updated', { updatedFields: Object.keys(updateData) });
+    res.json({ success: true, settings: data });
+  } catch (error) {
+    logger.error('Admin update settings error', { error: error.message });
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 

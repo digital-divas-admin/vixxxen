@@ -917,6 +917,7 @@ function animateValue(el, start, end, duration, finalText) {
 
 let trialFingerprint = null;
 let trialRemaining = 2;
+let trialConfig = null; // Cached trial configuration
 
 /**
  * Initialize FingerprintJS and get browser fingerprint
@@ -963,6 +964,30 @@ async function checkTrialStatus() {
 }
 
 /**
+ * Fetch trial configuration from server
+ */
+async function fetchTrialConfig() {
+  try {
+    const response = await fetch('/api/trial/config');
+    if (response.ok) {
+      trialConfig = await response.json();
+      console.log('[Trial] Config loaded:', trialConfig);
+      return trialConfig;
+    }
+  } catch (error) {
+    console.warn('[Trial] Config fetch failed:', error);
+  }
+  // Default config fallback
+  return {
+    enabled: true,
+    characterName: 'Luna',
+    characterPreviewImage: null,
+    placeholderText: 'e.g. wearing a red dress, walking in a park at golden hour...',
+    hasReferenceImages: false
+  };
+}
+
+/**
  * Open the trial modal
  */
 async function openTrialModal() {
@@ -974,8 +999,17 @@ async function openTrialModal() {
     await initTrialFingerprint();
   }
 
-  // Check trial status
-  const status = await checkTrialStatus();
+  // Fetch trial config and status in parallel
+  const [config, status] = await Promise.all([
+    trialConfig ? Promise.resolve(trialConfig) : fetchTrialConfig(),
+    checkTrialStatus()
+  ]);
+
+  // Check if trial is disabled
+  if (!config.enabled) {
+    console.log('[Trial] Feature is disabled');
+    return;
+  }
 
   // Remove existing modal if any
   document.getElementById('trialModal')?.remove();
@@ -988,7 +1022,7 @@ async function openTrialModal() {
   if (status.remaining <= 0) {
     modal.innerHTML = createTrialExhaustedHTML();
   } else {
-    modal.innerHTML = createTrialFormHTML(status.remaining);
+    modal.innerHTML = createTrialFormHTML(status.remaining, config);
   }
 
   document.body.appendChild(modal);
@@ -1006,8 +1040,16 @@ async function openTrialModal() {
 /**
  * Create the trial form HTML
  */
-function createTrialFormHTML(remaining) {
+function createTrialFormHTML(remaining, config = {}) {
   const remainingClass = remaining === 1 ? 'trial-modal__remaining--warning' : '';
+  const characterName = config.characterName || 'Luna';
+  const placeholderText = config.placeholderText || 'e.g. wearing a red dress at sunset, smiling warmly at the camera...';
+  const previewImage = config.characterPreviewImage;
+
+  // Character image - use preview if available, otherwise gradient placeholder
+  const characterImageHtml = previewImage
+    ? `<img src="${previewImage}" alt="${characterName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`
+    : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 12px;">&#10024;</div>`;
 
   return `
     <div class="landing-modal__overlay"></div>
@@ -1021,22 +1063,22 @@ function createTrialFormHTML(remaining) {
         </div>
 
         <div class="trial-modal__character">
-          <div class="trial-modal__character-image" style="background: linear-gradient(135deg, #ff2ebb 0%, #00b2ff 100%); display: flex; align-items: center; justify-content: center; font-size: 28px;">
-            &#10024;
+          <div class="trial-modal__character-image">
+            ${characterImageHtml}
           </div>
           <div class="trial-modal__character-info">
-            <div class="trial-modal__character-name">Luna - Demo Character</div>
-            <div class="trial-modal__character-desc">A beautiful AI companion with silver hair and blue eyes</div>
+            <div class="trial-modal__character-name">${characterName} - Demo Character</div>
+            <div class="trial-modal__character-desc">Generate multiple images with the same character</div>
           </div>
         </div>
 
         <div class="trial-modal__form" id="trialForm">
           <div class="trial-modal__input-group">
-            <label for="trialPrompt">Describe your image</label>
+            <label for="trialPrompt">Describe the scene</label>
             <textarea
               id="trialPrompt"
               class="trial-modal__textarea"
-              placeholder="e.g. wearing a red dress at sunset, smiling warmly at the camera..."
+              placeholder="${placeholderText}"
               maxlength="500"
             ></textarea>
           </div>
