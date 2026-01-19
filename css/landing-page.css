@@ -99,10 +99,11 @@
 }
 
 .landing-hero__headline {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1.2;
   margin-bottom: 20px;
+  text-transform: uppercase;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -111,7 +112,7 @@
 
 .landing-hero__subheadline {
   font-size: 18px;
-  color: var(--text-secondary);
+  color: #fff;
   margin-bottom: 32px;
   line-height: 1.6;
 }
@@ -125,7 +126,7 @@
 
 .landing-hero__trust {
   font-size: 14px;
-  color: var(--text-muted);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -179,7 +180,7 @@
 
 .landing-btn--ghost {
   background: transparent;
-  color: var(--text-secondary);
+  color: #fff;
   border: none;
   min-width: auto;
   padding: 10px 16px;
