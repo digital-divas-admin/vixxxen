@@ -24,6 +24,24 @@
   color: #1d1d1f !important;
 }
 
+/* Model selector tabs */
+.light-theme .model-tab {
+  background: #f0f0f5 !important;
+  border-color: #d1d1d6 !important;
+  color: #6e6e73 !important;
+}
+
+.light-theme .model-tab:hover {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border-color: #c7c7cc !important;
+}
+
+.light-theme .model-tab.active {
+  /* Keep gradient for active state */
+  color: #ffffff !important;
+}
+
 /* Control panels and sidebars */
 .light-theme .control-panel,
 .light-theme .control-section,
@@ -717,4 +735,368 @@
 .light-theme .output-item-actions .icon-btn {
   background: #f0f0f5 !important;
   border: 1px solid #d1d1d6 !important;
+}
+
+/* ===========================================
+   BILLING PAGE - Light Theme
+   =========================================== */
+
+/* Hero section */
+.light-theme .billing-hero {
+  background: linear-gradient(135deg, #f0f0f5 0%, #e8e8ed 50%, #f0f0f5 100%) !important;
+}
+
+.light-theme .billing-hero::before {
+  background: radial-gradient(circle, rgba(255, 46, 187, 0.08) 0%, transparent 50%) !important;
+}
+
+.light-theme .billing-hero-label {
+  color: #6e6e73 !important;
+}
+
+.light-theme .credits-balance-context {
+  color: #8e8e93 !important;
+}
+
+.light-theme .credits-balance-context span {
+  color: #6e6e73 !important;
+}
+
+.light-theme .billing-low-balance {
+  background: rgba(248, 113, 113, 0.1) !important;
+  border-color: rgba(248, 113, 113, 0.25) !important;
+}
+
+/* Credit packages */
+.light-theme .credits-package {
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9fb 100%) !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .credits-package:hover {
+  border-color: #ff2ebb !important;
+  box-shadow: 0 8px 32px rgba(255, 46, 187, 0.15) !important;
+}
+
+.light-theme .credits-package.featured {
+  background: linear-gradient(180deg, #fff5fa 0%, #fef5f9 100%) !important;
+  border-color: #ff2ebb !important;
+}
+
+.light-theme .package-name {
+  color: #8e8e93 !important;
+}
+
+.light-theme .package-credits {
+  color: #1d1d1f !important;
+}
+
+.light-theme .package-credits-label {
+  color: #6e6e73 !important;
+}
+
+.light-theme .package-pricing {
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .package-price {
+  color: #1d1d1f !important;
+}
+
+.light-theme .package-unit-price {
+  color: #8e8e93 !important;
+}
+
+/* Credits reference section */
+.light-theme .credits-reference {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .credits-reference-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .credits-reference-item {
+  background: #f5f5f7 !important;
+}
+
+.light-theme .credits-reference-item-name {
+  color: #6e6e73 !important;
+}
+
+.light-theme .credits-reference-item-unit {
+  color: #8e8e93 !important;
+}
+
+/* Transaction section */
+.light-theme .transaction-section {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .transaction-header {
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .transaction-header-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .transaction-view-toggle {
+  background: #f0f0f5 !important;
+}
+
+.light-theme .transaction-view-btn {
+  color: #8e8e93 !important;
+}
+
+.light-theme .transaction-view-btn.active {
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .transaction-table th {
+  background: #f5f5f7 !important;
+  color: #6e6e73 !important;
+}
+
+.light-theme .transaction-table td {
+  color: #1d1d1f !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .transaction-table tr:hover td {
+  background: #f9f9fb !important;
+}
+
+.light-theme .transaction-description {
+  color: #6e6e73 !important;
+}
+
+/* Transaction cards (mobile) */
+.light-theme .transaction-cards {
+  background: #e8e8ed !important;
+}
+
+.light-theme .transaction-card {
+  background: #ffffff !important;
+}
+
+.light-theme .transaction-card-desc {
+  color: #6e6e73 !important;
+}
+
+.light-theme .transaction-card-date {
+  color: #8e8e93 !important;
+}
+
+/* Trust section */
+.light-theme .billing-trust {
+  background: #f5f5f7 !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .billing-trust-item {
+  color: #6e6e73 !important;
+}
+
+.light-theme .billing-trust-divider {
+  background: #d1d1d6 !important;
+}
+
+/* ===========================================
+   ACCOUNT PAGE - Light Theme
+   =========================================== */
+
+/* Page background */
+.light-theme .account-page {
+  background: #f5f5f7 !important;
+}
+
+/* Header */
+.light-theme .account-header {
+  background: #ffffff !important;
+}
+
+.light-theme .account-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .account-subtitle {
+  color: #6e6e73 !important;
+}
+
+/* Cards */
+.light-theme .account-card {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .account-card-header {
+  background: #f5f5f7 !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .account-card-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .account-card-body {
+  background: #ffffff !important;
+}
+
+/* Danger zone card */
+.light-theme .account-card.danger {
+  background: linear-gradient(180deg, #fff5f5 0%, #fff8f8 100%) !important;
+  border-color: rgba(255, 68, 68, 0.3) !important;
+}
+
+.light-theme .account-card.danger .account-card-header {
+  background: #fff0f0 !important;
+  border-color: rgba(255, 68, 68, 0.15) !important;
+}
+
+/* Form fields */
+.light-theme .account-label {
+  color: #6e6e73 !important;
+}
+
+.light-theme .account-input {
+  background: #f0f0f5 !important;
+  border-color: #d1d1d6 !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .account-input::placeholder {
+  color: #8e8e93 !important;
+}
+
+.light-theme .account-input:focus {
+  border-color: #ff2ebb !important;
+  background: #ffffff !important;
+}
+
+.light-theme .account-input:disabled {
+  background: #e8e8ed !important;
+  color: #8e8e93 !important;
+}
+
+.light-theme .account-hint {
+  color: #8e8e93 !important;
+}
+
+/* Buttons */
+.light-theme .account-btn {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .account-btn:hover {
+  background: #d1d1d6 !important;
+}
+
+.light-theme .account-btn.primary {
+  background: linear-gradient(135deg, #9d4edd, #ff2ebb) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.light-theme .account-btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(255, 46, 187, 0.3) !important;
+}
+
+.light-theme .account-btn.secondary {
+  background: #f0f0f5 !important;
+  border-color: #d1d1d6 !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .account-btn.secondary:hover {
+  background: #e8e8ed !important;
+}
+
+.light-theme .account-btn.danger {
+  background: rgba(255, 68, 68, 0.1) !important;
+  color: #dc2626 !important;
+  border-color: rgba(255, 68, 68, 0.3) !important;
+}
+
+.light-theme .account-btn.danger:hover {
+  background: rgba(255, 68, 68, 0.2) !important;
+}
+
+/* Avatar section */
+.light-theme .account-avatar-section {
+  background: #f5f5f7 !important;
+}
+
+.light-theme .account-avatar {
+  border-color: #d1d1d6 !important;
+  background: #e8e8ed !important;
+}
+
+/* Subscription info */
+.light-theme .account-subscription-info {
+  background: #f5f5f7 !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .account-plan-badge {
+  background: rgba(255, 46, 187, 0.1) !important;
+  color: #ff2ebb !important;
+}
+
+.light-theme .account-credits-number {
+  color: #1d1d1f !important;
+}
+
+.light-theme .account-credits-label {
+  color: #6e6e73 !important;
+}
+
+.light-theme .account-detail-label {
+  color: #8e8e93 !important;
+}
+
+.light-theme .account-detail-value {
+  color: #1d1d1f !important;
+}
+
+.light-theme .account-warning-text {
+  color: #dc2626 !important;
+}
+
+/* Back button */
+.light-theme .account-back-btn {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .account-back-btn:hover {
+  background: #d1d1d6 !important;
+}
+
+/* Custom Character Orders */
+.light-theme .order-item {
+  background: #f5f5f7 !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .order-item:hover {
+  background: #f0f0f5 !important;
+}
+
+.light-theme .order-name {
+  color: #1d1d1f !important;
+}
+
+.light-theme .order-date {
+  color: #8e8e93 !important;
+}
+
+.light-theme .order-status {
+  color: #6e6e73 !important;
 }

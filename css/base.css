@@ -27,7 +27,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
+  background: var(--bg-hover);
   border-radius: 4px;
 }
 
@@ -141,7 +141,7 @@ input[type="file"] {
 /* Character Count */
 .char-count {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-muted);
   text-align: right;
   margin-top: 6px;
 }
@@ -149,7 +149,7 @@ input[type="file"] {
 /* Clone Info Box */
 .clone-info {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 16px;
   padding: 12px;

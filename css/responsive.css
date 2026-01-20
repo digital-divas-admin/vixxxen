@@ -1956,7 +1956,7 @@
     background: #0a0a0a;
     border-radius: 8px;
     overflow: visible; /* Allow toggle button to show outside */
-    border: 1px solid #2a2a2a;
+    border: 1px solid var(--border-color);
   }
 
   .edit-canvas-wrapper:not(.navigate-mode) #maskCanvas {
@@ -2127,7 +2127,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: var(--bg-card, #1a1a1a);
+    background: var(--bg-card);
     border-radius: 20px 20px 0 0;
     max-height: 85vh;
     display: flex;
@@ -2140,7 +2140,7 @@
     display: block;
     width: 40px;
     height: 4px;
-    background: var(--border-color, #333);
+    background: var(--border-color);
     border-radius: 2px;
     margin: 12px auto 0;
     opacity: 0.6;
@@ -2151,7 +2151,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px 8px;
-    border-bottom: 1px solid var(--border-color, #333);
+    border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
   }
 
@@ -2166,7 +2166,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--bg-tertiary, #2a2a2a);
+    background: var(--bg-tertiary);
     border: none;
     color: var(--text-primary, #fff);
     font-size: 1.25rem;
@@ -2224,7 +2224,7 @@
     flex-shrink: 0;
     padding: 12px 16px;
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid var(--border-color, #333);
+    border-top: 1px solid var(--border-color);
     display: flex;
     gap: 10px;
   }
@@ -2336,8 +2336,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: #1a1a1a;
-    border-top: 1px solid #2a2a2a;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border-color);
   }
 
   .character-modal-price {
@@ -2355,7 +2355,7 @@
   /* Gallery on mobile - small horizontal scroll */
   .character-modal-gallery {
     padding: 12px;
-    border-top: 1px solid #2a2a2a;
+    border-top: 1px solid var(--border-color);
   }
 
   .character-modal-gallery-title {
