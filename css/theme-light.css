@@ -24,6 +24,24 @@
   color: #1d1d1f !important;
 }
 
+/* Model selector tabs */
+.light-theme .model-tab {
+  background: #f0f0f5 !important;
+  border-color: #d1d1d6 !important;
+  color: #6e6e73 !important;
+}
+
+.light-theme .model-tab:hover {
+  background: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border-color: #c7c7cc !important;
+}
+
+.light-theme .model-tab.active {
+  /* Keep gradient for active state */
+  color: #ffffff !important;
+}
+
 /* Control panels and sidebars */
 .light-theme .control-panel,
 .light-theme .control-section,
