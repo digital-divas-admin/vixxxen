@@ -15075,15 +15075,34 @@
     }
 
     // Get face lock images to include in generation
-    function getFacelockImagesForGeneration() {
+    // Fetches fresh signed URLs from backend to avoid expiration issues
+    async function getFacelockImagesForGeneration() {
       if (!facelockEnabled) return [];
+
+      const characterId = getFacelockCharacterId();
+      if (!characterId) return [];
 
       // For Nano Banana, always use SFW images
       const effectiveMode = (currentModel === 'nano-banana' && facelockMode === 'nsfw') ? 'sfw' : facelockMode;
-      const images = facelockImages[effectiveMode] || [];
 
-      // Return just the URLs
-      return images.map(img => img.imageUrl);
+      try {
+        // Fetch fresh signed URLs from backend
+        const response = await authFetch(`${API_BASE_URL}/api/facelock/${characterId}/images?mode=${effectiveMode}`);
+        if (!response.ok) {
+          console.warn('Failed to fetch fresh facelock URLs, using cached');
+          // Fallback to cached URLs
+          const images = facelockImages[effectiveMode] || [];
+          return images.map(img => img.imageUrl);
+        }
+
+        const data = await response.json();
+        return (data.images || []).map(img => img.url);
+      } catch (error) {
+        console.error('Error fetching facelock images for generation:', error);
+        // Fallback to cached URLs
+        const images = facelockImages[effectiveMode] || [];
+        return images.map(img => img.imageUrl);
+      }
     }
 
     // Update Face Lock section visibility based on model
@@ -18454,7 +18473,7 @@
           console.log(`🌊 Seedream request: ${seedreamWidth}x${seedreamHeight}`);
 
           // Combine Face Lock images + manual reference images
-          const facelockUrls = getFacelockImagesForGeneration();
+          const facelockUrls = await getFacelockImagesForGeneration();
           const manualRefs = referenceImages.map(img => img.dataUrl);
           const allReferenceImages = [...facelockUrls, ...manualRefs];
 
@@ -18473,7 +18492,7 @@
           console.log(`🍌 Nano Banana request: AR=${aspectRatio}`);
 
           // Combine Face Lock images + manual reference images
-          const facelockUrls = getFacelockImagesForGeneration();
+          const facelockUrls = await getFacelockImagesForGeneration();
           const manualRefs = referenceImages.map(img => img.dataUrl);
           const allReferenceImages = [...facelockUrls, ...manualRefs];
 

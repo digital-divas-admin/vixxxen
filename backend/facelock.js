@@ -171,7 +171,12 @@ router.post('/:characterId', requireAuth, async (req, res) => {
       existingQuery.eq('image_url', imageUrl);
     }
 
-    const { data: existing } = await existingQuery.single();
+    const { data: existing, error: existingError } = await existingQuery.maybeSingle();
+
+    if (existingError) {
+      logger.error('Error checking for existing facelock', { error: existingError.message, requestId: req.id });
+      throw existingError;
+    }
 
     if (existing) {
       return res.status(400).json({
