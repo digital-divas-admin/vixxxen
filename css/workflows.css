@@ -897,3 +897,45 @@
 [data-theme="light"] .workflow-execution-status {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
+
+/* =============================================
+   EXECUTION RESULTS
+   ============================================= */
+
+.workflow-execution-results {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.workflow-results-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.workflow-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.workflow-result-image {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.workflow-result-image:hover {
+  transform: scale(1.02);
+}
+
+.workflow-result-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

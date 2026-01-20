@@ -1093,6 +1093,8 @@
           <span>Starting...</span>
         </div>
       </div>
+      <div class="workflow-execution-results" id="executionResults" style="display: none;">
+      </div>
     `;
 
     document.body.appendChild(status);
@@ -1151,6 +1153,8 @@
 
         if (execution.status === 'completed') {
           showToast('Workflow completed successfully!', 'success');
+          // Show generated images
+          showExecutionResults(steps);
         } else if (execution.status === 'failed') {
           showToast(execution.error_message || 'Workflow failed', 'error');
         }
@@ -1159,6 +1163,47 @@
     } catch (error) {
       console.error('Error polling execution status:', error);
     }
+  }
+
+  function showExecutionResults(steps) {
+    const resultsEl = document.getElementById('executionResults');
+    if (!resultsEl) return;
+
+    // Collect all images from steps
+    const images = [];
+    steps.forEach(step => {
+      if (step.output_data) {
+        // Check for saved_urls (from save-gallery)
+        if (step.output_data.saved_urls && Array.isArray(step.output_data.saved_urls)) {
+          images.push(...step.output_data.saved_urls);
+        }
+        // Check for image_urls (from generate-image)
+        else if (step.output_data.image_urls && Array.isArray(step.output_data.image_urls)) {
+          images.push(...step.output_data.image_urls);
+        }
+        // Check for single image_url
+        else if (step.output_data.image_url) {
+          images.push(step.output_data.image_url);
+        }
+      }
+    });
+
+    if (images.length === 0) {
+      resultsEl.style.display = 'none';
+      return;
+    }
+
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `
+      <div class="workflow-results-title">Generated Images</div>
+      <div class="workflow-results-grid">
+        ${images.map(url => `
+          <div class="workflow-result-image">
+            <img src="${url}" alt="Generated image" onclick="window.open('${url}', '_blank')">
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 
   // =============================================
