@@ -916,6 +916,7 @@
 }
 
 .light-theme .account-card-header {
+  background: #f5f5f7 !important;
   border-color: #e8e8ed !important;
 }
 
@@ -934,6 +935,7 @@
 }
 
 .light-theme .account-card.danger .account-card-header {
+  background: #fff0f0 !important;
   border-color: rgba(255, 68, 68, 0.15) !important;
 }
 
