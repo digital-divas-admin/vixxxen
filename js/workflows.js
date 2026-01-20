@@ -456,22 +456,44 @@
 
       if (!sourceNode || !targetNode) return;
 
-      const sourceNodeDef = NODE_TYPES[sourceNode.type];
-      const targetNodeDef = NODE_TYPES[targetNode.type];
+      // Try to get actual handle positions from DOM
+      const sourceHandle = document.querySelector(`#node-${edge.source} .workflow-node-handle.output[data-handle="${edge.sourceHandle}"]`);
+      const targetHandle = document.querySelector(`#node-${edge.target} .workflow-node-handle.input[data-handle="${edge.targetHandle}"]`);
 
-      if (!sourceNodeDef || !targetNodeDef) return;
+      let sourceX, sourceY, targetX, targetY;
 
-      // Calculate positions (simplified - center of node)
-      const sourceX = sourceNode.position.x + 180; // Right side
-      const sourceY = sourceNode.position.y + 50; // Middle
-      const targetX = targetNode.position.x; // Left side
-      const targetY = targetNode.position.y + 50; // Middle
+      if (sourceHandle && targetHandle) {
+        // Get positions relative to canvas
+        const canvas = document.getElementById('workflowsCanvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        const sourceRect = sourceHandle.getBoundingClientRect();
+        const targetRect = targetHandle.getBoundingClientRect();
+
+        sourceX = sourceRect.left - canvasRect.left + sourceRect.width / 2;
+        sourceY = sourceRect.top - canvasRect.top + sourceRect.height / 2;
+        targetX = targetRect.left - canvasRect.left + targetRect.width / 2;
+        targetY = targetRect.top - canvasRect.top + targetRect.height / 2;
+      } else {
+        // Fallback to calculated positions
+        const sourceNodeEl = document.getElementById(`node-${edge.source}`);
+        const targetNodeEl = document.getElementById(`node-${edge.target}`);
+
+        const sourceWidth = sourceNodeEl ? sourceNodeEl.offsetWidth : 180;
+        const sourceHeight = sourceNodeEl ? sourceNodeEl.offsetHeight : 80;
+        const targetHeight = targetNodeEl ? targetNodeEl.offsetHeight : 80;
+
+        sourceX = sourceNode.position.x + sourceWidth;
+        sourceY = sourceNode.position.y + sourceHeight / 2;
+        targetX = targetNode.position.x;
+        targetY = targetNode.position.y + targetHeight / 2;
+      }
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
-      // Create bezier curve
-      const midX = (sourceX + targetX) / 2;
-      const d = `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
+      // Create smooth bezier curve
+      const dx = Math.abs(targetX - sourceX);
+      const controlOffset = Math.max(50, dx * 0.4);
+      const d = `M ${sourceX} ${sourceY} C ${sourceX + controlOffset} ${sourceY}, ${targetX - controlOffset} ${targetY}, ${targetX} ${targetY}`;
 
       path.setAttribute('d', d);
       path.setAttribute('class', 'workflow-connection');
