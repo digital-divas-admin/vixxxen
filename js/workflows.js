@@ -59,7 +59,8 @@
           label: 'Model',
           options: [
             { value: 'seedream', label: 'Seedream' },
-            { value: 'nano-banana', label: 'Nano Banana' }
+            { value: 'nano-banana', label: 'Nano Banana' },
+            { value: 'qwen', label: 'Qwen' }
           ],
           default: 'seedream'
         },
@@ -80,7 +81,8 @@
           name: 'facelock_enabled',
           type: 'toggle',
           label: 'Enable Face Lock',
-          default: true
+          default: true,
+          showWhen: { model: ['seedream', 'nano-banana'] }
         },
         {
           name: 'facelock_mode',
@@ -91,7 +93,7 @@
             { value: 'nsfw', label: 'NSFW' }
           ],
           default: 'sfw',
-          showWhen: { facelock_enabled: true }
+          showWhen: { facelock_enabled: true, model: ['seedream', 'nano-banana'] }
         },
         {
           name: 'aspect_ratio',
@@ -108,17 +110,32 @@
         },
         {
           name: 'width',
-          type: 'number',
+          type: 'select',
           label: 'Width',
-          default: 768,
-          showWhen: { model: 'seedream' }
+          options: [
+            { value: '512', label: '512' },
+            { value: '768', label: '768' },
+            { value: '1024', label: '1024' },
+            { value: '1152', label: '1152' },
+            { value: '1344', label: '1344' }
+          ],
+          default: '768',
+          showWhen: { model: ['seedream', 'qwen'] }
         },
         {
           name: 'height',
-          type: 'number',
+          type: 'select',
           label: 'Height',
-          default: 1344,
-          showWhen: { model: 'seedream' }
+          options: [
+            { value: '512', label: '512' },
+            { value: '768', label: '768' },
+            { value: '1024', label: '1024' },
+            { value: '1152', label: '1152' },
+            { value: '1344', label: '1344' },
+            { value: '1536', label: '1536' }
+          ],
+          default: '1344',
+          showWhen: { model: ['seedream', 'qwen'] }
         }
       ]
     },
@@ -532,7 +549,14 @@
       if (field.showWhen) {
         let show = true;
         for (const [key, value] of Object.entries(field.showWhen)) {
-          if (node.config[key] !== value) {
+          const configValue = node.config[key];
+          // Support array values (show if configValue matches any value in array)
+          if (Array.isArray(value)) {
+            if (!value.includes(configValue)) {
+              show = false;
+              break;
+            }
+          } else if (configValue !== value) {
             show = false;
             break;
           }
