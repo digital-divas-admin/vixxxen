@@ -124,10 +124,50 @@ function isLibraryImageId(value) {
 }
 
 /**
- * Process a mixed array of library IDs and raw base64 images
+ * Check if a value looks like a URL
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isUrl(value) {
+  if (!value || typeof value !== 'string') return false;
+  return value.startsWith('http://') || value.startsWith('https://');
+}
+
+/**
+ * Fetch a URL and convert it to a base64 data URL
+ * @param {string} url
+ * @returns {Promise<{success: boolean, dataUrl?: string, error?: string}>}
+ */
+async function fetchUrlToBase64(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return { success: false, error: `Failed to fetch URL: ${response.status}` };
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+    // Validate it's an image
+    if (!contentType.startsWith('image/')) {
+      return { success: false, error: `URL is not an image: ${contentType}` };
+    }
+
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    const dataUrl = `data:${contentType};base64,${base64}`;
+
+    return { success: true, dataUrl };
+  } catch (error) {
+    logger.error('Error fetching URL to base64', { url: url.substring(0, 100), error: error.message });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Process a mixed array of library IDs, URLs, and raw base64 images
  * Returns all as base64 data URLs
  *
- * @param {string[]} images - Mixed array of library IDs and base64 images
+ * @param {string[]} images - Mixed array of library IDs, URLs, and base64 images
  * @param {string} userId - User ID for library lookups
  * @returns {Promise<{success: boolean, images?: string[], error?: string}>}
  */
@@ -137,16 +177,19 @@ async function processImageInputs(images, userId) {
   }
 
   const libraryIds = [];
-  const rawImages = [];
+  const urls = [];
   const indexMap = []; // Track which position each image came from
 
-  // Separate library IDs from raw images
+  // Separate library IDs, URLs, and raw base64 images
   images.forEach((img, index) => {
     if (isLibraryImageId(img)) {
       libraryIds.push(img);
       indexMap.push({ type: 'library', id: img, originalIndex: index });
+    } else if (isUrl(img)) {
+      urls.push({ url: img, index });
+      indexMap.push({ type: 'url', url: img, originalIndex: index });
     } else {
-      rawImages.push(img);
+      // Raw base64 data URL
       indexMap.push({ type: 'raw', data: img, originalIndex: index });
     }
   });
@@ -164,10 +207,27 @@ async function processImageInputs(images, userId) {
     });
   }
 
+  // Fetch URLs and convert to base64
+  let resolvedUrls = {};
+  if (urls.length > 0) {
+    logger.info('Fetching URLs for image processing', { count: urls.length });
+    for (const { url, index } of urls) {
+      const result = await fetchUrlToBase64(url);
+      if (!result.success) {
+        logger.warn('Failed to fetch URL', { url: url.substring(0, 100), error: result.error });
+        return { success: false, error: `Failed to fetch image URL: ${result.error}` };
+      }
+      resolvedUrls[url] = result.dataUrl;
+    }
+  }
+
   // Reconstruct in original order
   const processedImages = indexMap.map(item => {
     if (item.type === 'library') {
       return resolvedLibraryImages[item.id];
+    }
+    if (item.type === 'url') {
+      return resolvedUrls[item.url];
     }
     return item.data;
   });
