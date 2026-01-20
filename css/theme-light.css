@@ -718,3 +718,167 @@
   background: #f0f0f5 !important;
   border: 1px solid #d1d1d6 !important;
 }
+
+/* ===========================================
+   BILLING PAGE - Light Theme
+   =========================================== */
+
+/* Hero section */
+.light-theme .billing-hero {
+  background: linear-gradient(135deg, #f0f0f5 0%, #e8e8ed 50%, #f0f0f5 100%) !important;
+}
+
+.light-theme .billing-hero::before {
+  background: radial-gradient(circle, rgba(255, 46, 187, 0.08) 0%, transparent 50%) !important;
+}
+
+.light-theme .billing-hero-label {
+  color: #6e6e73 !important;
+}
+
+.light-theme .credits-balance-context {
+  color: #8e8e93 !important;
+}
+
+.light-theme .credits-balance-context span {
+  color: #6e6e73 !important;
+}
+
+.light-theme .billing-low-balance {
+  background: rgba(248, 113, 113, 0.1) !important;
+  border-color: rgba(248, 113, 113, 0.25) !important;
+}
+
+/* Credit packages */
+.light-theme .credits-package {
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9fb 100%) !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .credits-package:hover {
+  border-color: #ff2ebb !important;
+  box-shadow: 0 8px 32px rgba(255, 46, 187, 0.15) !important;
+}
+
+.light-theme .credits-package.featured {
+  background: linear-gradient(180deg, #fff5fa 0%, #fef5f9 100%) !important;
+  border-color: #ff2ebb !important;
+}
+
+.light-theme .package-name {
+  color: #8e8e93 !important;
+}
+
+.light-theme .package-credits {
+  color: #1d1d1f !important;
+}
+
+.light-theme .package-credits-label {
+  color: #6e6e73 !important;
+}
+
+.light-theme .package-pricing {
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .package-price {
+  color: #1d1d1f !important;
+}
+
+.light-theme .package-unit-price {
+  color: #8e8e93 !important;
+}
+
+/* Credits reference section */
+.light-theme .credits-reference {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .credits-reference-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .credits-reference-item {
+  background: #f5f5f7 !important;
+}
+
+.light-theme .credits-reference-item-name {
+  color: #6e6e73 !important;
+}
+
+/* Transaction section */
+.light-theme .transaction-section {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+
+.light-theme .transaction-header {
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .transaction-header-title {
+  color: #1d1d1f !important;
+}
+
+.light-theme .transaction-view-toggle {
+  background: #f0f0f5 !important;
+}
+
+.light-theme .transaction-view-btn {
+  color: #8e8e93 !important;
+}
+
+.light-theme .transaction-view-btn.active {
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+}
+
+.light-theme .transaction-table th {
+  background: #f5f5f7 !important;
+  color: #6e6e73 !important;
+}
+
+.light-theme .transaction-table td {
+  color: #1d1d1f !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .transaction-table tr:hover td {
+  background: #f9f9fb !important;
+}
+
+.light-theme .transaction-description {
+  color: #6e6e73 !important;
+}
+
+/* Transaction cards (mobile) */
+.light-theme .transaction-cards {
+  background: #e8e8ed !important;
+}
+
+.light-theme .transaction-card {
+  background: #ffffff !important;
+}
+
+.light-theme .transaction-card-desc {
+  color: #6e6e73 !important;
+}
+
+.light-theme .transaction-card-date {
+  color: #8e8e93 !important;
+}
+
+/* Trust section */
+.light-theme .billing-trust {
+  background: #f5f5f7 !important;
+  border-color: #e8e8ed !important;
+}
+
+.light-theme .billing-trust-item {
+  color: #6e6e73 !important;
+}
+
+.light-theme .billing-trust-divider {
+  background: #d1d1d6 !important;
+}
