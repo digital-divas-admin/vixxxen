@@ -165,7 +165,7 @@ async function generateWithSeedream(config, userId, referenceImages) {
     throw new Error('WaveSpeed API key not configured');
   }
 
-  const { prompt, width = 768, height = 1344, num_outputs = 1 } = config;
+  const { prompt, width = 2048, height = 2048, num_outputs = 1 } = config;
   const hasReferenceImage = referenceImages.length > 0;
   const apiEndpoint = hasReferenceImage ? WAVESPEED_IMG2IMG_URL : WAVESPEED_TEXT2IMG_URL;
 
@@ -184,9 +184,24 @@ async function generateWithSeedream(config, userId, referenceImages) {
     imagePrompt = `Use these reference images as style guide. ${imagePrompt}`;
   }
 
-  // Validate dimensions
-  const validatedWidth = Math.min(Math.max(parseInt(width) || 768, 512), 4096);
-  const validatedHeight = Math.min(Math.max(parseInt(height) || 1344, 512), 4096);
+  // Validate dimensions - img2img requires minimum 3,686,400 pixels (1920x1920)
+  let validatedWidth = Math.min(Math.max(parseInt(width) || 2048, 512), 4096);
+  let validatedHeight = Math.min(Math.max(parseInt(height) || 2048, 512), 4096);
+
+  // Ensure minimum pixel count for img2img mode
+  const MIN_PIXELS_IMG2IMG = 3686400; // ~1920x1920
+  if (hasReferenceImage && (validatedWidth * validatedHeight) < MIN_PIXELS_IMG2IMG) {
+    // Scale up proportionally to meet minimum
+    const currentPixels = validatedWidth * validatedHeight;
+    const scale = Math.sqrt(MIN_PIXELS_IMG2IMG / currentPixels);
+    validatedWidth = Math.ceil(validatedWidth * scale);
+    validatedHeight = Math.ceil(validatedHeight * scale);
+    logger.info('Scaled up dimensions for img2img minimum', {
+      originalWidth: width, originalHeight: height,
+      scaledWidth: validatedWidth, scaledHeight: validatedHeight
+    });
+  }
+
   const sizeString = `${validatedWidth}*${validatedHeight}`;
 
   // Build request body
