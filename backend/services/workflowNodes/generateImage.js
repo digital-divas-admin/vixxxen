@@ -58,7 +58,25 @@ async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
 }
 
 /**
- * Get facelock reference images for a character
+ * Fetch URL and convert to base64 data URL
+ */
+async function fetchUrlToBase64(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const buffer = await response.buffer();
+    const contentType = response.headers.get('content-type') || 'image/png';
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
+  } catch (error) {
+    logger.warn('Failed to fetch URL to base64', { error: error.message });
+    return null;
+  }
+}
+
+/**
+ * Get facelock reference images for a character (as base64 data URLs)
  */
 async function getFacelockImages(userId, characterId, mode = 'sfw') {
   const referenceImages = [];
@@ -93,7 +111,16 @@ async function getFacelockImages(userId, characterId, mode = 'sfw') {
         }
 
         if (imageUrl) {
-          referenceImages.push(imageUrl);
+          // Convert HTTP URLs to base64
+          if (imageUrl.startsWith('http')) {
+            const base64Url = await fetchUrlToBase64(imageUrl);
+            if (base64Url) {
+              referenceImages.push(base64Url);
+            }
+          } else {
+            // Already base64 or data URL
+            referenceImages.push(imageUrl);
+          }
         }
       }
     }
