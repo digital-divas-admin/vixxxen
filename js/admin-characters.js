@@ -144,6 +144,7 @@
     document.getElementById('adminCharForm').reset();
     document.getElementById('adminCharIsListed').checked = true;
     document.getElementById('adminCharIsActive').checked = true;
+    document.getElementById('adminCharAppearanceDescription').value = '';
     document.getElementById('adminCharModal').style.display = 'flex';
   };
 
@@ -167,6 +168,7 @@
     document.getElementById('adminCharPrice').value = char.price || 0;
     document.getElementById('adminCharIsListed').checked = char.is_listed !== false;
     document.getElementById('adminCharIsActive').checked = char.is_active !== false;
+    document.getElementById('adminCharAppearanceDescription').value = char.appearance_description || '';
 
     document.getElementById('adminCharModal').style.display = 'flex';
   };
@@ -196,7 +198,8 @@
         trigger_word: document.getElementById('adminCharTriggerWord').value.trim() || null,
         price: parseFloat(document.getElementById('adminCharPrice').value) || 0,
         is_listed: document.getElementById('adminCharIsListed').checked,
-        is_active: document.getElementById('adminCharIsActive').checked
+        is_active: document.getElementById('adminCharIsActive').checked,
+        appearance_description: document.getElementById('adminCharAppearanceDescription').value.trim() || null
       };
 
       let response;

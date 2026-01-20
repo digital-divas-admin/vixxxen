@@ -34,13 +34,14 @@ async function getCharacterContext(characterId) {
     // Try main characters table first
     const { data: character } = await supabase
       .from('characters')
-      .select('name, prompt_prefix, prompt_suffix')
+      .select('name, prompt_prefix, prompt_suffix, appearance_description')
       .eq('id', characterId)
       .single();
 
     if (character) {
       return {
         name: character.name,
+        appearance: character.appearance_description || '',
         traits: character.prompt_prefix || '',
         suffix: character.prompt_suffix || ''
       };
@@ -49,13 +50,14 @@ async function getCharacterContext(characterId) {
     // Try marketplace characters
     const { data: marketplaceChar } = await supabase
       .from('marketplace_characters')
-      .select('name, description')
+      .select('name, description, appearance_description')
       .eq('id', characterId)
       .single();
 
     if (marketplaceChar) {
       return {
         name: marketplaceChar.name,
+        appearance: marketplaceChar.appearance_description || '',
         traits: marketplaceChar.description || '',
         suffix: ''
       };
@@ -115,11 +117,29 @@ Style: ${style} (${styleDesc})`;
   if (characterContext) {
     prompt += `
 
-Character: ${characterContext.name}
-${characterContext.traits ? `Character traits/appearance: ${characterContext.traits}` : ''}
-${characterContext.suffix ? `Additional details: ${characterContext.suffix}` : ''}
+Character: ${characterContext.name}`;
 
-IMPORTANT: Every prompt must feature this character as the main subject.`;
+    // If appearance description is provided, use it as the canonical description
+    if (characterContext.appearance) {
+      prompt += `
+
+EXACT PHYSICAL APPEARANCE (use this IDENTICAL description in EVERY prompt - do not vary or improvise):
+"${characterContext.appearance}"`;
+    }
+
+    // Add additional traits/styling hints if available
+    if (characterContext.traits) {
+      prompt += `
+
+Additional styling notes: ${characterContext.traits}`;
+    }
+
+    prompt += `
+
+CRITICAL CHARACTER RULES:
+- The character's physical appearance MUST be described identically in every prompt using the exact description above
+- Do NOT change hair color, eye color, body type, age, or any physical features between prompts
+- Only vary: poses, clothing, settings, lighting, activities, expressions`;
   }
 
   prompt += `
