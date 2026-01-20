@@ -259,7 +259,8 @@ async function generateWithSeedream(config, userId, referenceImages) {
  * Poll WaveSpeed task for completion
  */
 async function pollWaveSpeedTask(taskId) {
-  const pollUrl = `https://api.wavespeed.ai/api/v3/predictions/${taskId}`;
+  // IMPORTANT: Must use /result suffix - matches working seedream.js implementation
+  const pollUrl = `https://api.wavespeed.ai/api/v3/predictions/${taskId}/result`;
   const maxAttempts = 60; // 2 minutes max
   const pollInterval = 2000; // 2 seconds
 
@@ -281,11 +282,17 @@ async function pollWaveSpeedTask(taskId) {
     logger.info('Poll result', { status: result.status, attempt });
 
     if (result.status === 'completed' || result.status === 'succeeded') {
-      return result;
+      // Return result.data if available, otherwise result (matches seedream.js)
+      return result.data || result;
     }
 
-    if (result.status === 'failed') {
+    if (result.status === 'failed' || result.status === 'error') {
       throw new Error(`WaveSpeed task failed: ${result.error || 'Unknown error'}`);
+    }
+
+    // If we have output data already, return it
+    if (result.outputs || result.output || (result.data && (result.data.outputs || result.data.url))) {
+      return result.data || result;
     }
   }
 
@@ -606,8 +613,8 @@ function buildQwenWorkflow({ prompt, negativePrompt = '', width = 1152, height =
     },
     "58": {
       "inputs": { "width": width, "height": height, "batch_size": 1 },
-      "class_type": "EmptyLatentImage",
-      "_meta": { "title": "Empty Latent Image" }
+      "class_type": "EmptySD3LatentImage",
+      "_meta": { "title": "EmptySD3LatentImage" }
     },
     "65": {
       "inputs": { "filename_prefix": "qwen_output", "images": ["8", 0] },
