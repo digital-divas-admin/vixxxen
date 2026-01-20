@@ -11,7 +11,7 @@
   background: linear-gradient(135deg, #ff2ebb, #00b2ff);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -32,8 +32,8 @@
 }
 
 .generate-btn:disabled {
-  background: #2a2a2a;
-  color: #666;
+  background: var(--bg-hover);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -50,7 +50,7 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -137,20 +137,20 @@
 
 .user-menu-header {
   padding: 12px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 12px;
 }
 
 .user-menu-name {
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .user-menu-email {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .user-menu-section {
@@ -160,7 +160,7 @@
 
 .user-menu-label {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -169,7 +169,7 @@
 
 .user-menu-value {
   font-size: 0.95rem;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
@@ -199,7 +199,7 @@
   background: rgba(255, 46, 187, 0.1);
   border: 1px solid rgba(255, 46, 187, 0.2);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -242,8 +242,8 @@
 }
 
 .login-modal-content {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 32px;
   max-width: 400px;
@@ -261,7 +261,7 @@
 }
 
 .login-modal-subtitle {
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin-bottom: 24px;
 }
@@ -269,10 +269,10 @@
 .login-input {
   width: 100%;
   padding: 12px;
-  background: #0a0a0a;
-  border: 1px solid #2a2a2a;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.95rem;
   margin-bottom: 12px;
 }
@@ -320,7 +320,7 @@
   align-items: center;
   width: 100%;
   margin: 16px 0;
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
@@ -329,7 +329,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #333;
+  background: var(--bg-surface);
 }
 
 .login-divider span {
@@ -341,7 +341,7 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #ccc;
+  border: 2px solid var(--border-color);
   border-top-color: #3c4043;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -389,7 +389,7 @@
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 50%;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
   display: flex;
@@ -439,7 +439,7 @@
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 50%;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
   display: flex;
@@ -588,8 +588,8 @@
 }
 
 .input-select option {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   padding: 8px;
 }
 
@@ -602,7 +602,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
@@ -611,7 +611,7 @@
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #2a2a2a;
+  background: var(--bg-hover);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -643,7 +643,7 @@
 
 .slider-hint {
   font-size: 0.7rem;
-  color: #555;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
@@ -660,10 +660,10 @@
   flex: 1;
   min-width: 120px;
   padding: 12px 16px;
-  background: #252525;
-  border: 1px solid #2a2a2a;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -672,15 +672,15 @@
 }
 
 .model-tab:hover {
-  background: #2a2a2a;
-  color: #fff;
+  background: var(--bg-hover);
+  color: var(--text-primary);
   transform: translateY(-2px);
   border-color: #3a3a3a;
 }
 
 .model-tab.active {
   background: linear-gradient(135deg, #ff2ebb, #00b2ff);
-  color: #fff;
+  color: var(--text-primary);
   border-color: transparent;
   box-shadow: 0 4px 12px rgba(255, 46, 187, 0.3);
 }
@@ -693,23 +693,23 @@
   gap: 12px;
   margin-top: 16px;
   padding: 8px 16px;
-  background: #1a1a1a;
+  background: var(--bg-tertiary);
   border-radius: 8px;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--border-color);
 }
 
 .content-mode-label {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .content-mode-switch {
   display: flex;
-  background: #252525;
+  background: var(--bg-elevated);
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -719,7 +719,7 @@
   text-align: center;
   border: none;
   background: transparent;
-  color: #aaa;
+  color: var(--text-tertiary);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -730,7 +730,7 @@
 
 .content-mode-btn.active {
   background: linear-gradient(135deg, #00b2ff, #00e676);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .content-mode-btn.nsfw-btn.active {
@@ -738,13 +738,13 @@
 }
 
 .content-mode-btn:hover:not(.active) {
-  color: #aaa;
-  background: #333;
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
 }
 
 .content-mode-info {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-muted);
   margin-left: auto;
 }
 
@@ -777,7 +777,7 @@
 
 .reference-upload-hint {
   font-size: 0.75rem;
-  color: #555;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
@@ -793,7 +793,7 @@
   aspect-ratio: 1;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--border-color);
 }
 
 .reference-item img {
@@ -811,7 +811,7 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.8);
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -829,7 +829,7 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #333;
+  border: 2px solid var(--border-color);
   border-top-color: #ff2ebb;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -841,7 +841,7 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -856,8 +856,8 @@
   bottom: 100%;
   right: 0;
   margin-bottom: 8px;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 4px;
   display: none;
@@ -876,7 +876,7 @@
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   text-align: left;
   cursor: pointer;
   border-radius: 6px;
@@ -911,8 +911,8 @@
 }
 
 .modal-overlay .modal-content {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   width: 90%;
   max-width: 700px;
@@ -927,19 +927,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-overlay .modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .modal-overlay .modal-close {
   background: transparent;
   border: none;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 28px;
   cursor: pointer;
   padding: 0;
@@ -948,7 +948,7 @@
 }
 
 .modal-overlay .modal-close:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .modal-overlay .modal-body {
@@ -962,7 +962,7 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--border-color);
 }
 
 /* Hide mobile-only elements on desktop */
@@ -976,30 +976,30 @@
   display: flex;
   gap: 8px;
   margin-bottom: 20px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 12px;
 }
 
 .lib-tab-btn {
   padding: 8px 16px;
   background: transparent;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .lib-tab-btn:hover {
-  color: #fff;
-  border-color: #555;
+  color: var(--text-primary);
+  border-color: var(--border-light);
 }
 
 .lib-tab-btn.active {
   background: linear-gradient(135deg, #ff2ebb20, #00b2ff20);
   border-color: #ff2ebb;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* Library Filter Pills */
@@ -1012,18 +1012,18 @@
 
 .lib-filter-btn {
   padding: 6px 14px;
-  background: #252525;
-  border: 1px solid #333;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .lib-filter-btn:hover {
-  color: #fff;
-  border-color: #555;
+  color: var(--text-primary);
+  border-color: var(--border-light);
 }
 
 .lib-filter-btn.active {
@@ -1091,14 +1091,14 @@
   border: 1px solid #444;
   border-radius: 4px;
   background: #1a1a2e;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.7rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .lib-simple-actions .lib-action-btn:hover {
-  background: #333;
+  background: var(--bg-surface);
 }
 
 .lib-simple-actions .lib-action-btn.delete {
@@ -1109,7 +1109,7 @@
 
 .lib-simple-actions .lib-action-btn.delete:hover {
   background: #ff4444;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .lib-simple-actions .lib-action-btn.appeal {
@@ -1136,7 +1136,7 @@
 
 .library-item-badge.approved {
   background: #22c55e;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .library-item-badge.pending {
@@ -1146,7 +1146,7 @@
 
 .library-item-badge.rejected {
   background: #ff4444;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .library-item-actions {
@@ -1175,7 +1175,7 @@
 
 .lib-action-btn.delete {
   background: #ff4444;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .lib-action-btn:hover {
@@ -1239,10 +1239,10 @@
   justify-content: center;
   gap: 3px;
   padding: 4px 6px;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   background: linear-gradient(135deg, #1a1a2e, #16162a);
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.65rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -1274,7 +1274,7 @@
 .library-modal-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: var(--text-muted);
   grid-column: 1 / -1;
 }
 
@@ -1315,17 +1315,17 @@
 .appeal-form label {
   display: block;
   margin-bottom: 8px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
 .appeal-form textarea {
   width: 100%;
   padding: 12px;
-  background: #252525;
-  border: 1px solid #333;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.95rem;
   resize: vertical;
   min-height: 80px;
@@ -1343,8 +1343,8 @@
 }
 
 .facelock-control {
-  background: var(--bg-tertiary, #1a1a1a);
-  border: 1px solid var(--border-color, #2a2a2a);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 12px 16px;
   transition: all 0.2s;
@@ -1394,7 +1394,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #333;
+  background: var(--bg-surface);
   border-radius: 24px;
   transition: all 0.3s;
 }
@@ -1434,10 +1434,10 @@
   width: 100%;
   padding: 10px 14px;
   min-height: 44px;
-  background: #252525;
-  border: 1px solid #333;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
   appearance: none;
@@ -1454,10 +1454,10 @@
 /* Mode Switch */
 .facelock-mode-switch {
   display: flex;
-  background: #252525;
+  background: var(--bg-elevated);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--border-color);
   margin-bottom: 12px;
 }
 
@@ -1467,7 +1467,7 @@
   min-height: 44px;
   border: none;
   background: transparent;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -1475,13 +1475,13 @@
 }
 
 .facelock-mode-btn:hover:not(.active) {
-  background: #333;
-  color: #aaa;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
 }
 
 .facelock-mode-btn.active {
   background: linear-gradient(135deg, #00b2ff, #00e676);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .facelock-mode-btn.nsfw.active {
@@ -1515,12 +1515,12 @@
 }
 
 .facelock-thumbnails::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--bg-tertiary);
   border-radius: 2px;
 }
 
 .facelock-thumbnails::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--bg-surface);
   border-radius: 2px;
 }
 
@@ -1553,14 +1553,14 @@
   height: 56px;
   border-radius: 8px;
   flex-shrink: 0;
-  background: #252525;
+  background: var(--bg-elevated);
   border: 2px dashed #444;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  color: #666;
+  color: var(--text-muted);
   font-size: 1.5rem;
 }
 
@@ -1576,7 +1576,7 @@
   justify-content: center;
   width: 100%;
   height: 56px;
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
@@ -1587,12 +1587,12 @@
   justify-content: space-between;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--border-color);
 }
 
 .facelock-count {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .facelock-manage-btn {
@@ -1642,7 +1642,7 @@
 
 .facelock-manager-content {
   position: relative;
-  background: var(--bg-card, #1a1a1a);
+  background: var(--bg-card);
   border-radius: 20px 20px 0 0;
   width: 100%;
   max-width: 500px;
@@ -1671,13 +1671,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .facelock-manager-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .facelock-manager-close {
@@ -1685,7 +1685,7 @@
   height: 32px;
   border: none;
   background: transparent;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 24px;
   cursor: pointer;
   border-radius: 50%;
@@ -1696,8 +1696,8 @@
 }
 
 .facelock-manager-close:hover {
-  background: #333;
-  color: #fff;
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .facelock-manager-body {
@@ -1709,7 +1709,7 @@
 /* Manager Mode Tabs */
 .facelock-manager-tabs {
   display: flex;
-  background: #252525;
+  background: var(--bg-elevated);
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 20px;
@@ -1721,7 +1721,7 @@
   min-height: 44px;
   border: none;
   background: transparent;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -1730,7 +1730,7 @@
 
 .facelock-manager-tab.active {
   background: linear-gradient(135deg, #00b2ff, #00e676);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .facelock-manager-tab.nsfw.active {
@@ -1749,7 +1749,7 @@
   aspect-ratio: 1;
   border-radius: 12px;
   overflow: hidden;
-  border: 2px solid #333;
+  border: 2px solid var(--border-color);
   background: #1a1a2e;
 }
 
@@ -1768,7 +1768,7 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.7);
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 16px;
   cursor: pointer;
   display: flex;
@@ -1789,7 +1789,7 @@
 .facelock-manager-add {
   aspect-ratio: 1;
   border-radius: 12px;
-  background: #252525;
+  background: var(--bg-elevated);
   border: 2px dashed #444;
   display: flex;
   flex-direction: column;
@@ -1798,7 +1798,7 @@
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .facelock-manager-add:hover {
@@ -1817,7 +1817,7 @@
 
 .facelock-manager-count {
   text-align: center;
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.85rem;
   margin-top: 12px;
 }
@@ -1825,7 +1825,7 @@
 /* Manager Footer */
 .facelock-manager-footer {
   padding: 16px 20px;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--border-color);
 }
 
 .facelock-manager-done {
@@ -1835,7 +1835,7 @@
   background: linear-gradient(135deg, #ff2ebb, #00b2ff);
   border: none;
   border-radius: 12px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -1877,7 +1877,7 @@
 
 .facelock-add-content {
   position: relative;
-  background: var(--bg-card, #1a1a1a);
+  background: var(--bg-card);
   border-radius: 20px 20px 0 0;
   width: 100%;
   max-width: 400px;
@@ -1898,7 +1898,7 @@
   text-align: center;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 20px;
 }
 
@@ -1912,10 +1912,10 @@
   width: 100%;
   padding: 14px 20px;
   min-height: 52px;
-  background: #252525;
-  border: 1px solid #333;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
@@ -1944,15 +1944,15 @@
   padding: 14px;
   margin-top: 10px;
   background: transparent;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .facelock-add-cancel:hover {
-  background: #252525;
-  color: #fff;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }

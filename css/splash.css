@@ -43,7 +43,7 @@
 }
 
 .loading-splash-text {
-  color: #888;
+  color: var(--text-secondary);
   margin-top: 16px;
   font-size: 0.9rem;
 }
