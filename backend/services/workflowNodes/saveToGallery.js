@@ -96,14 +96,10 @@ async function executeSaveToGallery(config, userId, context) {
           user_id: userId,
           storage_path: storagePath,
           storage_bucket: 'user-images',
+          filename: `${folder}_${imageId}.${ext}`,
           file_size: imageBuffer.length,
           mime_type: contentType,
-          status: 'auto_approved', // Workflow-generated images are pre-approved
-          source: 'workflow',
-          metadata: {
-            folder,
-            generated_at: new Date().toISOString()
-          }
+          status: 'auto_approved' // Workflow-generated images are pre-approved
         })
         .select()
         .single();
