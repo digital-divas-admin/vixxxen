@@ -11869,10 +11869,16 @@
             <!-- Canvas Area -->
             <div class="workflows-canvas-container" id="workflowsCanvasContainer">
               <div class="workflows-canvas" id="workflowsCanvas">
-                <!-- Rete.js editor will be mounted here -->
+                <!-- Nodes and connections rendered here -->
               </div>
               <div class="workflows-canvas-hint" id="workflowsCanvasHint">
                 Drag nodes from the left panel to get started
+              </div>
+              <div class="workflows-zoom-controls" id="workflowsZoomControls">
+                <button class="workflows-zoom-btn" onclick="window.workflowsModule.zoomIn()" title="Zoom In">+</button>
+                <span class="workflows-zoom-level" id="workflowsZoomLevel">100%</span>
+                <button class="workflows-zoom-btn" onclick="window.workflowsModule.zoomOut()" title="Zoom Out">−</button>
+                <button class="workflows-zoom-btn" onclick="window.workflowsModule.resetZoom()" title="Reset View">⟲</button>
               </div>
             </div>
 

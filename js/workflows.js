@@ -25,6 +25,12 @@
   let tempConnection = null;
   let characters = [];
 
+  // Canvas transform state
+  let canvasZoom = 1;
+  let canvasPan = { x: 0, y: 0 };
+  let isPanning = false;
+  let panStart = { x: 0, y: 0 };
+
   // =============================================
   // NODE DEFINITIONS
   // =============================================
@@ -671,9 +677,10 @@
       const nodeType = e.dataTransfer.getData('nodeType');
       if (!nodeType || !NODE_TYPES[nodeType]) return;
 
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const rect = canvasContainer.getBoundingClientRect();
+      // Account for zoom and pan when placing new nodes
+      const x = (e.clientX - rect.left - canvasPan.x) / canvasZoom;
+      const y = (e.clientY - rect.top - canvasPan.y) / canvasZoom;
 
       addNode(nodeType, { x, y });
     });
@@ -688,15 +695,83 @@
     // Handle mouse move for dragging and connecting
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+
+    // Handle zoom with mouse wheel
+    canvasContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Zoom in/out
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      const newZoom = Math.min(Math.max(canvasZoom * zoomFactor, 0.25), 2);
+
+      // Adjust pan to zoom toward mouse position
+      const zoomRatio = newZoom / canvasZoom;
+      canvasPan.x = mouseX - (mouseX - canvasPan.x) * zoomRatio;
+      canvasPan.y = mouseY - (mouseY - canvasPan.y) * zoomRatio;
+
+      canvasZoom = newZoom;
+      applyCanvasTransform();
+    }, { passive: false });
+
+    // Handle pan with middle mouse button or space+drag
+    canvasContainer.addEventListener('mousedown', (e) => {
+      // Middle mouse button (button 1) or if space is held
+      if (e.button === 1) {
+        e.preventDefault();
+        isPanning = true;
+        panStart = { x: e.clientX - canvasPan.x, y: e.clientY - canvasPan.y };
+        canvasContainer.style.cursor = 'grabbing';
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !e.repeat && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        const canvasContainer = document.getElementById('workflowsCanvasContainer');
+        if (canvasContainer) canvasContainer.style.cursor = 'grab';
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') {
+        const canvasContainer = document.getElementById('workflowsCanvasContainer');
+        if (canvasContainer) canvasContainer.style.cursor = 'default';
+        isPanning = false;
+      }
+    });
+  }
+
+  function applyCanvasTransform() {
+    const canvas = document.getElementById('workflowsCanvas');
+    if (canvas) {
+      canvas.style.transform = `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasZoom})`;
+      canvas.style.transformOrigin = '0 0';
+    }
+    // Update zoom display
+    const zoomLevel = document.getElementById('workflowsZoomLevel');
+    if (zoomLevel) {
+      zoomLevel.textContent = `${Math.round(canvasZoom * 100)}%`;
+    }
   }
 
   function handleMouseMove(e) {
-    if (isDragging && dragNode) {
-      const canvas = document.getElementById('workflowsCanvas');
-      const rect = canvas.getBoundingClientRect();
+    // Handle panning
+    if (isPanning) {
+      canvasPan.x = e.clientX - panStart.x;
+      canvasPan.y = e.clientY - panStart.y;
+      applyCanvasTransform();
+      return;
+    }
 
-      dragNode.position.x = e.clientX - rect.left - dragOffset.x;
-      dragNode.position.y = e.clientY - rect.top - dragOffset.y;
+    if (isDragging && dragNode) {
+      const canvasContainer = document.getElementById('workflowsCanvasContainer');
+      const rect = canvasContainer.getBoundingClientRect();
+
+      // Account for zoom and pan when calculating position
+      dragNode.position.x = (e.clientX - rect.left - canvasPan.x) / canvasZoom - dragOffset.x;
+      dragNode.position.y = (e.clientY - rect.top - canvasPan.y) / canvasZoom - dragOffset.y;
 
       // Update node position
       const nodeEl = document.getElementById(`node-${dragNode.id}`);
@@ -759,6 +834,12 @@
   }
 
   function handleMouseUp(e) {
+    if (isPanning) {
+      isPanning = false;
+      const canvasContainer = document.getElementById('workflowsCanvasContainer');
+      if (canvasContainer) canvasContainer.style.cursor = 'default';
+    }
+
     if (isDragging) {
       isDragging = false;
       dragNode = null;
@@ -1099,8 +1180,34 @@
       if (selectedNode) {
         deleteNode(selectedNode.id);
       }
+    },
+
+    zoomIn: function() {
+      canvasZoom = Math.min(canvasZoom * 1.2, 2);
+      applyCanvasTransform();
+      updateZoomDisplay();
+    },
+
+    zoomOut: function() {
+      canvasZoom = Math.max(canvasZoom * 0.8, 0.25);
+      applyCanvasTransform();
+      updateZoomDisplay();
+    },
+
+    resetZoom: function() {
+      canvasZoom = 1;
+      canvasPan = { x: 0, y: 0 };
+      applyCanvasTransform();
+      updateZoomDisplay();
     }
   };
+
+  function updateZoomDisplay() {
+    const zoomLevel = document.getElementById('workflowsZoomLevel');
+    if (zoomLevel) {
+      zoomLevel.textContent = `${Math.round(canvasZoom * 100)}%`;
+    }
+  }
 
   // Global functions called from HTML
   window.createNewWorkflow = async function() {

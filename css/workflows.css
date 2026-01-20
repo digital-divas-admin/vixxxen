@@ -465,6 +465,47 @@
   pointer-events: none;
 }
 
+/* Zoom Controls */
+.workflows-zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 100;
+}
+
+.workflows-zoom-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.workflows-zoom-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.workflows-zoom-level {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: center;
+}
+
 /* Config Panel */
 .workflows-config-panel {
   width: 320px;
