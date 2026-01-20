@@ -227,11 +227,69 @@ async function generateWithSeedream(config, userId, referenceImages) {
 
   if (!response.ok) {
     const errorText = await response.text();
+    logger.error('WaveSpeed API error', { status: response.status, error: errorText });
     throw new Error(`WaveSpeed API error: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  return parseWaveSpeedResponse(result);
+  logger.info('WaveSpeed API response', {
+    hasData: !!result.data,
+    hasId: !!result.id,
+    keys: Object.keys(result)
+  });
+
+  // Parse the response
+  let images = parseWaveSpeedResponse(result);
+
+  // Handle async mode - if we got a task ID, poll for result
+  if (images.length === 0 && result.id && !result.data) {
+    logger.info('WaveSpeed returned task ID, polling for result', { taskId: result.id });
+    const taskResult = await pollWaveSpeedTask(result.id);
+    images = parseWaveSpeedResponse(taskResult);
+  }
+
+  if (images.length === 0) {
+    logger.warn('No images in WaveSpeed response', { response: JSON.stringify(result).substring(0, 500) });
+  }
+
+  return images;
+}
+
+/**
+ * Poll WaveSpeed task for completion
+ */
+async function pollWaveSpeedTask(taskId) {
+  const pollUrl = `https://api.wavespeed.ai/api/v3/predictions/${taskId}`;
+  const maxAttempts = 60; // 2 minutes max
+  const pollInterval = 2000; // 2 seconds
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    const response = await fetch(pollUrl, {
+      headers: {
+        'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      logger.warn('Poll request failed', { status: response.status, attempt });
+      continue;
+    }
+
+    const result = await response.json();
+    logger.info('Poll result', { status: result.status, attempt });
+
+    if (result.status === 'completed' || result.status === 'succeeded') {
+      return result;
+    }
+
+    if (result.status === 'failed') {
+      throw new Error(`WaveSpeed task failed: ${result.error || 'Unknown error'}`);
+    }
+  }
+
+  throw new Error('WaveSpeed task timed out after 2 minutes');
 }
 
 /**
