@@ -70,6 +70,7 @@
   <link rel="stylesheet" href="css/main.css?v=20260115">
   <link rel="stylesheet" href="css/landing-page.css?v=20260115">
   <link rel="stylesheet" href="css/onboarding-wizard.css?v=20260115">
+  <link rel="stylesheet" href="css/workflows.css?v=20260120">
 
   <style>
     /* ===========================================
@@ -9329,6 +9330,10 @@
           <div class="nav-icon">🎓</div>
           <div class="nav-label">Learn</div>
         </div>
+        <div class="nav-tab" onclick="switchMainTab('workflows')" id="workflowsNavTab">
+          <div class="nav-icon">⚡</div>
+          <div class="nav-label">Workflows</div>
+        </div>
       </div>
 
       <!-- User Area -->
@@ -11784,6 +11789,109 @@
     </div>
     <!-- End Education Tab Section -->
 
+    <!-- Workflows Tab Section -->
+    <div class="tab-section" id="workflowsSection">
+      <!-- Mobile Not Supported Message -->
+      <div class="workflows-mobile-message" id="workflowsMobileMessage">
+        <div class="workflows-mobile-icon">💻</div>
+        <h2>Desktop Required</h2>
+        <p>The Workflow Editor requires a larger screen. Please visit on desktop or tablet to create and edit workflows.</p>
+        <div class="workflows-mobile-list" id="workflowsMobileList">
+          <!-- Mobile workflow list will be populated here -->
+        </div>
+      </div>
+
+      <!-- Desktop Workflows Content -->
+      <div class="workflows-desktop-content" id="workflowsDesktopContent">
+        <!-- Workflows List View -->
+        <div class="workflows-list-view" id="workflowsListView">
+          <div class="workflows-header">
+            <h1 class="workflows-title">My Workflows</h1>
+            <button class="workflows-new-btn" onclick="createNewWorkflow()">
+              <span>+</span> New Workflow
+            </button>
+          </div>
+
+          <div class="workflows-grid" id="workflowsGrid">
+            <!-- Workflow cards will be populated here -->
+            <div class="workflows-empty" id="workflowsEmpty">
+              <div class="workflows-empty-icon">⚡</div>
+              <h3>No Workflows Yet</h3>
+              <p>Create your first workflow to automate image generation, captioning, and more.</p>
+              <button class="workflows-empty-btn" onclick="createNewWorkflow()">Create Workflow</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflow Editor View -->
+        <div class="workflows-editor-view" id="workflowsEditorView" style="display: none;">
+          <div class="workflows-editor-header">
+            <button class="workflows-back-btn" onclick="closeWorkflowEditor()">
+              <span>←</span> Back
+            </button>
+            <input type="text" class="workflows-name-input" id="workflowNameInput" value="Untitled Workflow" placeholder="Workflow name...">
+            <div class="workflows-editor-actions">
+              <button class="workflows-test-btn" onclick="testWorkflow()" id="workflowTestBtn">
+                <span>▶</span> Test Run
+              </button>
+              <button class="workflows-save-btn" onclick="saveWorkflow()" id="workflowSaveBtn">
+                Save
+              </button>
+            </div>
+          </div>
+
+          <div class="workflows-editor-body">
+            <!-- Node Palette -->
+            <div class="workflows-palette" id="workflowsPalette">
+              <div class="workflows-palette-section">
+                <div class="workflows-palette-title">Triggers</div>
+                <div class="workflows-palette-node" draggable="true" data-node-type="manual-trigger">
+                  <span class="workflows-palette-icon">👆</span>
+                  <span>Manual</span>
+                </div>
+              </div>
+              <div class="workflows-palette-section">
+                <div class="workflows-palette-title">AI Generation</div>
+                <div class="workflows-palette-node" draggable="true" data-node-type="generate-image">
+                  <span class="workflows-palette-icon">🎨</span>
+                  <span>Generate Image</span>
+                </div>
+              </div>
+              <div class="workflows-palette-section">
+                <div class="workflows-palette-title">Output</div>
+                <div class="workflows-palette-node" draggable="true" data-node-type="save-gallery">
+                  <span class="workflows-palette-icon">💾</span>
+                  <span>Save to Gallery</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="workflows-canvas-container" id="workflowsCanvasContainer">
+              <div class="workflows-canvas" id="workflowsCanvas">
+                <!-- Rete.js editor will be mounted here -->
+              </div>
+              <div class="workflows-canvas-hint" id="workflowsCanvasHint">
+                Drag nodes from the left panel to get started
+              </div>
+            </div>
+
+            <!-- Node Config Panel -->
+            <div class="workflows-config-panel" id="workflowsConfigPanel" style="display: none;">
+              <div class="workflows-config-header">
+                <h3 class="workflows-config-title" id="workflowsConfigTitle">Configure Node</h3>
+                <button class="workflows-config-close" onclick="closeNodeConfig()">✕</button>
+              </div>
+              <div class="workflows-config-body" id="workflowsConfigBody">
+                <!-- Node configuration form will be rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Workflows Tab Section -->
+
     <!-- Resource Detail Modal -->
     <div class="resource-modal" id="resourceModal">
       <div class="resource-modal-content">
@@ -12927,6 +13035,7 @@
   <script src="js/billing-page.js?v=20260115"></script>
   <script src="js/delete-functions.js?v=20260115"></script>
   <script src="js/onboarding-wizard.js?v=20260115"></script>
+  <script src="js/workflows.js?v=20260120"></script>
 
   <script>
     // ===========================================
@@ -12987,7 +13096,8 @@
       'inpaint': 'Inpaint',
       'caption': 'Caption',
       'marketplace': 'Marketplace',
-      'education': 'Learn'
+      'education': 'Learn',
+      'workflows': 'Workflows'
     };
 
     // Open a tool from the mobile dashboard
@@ -15184,6 +15294,13 @@
         if (isUserAdmin) {
           showAdminButton();
           showStartHereAdminButton();
+        }
+      } else if (tab === 'workflows') {
+        document.getElementById('workflowsSection').classList.add('active');
+        document.getElementById('workflowsNavTab').classList.add('active');
+        // Load workflows when tab is opened
+        if (window.workflowsModule && typeof window.workflowsModule.fetchWorkflows === 'function') {
+          window.workflowsModule.fetchWorkflows();
         }
       }
     }
