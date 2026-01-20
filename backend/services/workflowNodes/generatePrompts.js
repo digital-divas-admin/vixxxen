@@ -31,10 +31,9 @@ async function getCharacterContext(characterId) {
   if (!characterId) return null;
 
   try {
-    // Try main characters table first
     const { data: character } = await supabase
-      .from('characters')
-      .select('name, prompt_prefix, prompt_suffix, appearance_description')
+      .from('marketplace_characters')
+      .select('name, description, appearance_description')
       .eq('id', characterId)
       .single();
 
@@ -42,23 +41,7 @@ async function getCharacterContext(characterId) {
       return {
         name: character.name,
         appearance: character.appearance_description || '',
-        traits: character.prompt_prefix || '',
-        suffix: character.prompt_suffix || ''
-      };
-    }
-
-    // Try marketplace characters
-    const { data: marketplaceChar } = await supabase
-      .from('marketplace_characters')
-      .select('name, description, appearance_description')
-      .eq('id', characterId)
-      .single();
-
-    if (marketplaceChar) {
-      return {
-        name: marketplaceChar.name,
-        appearance: marketplaceChar.appearance_description || '',
-        traits: marketplaceChar.description || '',
+        traits: character.description || '',
         suffix: ''
       };
     }
