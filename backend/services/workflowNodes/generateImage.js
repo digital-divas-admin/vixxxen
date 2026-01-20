@@ -1,11 +1,17 @@
 /**
  * Generate Image Node Executor
  * Handles image generation within workflows
+ * Calls WaveSpeed API directly instead of going through HTTP routes
  */
 
 const fetch = require('node-fetch');
 const { supabase } = require('../supabase');
 const { logger } = require('../logger');
+const { compressImages } = require('../imageCompression');
+
+// WaveSpeed API endpoints
+const WAVESPEED_TEXT2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5';
+const WAVESPEED_IMG2IMG_URL = 'https://api.wavespeed.ai/api/v3/bytedance/seedream-v4.5/edit';
 
 // Credit costs per model
 const CREDIT_COSTS = {
@@ -14,24 +20,42 @@ const CREDIT_COSTS = {
   'qwen': 5
 };
 
+// Retry settings
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2000;
+
+/**
+ * Fetch with retry logic for rate limits
+ */
+async function fetchWithRetry(url, options, maxRetries = MAX_RETRIES) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.status === 429 && attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        logger.info(`Rate limited, retrying in ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  throw lastError || new Error('Request failed after retries');
+}
+
 /**
  * Execute a Generate Image node
- *
- * @param {Object} config - Node configuration
- * @param {string} config.model - 'seedream', 'nano-banana', or 'qwen'
- * @param {string} config.character_id - Character ID for LoRA
- * @param {string} config.prompt - Image prompt
- * @param {boolean} config.facelock_enabled - Whether to use facelock
- * @param {string} config.facelock_source - 'same' or 'different'
- * @param {string} config.facelock_character_id - Character ID for facelock (if different)
- * @param {string} config.facelock_mode - 'sfw' or 'nsfw'
- * @param {string} config.aspect_ratio - Aspect ratio (for nano-banana)
- * @param {number} config.width - Width (for seedream)
- * @param {number} config.height - Height (for seedream)
- * @param {number} config.num_outputs - Number of images to generate
- * @param {string} userId - User ID executing the workflow
- * @param {Object} context - Workflow context with previous node outputs
- * @returns {Object} { output: { image_url, image_urls }, creditsUsed }
  */
 async function executeGenerateImage(config, userId, context) {
   const {
@@ -58,6 +82,11 @@ async function executeGenerateImage(config, userId, context) {
   // Validate prompt
   if (!prompt) {
     throw new Error('Prompt is required');
+  }
+
+  // Check for API key
+  if (!process.env.WAVESPEED_API_KEY) {
+    throw new Error('WaveSpeed API key not configured');
   }
 
   // Get facelock images if enabled
@@ -112,7 +141,6 @@ async function executeGenerateImage(config, userId, context) {
   // Build character prompt enhancement
   let enhancedPrompt = prompt;
   if (character_id) {
-    // Get character details for LoRA/prompt enhancement
     const { data: character } = await supabase
       .from('characters')
       .select('name, prompt_prefix, prompt_suffix')
@@ -129,58 +157,115 @@ async function executeGenerateImage(config, userId, context) {
     }
   }
 
-  // Call the appropriate generation endpoint
+  // Generate images by calling WaveSpeed API directly
   let images = [];
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
 
   try {
-    let endpoint, payload;
+    const hasReferenceImage = referenceImages.length > 0;
+    const apiEndpoint = hasReferenceImage ? WAVESPEED_IMG2IMG_URL : WAVESPEED_TEXT2IMG_URL;
 
-    if (model === 'seedream') {
-      endpoint = `${baseUrl}/api/seedream/generate`;
-      payload = {
-        prompt: enhancedPrompt,
-        width,
-        height,
-        numOutputs: num_outputs,
-        referenceImages
-      };
-    } else if (model === 'nano-banana') {
-      endpoint = `${baseUrl}/api/nano-banana/generate`;
-      payload = {
-        prompt: enhancedPrompt,
-        aspectRatio: aspect_ratio,
-        numOutputs: num_outputs,
-        referenceImages
-      };
-    } else {
-      throw new Error(`Unsupported model: ${model}`);
+    // Compress reference images if present
+    let compressedReferenceImages = [];
+    if (hasReferenceImage) {
+      compressedReferenceImages = await compressImages(referenceImages, {
+        maxDimension: 1024,
+        quality: 75
+      });
     }
 
-    // Make internal API call
-    // Note: In production, this should use internal service calls
-    // For now, we'll call the endpoint directly
-    const response = await fetch(endpoint, {
+    // Build prompt with negative prompt
+    let imagePrompt = enhancedPrompt;
+    imagePrompt += ' Avoid: worst quality, low quality, blurry, distorted';
+
+    if (compressedReferenceImages.length > 0) {
+      imagePrompt = `Use these reference images as style guide. ${imagePrompt}`;
+    }
+
+    // Validate dimensions
+    const validatedWidth = Math.min(Math.max(parseInt(width) || 768, 512), 4096);
+    const validatedHeight = Math.min(Math.max(parseInt(height) || 1344, 512), 4096);
+    const sizeString = `${validatedWidth}*${validatedHeight}`;
+
+    // Build request body
+    let requestBody;
+    if (hasReferenceImage && compressedReferenceImages.length > 0) {
+      requestBody = {
+        prompt: imagePrompt,
+        images: compressedReferenceImages,
+        size: sizeString,
+        enable_base64_output: true,
+        enable_sync_mode: true
+      };
+    } else {
+      requestBody = {
+        prompt: imagePrompt,
+        size: sizeString,
+        n: Math.min(num_outputs, 4),
+        enable_base64_output: true,
+        enable_sync_mode: true
+      };
+    }
+
+    logger.info('Calling WaveSpeed API', {
+      endpoint: hasReferenceImage ? 'img2img' : 'text2img',
+      width: validatedWidth,
+      height: validatedHeight,
+      referenceImages: compressedReferenceImages.length
+    });
+
+    const response = await fetchWithRetry(apiEndpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        // Use service-level auth for internal calls
-        'x-workflow-internal': 'true'
+        'Authorization': `Bearer ${process.env.WAVESPEED_API_KEY}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Generation failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`WaveSpeed API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    images = result.images || [];
+
+    // Parse response - handle various response formats
+    if (result.data && result.data.outputs) {
+      for (const output of result.data.outputs) {
+        if (typeof output === 'string') {
+          images.push(output);
+        } else if (output.url) {
+          images.push(output.url);
+        } else if (output.base64) {
+          images.push(`data:image/png;base64,${output.base64}`);
+        }
+      }
+    } else if (result.data && result.data.url) {
+      images.push(result.data.url);
+    } else if (result.data && result.data.base64) {
+      images.push(`data:image/png;base64,${result.data.base64}`);
+    } else if (result.outputs) {
+      for (const output of result.outputs) {
+        if (typeof output === 'string') {
+          images.push(output.startsWith('http') ? output : `data:image/png;base64,${output}`);
+        } else if (output.url) {
+          images.push(output.url);
+        } else if (output.base64) {
+          images.push(`data:image/png;base64,${output.base64}`);
+        }
+      }
+    } else if (result.output) {
+      if (typeof result.output === 'string') {
+        images.push(result.output.startsWith('http') ? result.output : `data:image/png;base64,${result.output}`);
+      }
+    }
 
     if (images.length === 0) {
+      logger.warn('No images in WaveSpeed response', { result: JSON.stringify(result).substring(0, 500) });
       throw new Error('No images were generated');
     }
+
+    logger.info('WaveSpeed generation successful', { imageCount: images.length });
 
   } catch (error) {
     logger.error('Image generation failed', { error: error.message, model });
