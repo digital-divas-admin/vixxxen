@@ -417,6 +417,9 @@ function renderLibraryModalGrid() {
            <button class="lib-use-btn" onclick="useLibImageFor('${img.id}', '${img.url}', 'inpaint')" title="Use in Inpaint">
              <span>🖌️</span> Inpaint
            </button>
+           <button class="lib-use-btn" onclick="addToFacelockFromLibrary('${img.id}', '${img.url}')" title="Add to Face Lock">
+             <span>🔒</span> Face
+           </button>
            <button class="lib-use-btn delete-btn" onclick="deleteLibImage('${img.id}')" title="Delete image">
              <span>🗑️</span>
            </button>

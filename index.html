@@ -13615,6 +13615,7 @@
                 <button class="send-to-option" onclick="sendToEdit('${image.url}', event)">✂️ Send to Edit</button>
                 <button class="send-to-option" onclick="sendToCaption('${image.url}', event)">💬 Send to Caption</button>
                 <button class="send-to-option" onclick="sendToInpaint('${image.url}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="addToFacelock('${image.url}', null)">🔒 Add to Face Lock</button>
               </div>
             </div>
             <button class="report-btn" onclick="event.stopPropagation(); openReportModal('image', '${image.timestamp}', '${image.url}')" title="Report">
@@ -13856,6 +13857,7 @@
                   <button class="send-to-option" onclick="sendToEdit('${img.public_url}', event)">✂️ Send to Edit</button>
                   <button class="send-to-option" onclick="sendToCaption('${img.public_url}', event)">💬 Send to Caption</button>
                   <button class="send-to-option" onclick="sendToInpaint('${img.public_url}', event)">🖌️ Send to Inpaint</button>
+                  <button class="send-to-option" onclick="addToFacelock('${img.public_url}', '${img.id}')">🔒 Add to Face Lock</button>
                 </div>
               </div>
               <button class="icon-btn delete-btn" onclick="deleteEditHistoryImage(this.closest('.output-item'))" title="Delete">
@@ -14940,12 +14942,24 @@
       // Store the mode we're adding to
       window.facelockAddMode = mode;
 
-      // Open the image library modal
-      if (typeof openImageLibrary === 'function') {
-        openImageLibrary('facelock');
+      // Open the image library modal (use existing function)
+      if (typeof openImageLibraryModal === 'function') {
+        openImageLibraryModal();
+        showToast('Select an image and tap the 🔒 Face button', 'info');
       } else {
         showToast('Image library not available', 'error');
       }
+    }
+
+    // Add image to face lock from library modal (called from library action buttons)
+    function addToFacelockFromLibrary(imageId, imageUrl) {
+      // Close the library modal first
+      if (typeof closeImageLibraryModal === 'function') {
+        closeImageLibraryModal();
+      }
+
+      // Then trigger the face lock add flow
+      addToFacelock(imageUrl, imageId);
     }
 
     // Add image to face lock (called from image library or image actions)
@@ -16485,6 +16499,7 @@
               <button class="send-to-option">✂️ Send to Edit</button>
               <button class="send-to-option">💬 Send to Caption</button>
               <button class="send-to-option">🖌️ Send to Inpaint</button>
+              <button class="send-to-option">🔒 Add to Face Lock</button>
             </div>
           </div>
           <button class="icon-btn delete-btn" title="Delete">
@@ -16513,6 +16528,8 @@
       sendToOptions[0].onclick = (e) => sendToVideo(outputItem.dataset.imageUrl, e);
       sendToOptions[1].onclick = (e) => sendToEdit(outputItem.dataset.imageUrl, e);
       sendToOptions[2].onclick = (e) => sendToCaption(outputItem.dataset.imageUrl, e);
+      sendToOptions[3].onclick = (e) => sendToInpaint(outputItem.dataset.imageUrl, e);
+      sendToOptions[4].onclick = (e) => addToFacelock(outputItem.dataset.imageUrl, null);
 
       const deleteBtn = overlay.querySelector('.delete-btn');
       deleteBtn.onclick = (e) => {
@@ -16669,6 +16686,7 @@
                   <button class="send-to-option" onclick="sendToEdit('${resultImage}', event)">✂️ Send to Edit</button>
                   <button class="send-to-option" onclick="sendToCaption('${resultImage}', event)">💬 Send to Caption</button>
                   <button class="send-to-option" onclick="sendToInpaint('${resultImage}', event)">🖌️ Send to Inpaint</button>
+                  <button class="send-to-option" onclick="addToFacelock('${resultImage}', null)">🔒 Add to Face Lock</button>
                 </div>
               </div>
             </div>
@@ -16881,6 +16899,7 @@
                 <button class="send-to-option" onclick="sendToEdit('${editedImage.url}', event)">✂️ Send to Edit</button>
                 <button class="send-to-option" onclick="sendToCaption('${editedImage.url}', event)">💬 Send to Caption</button>
                 <button class="send-to-option" onclick="sendToInpaint('${editedImage.url}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="addToFacelock('${editedImage.url}', null)">🔒 Add to Face Lock</button>
               </div>
             </div>
           </div>
@@ -17657,6 +17676,7 @@
                 <button class="send-to-option" onclick="sendToEdit('${imageUrl}', event)">✂️ Send to Edit</button>
                 <button class="send-to-option" onclick="sendToCaption('${imageUrl}', event)">💬 Send to Caption</button>
                 <button class="send-to-option" onclick="sendToInpaint('${imageUrl}', event)">🖌️ Send to Inpaint</button>
+                <button class="send-to-option" onclick="addToFacelock('${imageUrl}', null)">🔒 Add to Face Lock</button>
               </div>
             </div>
             <button class="icon-btn delete-btn" onclick="deleteInpaintResult(this.closest('.output-item'))" title="Delete">
@@ -17723,6 +17743,7 @@
                   <button class="send-to-option" onclick="sendToEdit('${url}', event)">✂️ Send to Edit</button>
                   <button class="send-to-option" onclick="sendToCaption('${url}', event)">💬 Send to Caption</button>
                   <button class="send-to-option" onclick="sendToInpaint('${url}', event)">🖌️ Send to Inpaint</button>
+                  <button class="send-to-option" onclick="addToFacelock('${url}', null)">🔒 Add to Face Lock</button>
                 </div>
               </div>
               <button class="icon-btn delete-btn" onclick="deleteInpaintResult(this.closest('.output-item'))" title="Delete">
