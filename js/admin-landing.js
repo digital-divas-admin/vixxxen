@@ -26,7 +26,7 @@ async function loadAdminLandingContent() {
   container.innerHTML = `
     <div style="text-align: center; padding: 40px;">
       <div class="loading-spinner"></div>
-      <p style="color: #888; margin-top: 12px;">Loading landing page content...</p>
+      <p style="color: var(--text-secondary); margin-top: 12px;">Loading landing page content...</p>
     </div>
   `;
 
@@ -60,8 +60,8 @@ function renderAdminLandingDashboard() {
 
   container.innerHTML = `
     <div class="admin-landing-header">
-      <h2 style="margin: 0; font-size: 1.5rem; color: #fff;">Landing Page CMS</h2>
-      <p style="color: #888; margin: 8px 0 0;">Edit your landing page content without code changes</p>
+      <h2 style="margin: 0; font-size: 1.5rem; color: var(--text-primary);">Landing Page CMS</h2>
+      <p style="color: var(--text-secondary); margin: 8px 0 0;">Edit your landing page content without code changes</p>
     </div>
 
     <div class="admin-landing-tabs" style="display: flex; gap: 8px; margin: 24px 0; flex-wrap: wrap;">
@@ -222,7 +222,7 @@ function renderStatsSection() {
   return `
     <div class="admin-section-card">
       <h3 class="admin-section-title">Stats Bar</h3>
-      <p style="color: #888; margin-bottom: 16px;">Social proof numbers displayed below the hero</p>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Social proof numbers displayed below the hero</p>
 
       <div id="statsListAdmin">
         ${stats.map((stat, index) => `
@@ -253,7 +253,7 @@ function renderCharactersSection() {
   return `
     <div class="admin-section-card">
       <h3 class="admin-section-title">Featured Characters (Case Studies)</h3>
-      <p style="color: #888; margin-bottom: 16px;">Showcase successful creator characters</p>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Showcase successful creator characters</p>
 
       <div id="charactersListAdmin">
         ${characters.map((char, index) => `
@@ -491,7 +491,7 @@ function renderPricingSection() {
   return `
     <div class="admin-section-card">
       <h3 class="admin-section-title">Pricing Section</h3>
-      <p style="color: #888; margin-bottom: 16px;">Pricing tiers are managed in the payments settings. Here you can customize the section headline.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Pricing tiers are managed in the payments settings. Here you can customize the section headline.</p>
 
       <div class="admin-form-group">
         <label>Section Headline</label>
@@ -577,7 +577,7 @@ function renderTrialTestingSection() {
   return `
     <div class="admin-section-card">
       <h3 class="admin-section-title">Trial Testing Mode</h3>
-      <p style="color: #888; margin-bottom: 20px;">
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">
         Enable admin bypass to test the "Try It Now" feature without rate limits.
         This only affects your browser - real users are still rate limited.
       </p>
@@ -590,7 +590,7 @@ function renderTrialTestingSection() {
             <div style="font-size: 1.1rem; font-weight: 600; color: ${isEnabled ? '#00ff88' : '#ff4444'};">
               ${isEnabled ? '✓ Admin Bypass Enabled' : '✗ Admin Bypass Disabled'}
             </div>
-            <div style="color: #888; font-size: 0.9rem; margin-top: 4px;">
+            <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">
               ${isEnabled ? 'You can test unlimited trial generations' : 'You are subject to normal rate limits'}
             </div>
           </div>
@@ -606,7 +606,7 @@ function renderTrialTestingSection() {
 
       <div class="admin-form-group">
         <label>Admin Key</label>
-        <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
           Enter the TRIAL_ADMIN_KEY from your server environment to enable bypass.
         </p>
         <input
@@ -626,7 +626,7 @@ function renderTrialTestingSection() {
       ` : ''}
 
       <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-        <h4 style="margin: 0 0 12px; color: #fff;">Quick Actions</h4>
+        <h4 style="margin: 0 0 12px; color: var(--text-primary);">Quick Actions</h4>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
           <button class="admin-btn admin-btn--secondary" onclick="resetAllTrials()">
             Reset All Trials
@@ -638,7 +638,7 @@ function renderTrialTestingSection() {
       </div>
 
       <div id="trialTestOutput" style="margin-top: 20px; display: none;">
-        <pre style="background: #1a1a2e; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; color: #00ff88;"></pre>
+        <pre style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; color: #00ff88;"></pre>
       </div>
     </div>
   `;
@@ -674,12 +674,12 @@ function renderTrialCharacterSettings() {
 
   const previewImageHtml = settings.character_preview_image
     ? `<img src="${escapeHtml(settings.character_preview_image)}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">`
-    : `<div style="width: 80px; height: 80px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.8rem;">No image</div>`;
+    : `<div style="width: 80px; height: 80px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem;">No image</div>`;
 
   return `
     <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-      <h4 style="margin: 0 0 16px; color: #fff;">Demo Character Configuration</h4>
-      <p style="color: #888; margin-bottom: 20px; font-size: 0.9rem;">
+      <h4 style="margin: 0 0 16px; color: var(--text-primary);">Demo Character Configuration</h4>
+      <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
         Configure the character shown in the trial modal. Reference images make the character consistent across generations.
       </p>
 
@@ -691,7 +691,7 @@ function renderTrialCharacterSettings() {
 
         <div class="admin-form-group">
           <label>Preview Image</label>
-          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
             Profile picture shown in the trial modal header
           </p>
           <div style="display: flex; gap: 16px; align-items: flex-start;">
@@ -709,7 +709,7 @@ function renderTrialCharacterSettings() {
 
         <div class="admin-form-group">
           <label>Base Prompt</label>
-          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
             This is prepended to the user's input (they don't see it)
           </p>
           <textarea id="trialBasePrompt" class="admin-input" rows="3" placeholder="Describe the character...">${escapeHtml(settings.base_prompt || '')}</textarea>
@@ -717,7 +717,7 @@ function renderTrialCharacterSettings() {
 
         <div class="admin-form-group">
           <label>Placeholder Text</label>
-          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
             Hint shown in the prompt textarea
           </p>
           <input type="text" id="trialPlaceholderText" class="admin-input" value="${escapeHtml(settings.placeholder_text || '')}" placeholder="e.g. wearing a red dress..." oninput="updateTrialPreview()">
@@ -725,11 +725,11 @@ function renderTrialCharacterSettings() {
 
         <div class="admin-form-group">
           <label>Reference Images (for consistent character)</label>
-          <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
             Add up to 5 reference images from the library. These are sent to Seedream for img2img to ensure character consistency.
           </p>
           <div id="trialReferenceImages" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-            ${referenceImagesHtml || '<span style="color: #666; display: flex; align-items: center; justify-content: center; width: 100%;">No reference images configured</span>'}
+            ${referenceImagesHtml || '<span style="color: var(--text-muted); display: flex; align-items: center; justify-content: center; width: 100%;">No reference images configured</span>'}
           </div>
           <button class="admin-btn admin-btn--secondary" onclick="openImagePickerForTrialReference()" ${(settings.reference_images || []).length >= 5 ? 'disabled style="opacity: 0.5;"' : ''}>
             📁 Add from Library ${(settings.reference_images || []).length >= 5 ? '(Max 5 reached)' : `(${(settings.reference_images || []).length}/5)`}
@@ -737,8 +737,8 @@ function renderTrialCharacterSettings() {
         </div>
 
         <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <h4 style="margin: 0 0 16px; color: #fff;">Modal Text Customization</h4>
-          <p style="color: #888; margin-bottom: 20px; font-size: 0.9rem;">
+          <h4 style="margin: 0 0 16px; color: var(--text-primary);">Modal Text Customization</h4>
+          <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">
             Customize all text shown in the trial popup modal.
           </p>
 
@@ -754,7 +754,7 @@ function renderTrialCharacterSettings() {
 
           <div class="admin-form-group">
             <label>Character Subtitle</label>
-            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
               Text shown after character name (e.g. "Luna - Demo Character")
             </p>
             <input type="text" id="trialCharacterSubtitle" class="admin-input" value="${escapeHtml(settings.character_subtitle || '')}" placeholder="Demo Character" oninput="updateTrialPreview()">
@@ -762,7 +762,7 @@ function renderTrialCharacterSettings() {
 
           <div class="admin-form-group">
             <label>Character Description</label>
-            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
               Description shown below the character name
             </p>
             <input type="text" id="trialCharacterDescription" class="admin-input" value="${escapeHtml(settings.character_description || '')}" placeholder="Generate multiple images with the same character" oninput="updateTrialPreview()">
@@ -780,7 +780,7 @@ function renderTrialCharacterSettings() {
 
           <div class="admin-form-group">
             <label>Conversion Heading</label>
-            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
               Heading shown above the benefits list
             </p>
             <input type="text" id="trialConversionHeading" class="admin-input" value="${escapeHtml(settings.conversion_heading || '')}" placeholder="Like what you see?" oninput="updateTrialPreview()">
@@ -788,7 +788,7 @@ function renderTrialCharacterSettings() {
 
           <div class="admin-form-group">
             <label>Benefits List</label>
-            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
               One benefit per line (shows as bullet points)
             </p>
             <textarea id="trialBenefitsList" class="admin-input" rows="4" placeholder="20 free credits every month&#10;Choose from 50+ unique characters&#10;Access NSFW content&#10;Save and download your images" oninput="updateTrialPreview()">${escapeHtml((settings.benefits_list || []).join('\n'))}</textarea>
@@ -801,7 +801,7 @@ function renderTrialCharacterSettings() {
 
           <div class="admin-form-group">
             <label>Exhausted Heading</label>
-            <p style="color: #666; font-size: 0.85rem; margin: 4px 0 8px;">
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 8px;">
               Shown when user has used all their trials
             </p>
             <input type="text" id="trialExhaustedHeading" class="admin-input" value="${escapeHtml(settings.exhausted_heading || '')}" placeholder="You've used your free trials!">
@@ -854,16 +854,16 @@ function renderTrialModalPreview() {
 
   return `
     <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-      <h4 style="margin: 0 0 8px; color: #fff;">Live Preview</h4>
-      <p style="color: #666; font-size: 0.85rem; margin-bottom: 16px;">
+      <h4 style="margin: 0 0 8px; color: var(--text-primary);">Live Preview</h4>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
         This shows what users see. Changes update live (before saving).
       </p>
 
-      <div id="trialPreviewContainer" style="background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.1);">
+      <div id="trialPreviewContainer" style="background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.1);">
         <!-- Modal Header -->
         <div style="text-align: center; margin-bottom: 20px;">
-          <h2 id="trialPreviewTitle" style="margin: 0 0 8px; font-size: 1.4rem; color: #fff;">${escapeHtml(modalTitle)}</h2>
-          <p id="trialPreviewSubtitle" style="margin: 0; color: #888; font-size: 0.9rem;">${escapeHtml(modalSubtitle)}</p>
+          <h2 id="trialPreviewTitle" style="margin: 0 0 8px; font-size: 1.4rem; color: var(--text-primary);">${escapeHtml(modalTitle)}</h2>
+          <p id="trialPreviewSubtitle" style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">${escapeHtml(modalSubtitle)}</p>
         </div>
 
         <!-- Character Info -->
@@ -872,24 +872,24 @@ function renderTrialModalPreview() {
             ${characterImageHtml}
           </div>
           <div>
-            <div id="trialPreviewCharName" style="font-weight: 600; color: #fff; font-size: 1.1rem;">${escapeHtml(characterName)} - ${escapeHtml(characterSubtitle)}</div>
-            <div id="trialPreviewCharDesc" style="color: #888; font-size: 0.85rem;">${escapeHtml(characterDescription)}</div>
+            <div id="trialPreviewCharName" style="font-weight: 600; color: var(--text-primary); font-size: 1.1rem;">${escapeHtml(characterName)} - ${escapeHtml(characterSubtitle)}</div>
+            <div id="trialPreviewCharDesc" style="color: var(--text-secondary); font-size: 0.85rem;">${escapeHtml(characterDescription)}</div>
           </div>
         </div>
 
         <!-- Prompt Form -->
         <div style="margin-bottom: 16px;">
-          <label id="trialPreviewInputLabel" style="display: block; margin-bottom: 8px; color: #ccc; font-size: 0.9rem;">${escapeHtml(inputLabel)}</label>
+          <label id="trialPreviewInputLabel" style="display: block; margin-bottom: 8px; color: var(--text-light); font-size: 0.9rem;">${escapeHtml(inputLabel)}</label>
           <textarea
             id="trialPreviewPrompt"
-            style="width: 100%; min-height: 80px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95rem; resize: vertical; box-sizing: border-box;"
+            style="width: 100%; min-height: 80px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: var(--text-primary); font-size: 0.95rem; resize: vertical; box-sizing: border-box;"
             placeholder="${escapeHtml(placeholderText)}"
           ></textarea>
         </div>
 
         <!-- Actions Row -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <span style="color: #888; font-size: 0.85rem;">∞ tries (admin bypass)</span>
+          <span style="color: var(--text-secondary); font-size: 0.85rem;">∞ tries (admin bypass)</span>
           <button
             onclick="runTrialPreviewGeneration()"
             style="background: linear-gradient(135deg, #ff2ebb 0%, #ff6b6b 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
@@ -907,13 +907,13 @@ function renderTrialModalPreview() {
 
         <!-- Result Area (hidden until generation) -->
         <div id="trialPreviewResult" style="display: none;">
-          <div style="position: relative; border-radius: 12px; overflow: hidden; background: #111;">
+          <div style="position: relative; border-radius: 12px; overflow: hidden; background: var(--bg-tertiary);">
             <img id="trialPreviewResultImage" src="" alt="Generated image" style="width: 100%; display: block;">
           </div>
           <div style="margin-top: 12px; text-align: center;">
             <button
               onclick="clearTrialPreviewResult()"
-              style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;"
+              style="background: rgba(255,255,255,0.1); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;"
             >
               Clear Result
             </button>
@@ -923,7 +923,7 @@ function renderTrialModalPreview() {
         <!-- Loading State -->
         <div id="trialPreviewLoading" style="display: none; text-align: center; padding: 40px;">
           <div style="width: 40px; height: 40px; border: 3px solid rgba(255,46,187,0.2); border-top-color: #ff2ebb; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
-          <p style="color: #888; margin: 0;">Generating image...</p>
+          <p style="color: var(--text-secondary); margin: 0;">Generating image...</p>
         </div>
       </div>
 
@@ -1401,7 +1401,7 @@ function renderImageLibrarySection() {
   return `
     <div class="admin-section-card">
       <h3 class="admin-section-title">Image Library</h3>
-      <p style="color: #888; margin-bottom: 16px;">Upload and manage images for your landing page. Click an image to copy its URL.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Upload and manage images for your landing page. Click an image to copy its URL.</p>
 
       <div class="admin-image-upload-zone" id="imageUploadZone">
         <input type="file" id="imageFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display: none;">
@@ -1420,11 +1420,11 @@ function renderImageLibrarySection() {
           <option value="hero">Hero</option>
           <option value="general">General</option>
         </select>
-        <span id="imageLibraryCount" style="color: #888; align-self: center;">0 images</span>
+        <span id="imageLibraryCount" style="color: var(--text-secondary); align-self: center;">0 images</span>
       </div>
 
       <div id="imageLibraryGrid" class="admin-image-library-grid">
-        <div style="text-align: center; padding: 40px; color: #888;">
+        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
           <div class="loading-spinner"></div>
           <p style="margin-top: 12px;">Loading images...</p>
         </div>
@@ -1469,7 +1469,7 @@ function renderImageLibraryGrid() {
 
   if (landingImageLibrary.length === 0) {
     grid.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #888; grid-column: 1 / -1;">
+      <div style="text-align: center; padding: 40px; color: var(--text-secondary); grid-column: 1 / -1;">
         <p>No images uploaded yet</p>
         <p style="font-size: 0.9rem; margin-top: 8px;">Upload your first image above</p>
       </div>
@@ -1689,7 +1689,7 @@ async function loadPickerImages() {
   const grid = document.getElementById('modalImageGrid');
   if (!grid) return;
 
-  grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Loading...</div>';
+  grid.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>';
 
   try {
     const response = await authFetch(`${API_BASE_URL}/api/landing/admin/images?limit=100`);
@@ -1699,7 +1699,7 @@ async function loadPickerImages() {
     const images = data.images || [];
 
     if (images.length === 0) {
-      grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">No images. Upload one above.</div>';
+      grid.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">No images. Upload one above.</div>';
       return;
     }
 
@@ -2503,7 +2503,7 @@ function addAdminLandingStyles() {
     .admin-tab--highlight {
       background: linear-gradient(135deg, #4ade80 0%, #22d3ee 100%) !important;
       border-color: transparent !important;
-      color: #1a1a2e !important;
+      color: var(--bg-tertiary) !important;
       font-weight: 600;
     }
     .admin-image-upload-zone {
