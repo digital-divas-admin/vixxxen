@@ -3,8 +3,15 @@
 // ===========================================
 // Depends on: config.js (currentUser, supabaseClient)
 
-// Cost per standard image generation (nano-banana)
-const STANDARD_GENERATION_COST = 13;
+// Credit costs per feature
+const CREDIT_COSTS = {
+  standard: 13,  // nano-banana
+  flux: 20,      // HD image
+  quick: 6       // seedream
+};
+
+// For backwards compatibility
+const STANDARD_GENERATION_COST = CREDIT_COSTS.standard;
 
 // Open billing page
 function openBillingPage() {
@@ -105,6 +112,24 @@ async function loadBillingData() {
     } else {
       lowBalanceEl.classList.remove('visible');
     }
+  }
+
+  // Update "What can you create?" counts
+  const standardCountEl = document.getElementById('refStandardCount');
+  const fluxCountEl = document.getElementById('refFluxCount');
+  const quickCountEl = document.getElementById('refQuickCount');
+
+  if (standardCountEl) {
+    const count = Math.floor(credits / CREDIT_COSTS.standard);
+    standardCountEl.textContent = `~${count.toLocaleString()} remaining`;
+  }
+  if (fluxCountEl) {
+    const count = Math.floor(credits / CREDIT_COSTS.flux);
+    fluxCountEl.textContent = `~${count.toLocaleString()} remaining`;
+  }
+  if (quickCountEl) {
+    const count = Math.floor(credits / CREDIT_COSTS.quick);
+    quickCountEl.textContent = `~${count.toLocaleString()} remaining`;
   }
 
   // Load transaction history

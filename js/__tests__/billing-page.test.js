@@ -112,12 +112,20 @@ describe('Billing Page', () => {
           <div class="credits-reference-title">What can you create?</div>
           <div class="credits-reference-grid">
             <div class="credits-reference-item">
-              <span class="credits-reference-item-name">Standard Image</span>
-              <span class="credits-reference-item-cost">13 credits</span>
+              <span class="credits-reference-item-name">Standard Image<span class="credits-reference-item-unit">13 credits each</span></span>
+              <span class="credits-reference-item-cost" id="refStandardCount">~0 remaining</span>
             </div>
             <div class="credits-reference-item">
-              <span class="credits-reference-item-name">HD Image (Flux)</span>
-              <span class="credits-reference-item-cost">20 credits</span>
+              <span class="credits-reference-item-name">HD Image (Flux)<span class="credits-reference-item-unit">20 credits each</span></span>
+              <span class="credits-reference-item-cost" id="refFluxCount">~0 remaining</span>
+            </div>
+            <div class="credits-reference-item">
+              <span class="credits-reference-item-name">Quick Image<span class="credits-reference-item-unit">6 credits each</span></span>
+              <span class="credits-reference-item-cost" id="refQuickCount">~0 remaining</span>
+            </div>
+            <div class="credits-reference-item">
+              <span class="credits-reference-item-name">Face Lock<span class="credits-reference-item-unit">add-on</span></span>
+              <span class="credits-reference-item-cost">+5 per image</span>
             </div>
           </div>
         </div>
@@ -312,27 +320,58 @@ describe('Billing Page', () => {
   });
 
   describe('Credits Reference Section', () => {
-    test('should display credit costs for features', () => {
+    // Credit costs (from billing-page.js)
+    const CREDIT_COSTS = {
+      standard: 13,
+      flux: 20,
+      quick: 6
+    };
+
+    test('should display credit reference items', () => {
       const referenceItems = document.querySelectorAll('.credits-reference-item');
-      expect(referenceItems.length).toBeGreaterThan(0);
+      expect(referenceItems.length).toBe(4); // Standard, HD, Quick, Face Lock
     });
 
-    test('should show correct cost for Standard Image', () => {
-      const items = document.querySelectorAll('.credits-reference-item');
-      const standardItem = Array.from(items).find(
-        item => item.querySelector('.credits-reference-item-name').textContent === 'Standard Image'
-      );
-      const cost = standardItem.querySelector('.credits-reference-item-cost').textContent;
-      expect(cost).toBe('13 credits');
+    test('should have IDs for dynamic count updates', () => {
+      expect(document.getElementById('refStandardCount')).not.toBeNull();
+      expect(document.getElementById('refFluxCount')).not.toBeNull();
+      expect(document.getElementById('refQuickCount')).not.toBeNull();
     });
 
-    test('should show correct cost for HD Image', () => {
+    test('should show unit prices for each feature', () => {
+      const unitPrices = document.querySelectorAll('.credits-reference-item-unit');
+      expect(unitPrices.length).toBe(4);
+      expect(unitPrices[0].textContent).toBe('13 credits each');
+      expect(unitPrices[1].textContent).toBe('20 credits each');
+      expect(unitPrices[2].textContent).toBe('6 credits each');
+    });
+
+    test('should calculate correct remaining count for Standard Image', () => {
+      const credits = 1000;
+      const count = Math.floor(credits / CREDIT_COSTS.standard);
+      document.getElementById('refStandardCount').textContent = `~${count.toLocaleString()} remaining`;
+      expect(document.getElementById('refStandardCount').textContent).toBe('~76 remaining');
+    });
+
+    test('should calculate correct remaining count for HD Image', () => {
+      const credits = 1000;
+      const count = Math.floor(credits / CREDIT_COSTS.flux);
+      document.getElementById('refFluxCount').textContent = `~${count.toLocaleString()} remaining`;
+      expect(document.getElementById('refFluxCount').textContent).toBe('~50 remaining');
+    });
+
+    test('should calculate correct remaining count for Quick Image', () => {
+      const credits = 1000;
+      const count = Math.floor(credits / CREDIT_COSTS.quick);
+      document.getElementById('refQuickCount').textContent = `~${count.toLocaleString()} remaining`;
+      expect(document.getElementById('refQuickCount').textContent).toBe('~166 remaining');
+    });
+
+    test('Face Lock should show static +5 per image', () => {
       const items = document.querySelectorAll('.credits-reference-item');
-      const hdItem = Array.from(items).find(
-        item => item.querySelector('.credits-reference-item-name').textContent === 'HD Image (Flux)'
-      );
-      const cost = hdItem.querySelector('.credits-reference-item-cost').textContent;
-      expect(cost).toBe('20 credits');
+      const faceLockItem = items[3]; // Last item
+      const cost = faceLockItem.querySelector('.credits-reference-item-cost').textContent;
+      expect(cost).toBe('+5 per image');
     });
   });
 

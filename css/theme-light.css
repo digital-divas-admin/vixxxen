@@ -807,6 +807,10 @@
   color: #6e6e73 !important;
 }
 
+.light-theme .credits-reference-item-unit {
+  color: #8e8e93 !important;
+}
+
 /* Transaction section */
 .light-theme .transaction-section {
   background: #ffffff !important;

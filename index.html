@@ -8393,6 +8393,8 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-bottom: 24px;
+      padding: 8px; /* Prevent clipping from featured card scale */
+      margin: -8px -8px 16px -8px; /* Compensate for padding */
     }
 
     .credits-package {
@@ -8528,16 +8530,25 @@
 
     .credits-reference-item-name {
       display: flex;
-      align-items: center;
-      gap: 8px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
       color: #aaa;
       font-size: 0.85rem;
+    }
+
+    .credits-reference-item-unit {
+      display: block;
+      font-size: 0.7rem;
+      color: #666;
+      font-weight: 400;
     }
 
     .credits-reference-item-cost {
       color: #ff2ebb;
       font-weight: 600;
       font-size: 0.85rem;
+      white-space: nowrap;
     }
 
     /* Transaction History - Redesigned */
@@ -12482,20 +12493,20 @@
                 </div>
                 <div class="credits-reference-grid">
                   <div class="credits-reference-item">
-                    <span class="credits-reference-item-name">Standard Image</span>
-                    <span class="credits-reference-item-cost">13 credits</span>
+                    <span class="credits-reference-item-name">Standard Image<span class="credits-reference-item-unit">13 credits each</span></span>
+                    <span class="credits-reference-item-cost" id="refStandardCount">~0 remaining</span>
                   </div>
                   <div class="credits-reference-item">
-                    <span class="credits-reference-item-name">HD Image (Flux)</span>
-                    <span class="credits-reference-item-cost">20 credits</span>
+                    <span class="credits-reference-item-name">HD Image (Flux)<span class="credits-reference-item-unit">20 credits each</span></span>
+                    <span class="credits-reference-item-cost" id="refFluxCount">~0 remaining</span>
                   </div>
                   <div class="credits-reference-item">
-                    <span class="credits-reference-item-name">Quick Image</span>
-                    <span class="credits-reference-item-cost">6 credits</span>
+                    <span class="credits-reference-item-name">Quick Image<span class="credits-reference-item-unit">6 credits each</span></span>
+                    <span class="credits-reference-item-cost" id="refQuickCount">~0 remaining</span>
                   </div>
                   <div class="credits-reference-item">
-                    <span class="credits-reference-item-name">Face Lock</span>
-                    <span class="credits-reference-item-cost">+5 credits</span>
+                    <span class="credits-reference-item-name">Face Lock<span class="credits-reference-item-unit">add-on</span></span>
+                    <span class="credits-reference-item-cost">+5 per image</span>
                   </div>
                 </div>
               </div>
