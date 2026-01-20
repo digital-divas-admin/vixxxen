@@ -1243,6 +1243,14 @@
     const resultsEl = document.getElementById('executionResults');
     if (!resultsEl) return;
 
+    // Collect prompts from generate-prompts step
+    let prompts = [];
+    steps.forEach(step => {
+      if (step.node_type === 'generate-prompts' && step.output_data?.prompts) {
+        prompts = step.output_data.prompts;
+      }
+    });
+
     // Collect all images from steps
     const images = [];
     steps.forEach(step => {
@@ -1262,22 +1270,49 @@
       }
     });
 
-    if (images.length === 0) {
+    if (images.length === 0 && prompts.length === 0) {
       resultsEl.style.display = 'none';
       return;
     }
 
     resultsEl.style.display = 'block';
-    resultsEl.innerHTML = `
-      <div class="workflow-results-title">Generated Images</div>
-      <div class="workflow-results-grid">
-        ${images.map(url => `
-          <div class="workflow-result-image">
-            <img src="${url}" alt="Generated image" onclick="window.open('${url}', '_blank')">
+
+    let html = '';
+
+    // Show prompts if available
+    if (prompts.length > 0) {
+      html += `
+        <div class="workflow-results-section">
+          <div class="workflow-results-title">Generated Prompts (${prompts.length})</div>
+          <div class="workflow-prompts-list">
+            ${prompts.map((p, i) => `
+              <div class="workflow-prompt-item">
+                <span class="workflow-prompt-number">${i + 1}</span>
+                <span class="workflow-prompt-text">${escapeHtml(p)}</span>
+              </div>
+            `).join('')}
           </div>
-        `).join('')}
-      </div>
-    `;
+        </div>
+      `;
+    }
+
+    // Show images if available
+    if (images.length > 0) {
+      html += `
+        <div class="workflow-results-section">
+          <div class="workflow-results-title">Generated Images (${images.length})</div>
+          <div class="workflow-results-grid">
+            ${images.map(url => `
+              <div class="workflow-result-image">
+                <img src="${url}" alt="Generated image" onclick="window.open('${url}', '_blank')">
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    resultsEl.innerHTML = html;
   }
 
   // =============================================
