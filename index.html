@@ -15135,6 +15135,9 @@
       // The toggle will be restored after characters are loaded
       window.facelockSavedEnabled = savedEnabled === 'true';
       window.facelockSavedCharacter = savedCharacter;
+
+      // Show Face Lock section if current model supports it (not Qwen)
+      updateFacelockVisibility();
     }
 
     // Load characters for Face Lock dropdown
