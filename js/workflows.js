@@ -167,7 +167,7 @@
 
   async function fetchWorkflows() {
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows`);
+      const response = await authFetch(`${API_BASE_URL}/api/workflows`);
       if (!response.ok) throw new Error('Failed to fetch workflows');
       const data = await response.json();
       workflows = data.workflows || [];
@@ -180,7 +180,7 @@
 
   async function createWorkflow(name = 'Untitled Workflow') {
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows`, {
+      const response = await authFetch(`${API_BASE_URL}/api/workflows`, {
         method: 'POST',
         body: JSON.stringify({
           name,
@@ -221,7 +221,7 @@
         }))
       };
 
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows/${currentWorkflowId}`, {
+      const response = await authFetch(`${API_BASE_URL}/api/workflows/${currentWorkflowId}`, {
         method: 'PUT',
         body: JSON.stringify({ name, graph })
       });
@@ -236,7 +236,7 @@
 
   async function loadWorkflow(workflowId) {
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows/${workflowId}`);
+      const response = await authFetch(`${API_BASE_URL}/api/workflows/${workflowId}`);
       if (!response.ok) throw new Error('Failed to load workflow');
       const data = await response.json();
       return data.workflow;
@@ -249,7 +249,7 @@
 
   async function deleteWorkflow(workflowId) {
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows/${workflowId}`, {
+      const response = await authFetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
         method: 'DELETE'
       });
       if (!response.ok) throw new Error('Failed to delete workflow');
@@ -263,7 +263,7 @@
 
   async function executeWorkflow(workflowId) {
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows/${workflowId}/execute`, {
+      const response = await authFetch(`${API_BASE_URL}/api/workflows/${workflowId}/execute`, {
         method: 'POST'
       });
 
@@ -284,7 +284,7 @@
 
   async function loadCharacters() {
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/characters`);
+      const response = await authFetch(`${API_BASE_URL}/api/characters`);
       if (response.ok) {
         const data = await response.json();
         characters = data.characters || [];
@@ -924,7 +924,7 @@
     if (!stepsEl) return;
 
     try {
-      const response = await window.authFetch(`${window.API_BASE_URL}/api/workflows/executions/${executionId}`);
+      const response = await authFetch(`${API_BASE_URL}/api/workflows/executions/${executionId}`);
       if (!response.ok) throw new Error('Failed to fetch status');
 
       const data = await response.json();
