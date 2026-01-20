@@ -521,8 +521,11 @@ async function executeWorkflow(executionId, workflow, userId) {
         .single();
 
       try {
-        // Resolve input variables
-        const resolvedConfig = resolveVariables(node.data?.config || {}, context);
+        // First, resolve edge-connected inputs
+        const configWithEdgeInputs = resolveEdgeInputs(nodeId, graph.edges, node.data?.config || {}, context);
+
+        // Then resolve any {{nodeId.field}} variable syntax
+        const resolvedConfig = resolveVariables(configWithEdgeInputs, context);
 
         // Execute the node
         const result = await executeNode(node.type, resolvedConfig, userId, context);
@@ -644,6 +647,31 @@ function topologicalSort(graph) {
   }
 
   return result;
+}
+
+/**
+ * Resolve edge-connected inputs
+ * Automatically populates config values based on edges connecting to this node
+ */
+function resolveEdgeInputs(nodeId, edges, config, context) {
+  const resolvedConfig = { ...config };
+
+  // Find all edges targeting this node
+  const incomingEdges = edges.filter(e => e.target === nodeId);
+
+  for (const edge of incomingEdges) {
+    const sourceOutput = context[edge.source];
+    if (sourceOutput && edge.targetHandle) {
+      // Get the value from the source node's output
+      const value = sourceOutput[edge.sourceHandle];
+      if (value !== undefined) {
+        // Set it on the config using the target handle name as the key
+        resolvedConfig[edge.targetHandle] = value;
+      }
+    }
+  }
+
+  return resolvedConfig;
 }
 
 /**
