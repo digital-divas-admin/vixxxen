@@ -14669,6 +14669,8 @@
       } else {
         content.style.display = 'none';
         control.classList.remove('active');
+        // Clear saved enabled state so it doesn't auto-restore
+        window.facelockSavedEnabled = false;
       }
 
       // Save preference
@@ -14941,6 +14943,9 @@
     function openImageLibraryForFacelock(mode) {
       // Store the mode we're adding to
       window.facelockAddMode = mode;
+
+      // Close the Face Lock manager first so library isn't behind it
+      closeFacelockManager();
 
       // Open the image library modal (use existing function)
       if (typeof openImageLibraryModal === 'function') {
@@ -20014,6 +20019,11 @@
 
         // Reload marketplace with user's ownership data and admin status (will use preloaded cache)
         loadMarketplaceCharacters();
+
+        // Load Face Lock characters now that user is authenticated
+        if (typeof loadFacelockCharacters === 'function') {
+          loadFacelockCharacters();
+        }
 
         // Hide landing page and show main app when logged in
         if (typeof hideLandingPage === 'function') {
