@@ -609,10 +609,11 @@
 
     // Add event listeners for inputs
     body.querySelectorAll('.workflows-config-input, .workflows-config-textarea, .workflows-config-select').forEach(input => {
-      input.addEventListener('change', (e) => updateNodeConfig(node, e.target.dataset.field, e.target.value));
+      input.addEventListener('change', (e) => updateNodeConfig(node, e.target.dataset.field, e.target.value, true));
       input.addEventListener('input', (e) => {
         if (e.target.tagName === 'TEXTAREA' || e.target.type === 'text') {
-          updateNodeConfig(node, e.target.dataset.field, e.target.value);
+          // For text inputs, just update the value without re-rendering (keeps focus)
+          updateNodeConfig(node, e.target.dataset.field, e.target.value, false);
         }
       });
     });
@@ -901,14 +902,16 @@
     renderCanvas();
   }
 
-  function updateNodeConfig(node, field, value) {
+  function updateNodeConfig(node, field, value, shouldRerender = true) {
     node.config[field] = value;
 
-    // Re-render config panel to handle showWhen conditions
-    renderNodeConfig(node);
+    if (shouldRerender) {
+      // Re-render config panel to handle showWhen conditions
+      renderNodeConfig(node);
 
-    // Update node display
-    renderCanvas();
+      // Update node display
+      renderCanvas();
+    }
   }
 
   // =============================================
