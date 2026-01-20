@@ -652,13 +652,22 @@ async function loadUserCharacters(userId) {
 
     container.innerHTML = ownedCharacters.map(uc => {
       const char = uc.character;
-      const isAdminGrant = uc.amount_paid === 0 || uc.amount_paid === '0' || uc.amount_paid === null;
+      const typeLabels = {
+        'admin_grant': 'Admin Grant',
+        'onboarding': 'Onboarding',
+        'purchase': 'Purchased',
+        'promo': 'Promo'
+      };
+      const typeLabel = typeLabels[uc.purchase_type] || (uc.amount_paid === 0 ? 'Admin Grant' : 'Purchased');
+      const typeColor = uc.purchase_type === 'admin_grant' ? '#9d4edd' :
+                        uc.purchase_type === 'onboarding' ? '#4ade80' :
+                        uc.purchase_type === 'promo' ? '#f59e0b' : '#888';
       return `
         <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
           ${char.image_url ? `<img src="${char.image_url}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;">` : '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(157, 78, 221, 0.2); display: flex; align-items: center; justify-content: center;">🎭</div>'}
           <div style="flex: 1;">
             <div style="font-weight: 500; color: #fff;">${char.name}</div>
-            <div style="font-size: 0.75rem; color: #888;">${char.category}${isAdminGrant ? ' • Admin Grant' : ''}</div>
+            <div style="font-size: 0.75rem; color: #888;">${char.category} • <span style="color: ${typeColor};">${typeLabel}</span></div>
           </div>
           <button onclick="revokeCharacterAccess('${char.id}', '${char.name}')" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #ef4444; cursor: pointer; font-size: 0.8rem;">
             Revoke

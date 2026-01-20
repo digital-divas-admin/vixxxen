@@ -2388,3 +2388,81 @@
     display: none;
   }
 }
+
+
+/* ==================== FACE LOCK RESPONSIVE ==================== */
+
+/* Tablet and below */
+@media (max-width: 900px) {
+  .facelock-control {
+    padding: 14px 16px;
+  }
+
+  .facelock-mode-btn {
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+
+  .facelock-thumb {
+    width: 60px;
+    height: 60px;
+  }
+
+  .facelock-thumb-add {
+    width: 60px;
+    height: 60px;
+  }
+
+  /* Manager modal - full width on mobile */
+  .facelock-manager-content {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .facelock-add-content {
+    max-width: 100%;
+  }
+}
+
+/* Phone */
+@media (max-width: 768px) {
+  .facelock-thumb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .facelock-thumb-add {
+    width: 52px;
+    height: 52px;
+  }
+
+  .facelock-manager-grid {
+    gap: 10px;
+  }
+
+  .facelock-manager-item,
+  .facelock-manager-add {
+    border-radius: 10px;
+  }
+}
+
+/* Small phone */
+@media (max-width: 480px) {
+  .facelock-control {
+    padding: 12px 14px;
+  }
+
+  .facelock-thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .facelock-thumb-add {
+    width: 48px;
+    height: 48px;
+  }
+
+  .facelock-manager-remove {
+    opacity: 1;
+  }
+}
