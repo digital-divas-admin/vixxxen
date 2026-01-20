@@ -15197,12 +15197,14 @@
 
       const characterId = select.value;
 
-      // Save selection
+      // Save selection (both localStorage and window variable for restore)
       if (characterId) {
         localStorage.setItem('facelockCharacter', characterId);
+        window.facelockSavedCharacter = characterId;
         loadFacelockImages(characterId);
       } else {
         localStorage.removeItem('facelockCharacter');
+        window.facelockSavedCharacter = null;
         facelockImages = { sfw: [], nsfw: [] };
         currentFacelockCharacter = null;
         updateFacelockThumbnails();
