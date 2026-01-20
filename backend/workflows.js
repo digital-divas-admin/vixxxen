@@ -447,8 +447,13 @@ function estimateWorkflowCredits(graph) {
 
   for (const node of graph.nodes || []) {
     switch (node.type) {
+      case 'generate-prompts':
+        credits += 1;
+        break;
       case 'generate-image':
-        credits += 5 * (node.data?.config?.num_outputs || 1);
+        // If connected to generate-prompts, estimate based on prompt count
+        const promptCount = node.data?.config?.count || node.data?.config?.num_outputs || 1;
+        credits += 5 * promptCount;
         break;
       case 'generate-video':
         credits += 20;
@@ -703,8 +708,12 @@ function resolveVariables(config, context) {
 async function executeNode(nodeType, config, userId, context) {
   const { executeGenerateImage } = require('./services/workflowNodes/generateImage');
   const { executeSaveToGallery } = require('./services/workflowNodes/saveToGallery');
+  const { executeGeneratePrompts } = require('./services/workflowNodes/generatePrompts');
 
   switch (nodeType) {
+    case 'generate-prompts':
+      return executeGeneratePrompts(config, userId, context);
+
     case 'generate-image':
       return executeGenerateImage(config, userId, context);
 

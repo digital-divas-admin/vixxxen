@@ -45,12 +45,86 @@
       outputs: [{ name: 'trigger', type: 'trigger', label: 'Trigger' }],
       config: []
     },
+    'generate-prompts': {
+      type: 'generate-prompts',
+      label: 'Generate Prompts',
+      icon: '✨',
+      category: 'ai-generation',
+      inputs: [{ name: 'trigger', type: 'trigger', label: 'Trigger', required: true }],
+      outputs: [{ name: 'prompts', type: 'prompts', label: 'Prompts' }],
+      config: [
+        {
+          name: 'theme',
+          type: 'textarea',
+          label: 'Theme/Concept',
+          placeholder: 'e.g., beach vacation, cyberpunk city, cozy winter cabin...',
+          required: true
+        },
+        {
+          name: 'count',
+          type: 'select',
+          label: 'Number of Prompts',
+          options: [
+            { value: '3', label: '3 prompts' },
+            { value: '5', label: '5 prompts' },
+            { value: '10', label: '10 prompts' },
+            { value: '15', label: '15 prompts' },
+            { value: '20', label: '20 prompts' }
+          ],
+          default: '5'
+        },
+        {
+          name: 'content_mode',
+          type: 'button-group',
+          label: 'Content Mode',
+          options: [
+            { value: 'sfw', label: 'SFW' },
+            { value: 'nsfw', label: 'NSFW' }
+          ],
+          default: 'sfw'
+        },
+        {
+          name: 'style',
+          type: 'select',
+          label: 'Style',
+          options: [
+            { value: 'realistic', label: 'Realistic' },
+            { value: 'anime', label: 'Anime' },
+            { value: 'cinematic', label: 'Cinematic' },
+            { value: 'fantasy', label: 'Fantasy' },
+            { value: 'glamour', label: 'Glamour' },
+            { value: 'artistic', label: 'Artistic' }
+          ],
+          default: 'realistic'
+        },
+        {
+          name: 'character_id',
+          type: 'character-select',
+          label: 'Character (optional)'
+        },
+        {
+          name: 'include_poses',
+          type: 'toggle',
+          label: 'Vary Poses/Actions',
+          default: true
+        },
+        {
+          name: 'include_settings',
+          type: 'toggle',
+          label: 'Vary Settings/Backgrounds',
+          default: true
+        }
+      ]
+    },
     'generate-image': {
       type: 'generate-image',
       label: 'Generate Image',
       icon: '🎨',
       category: 'ai-generation',
-      inputs: [{ name: 'trigger', type: 'trigger', label: 'Trigger', required: true }],
+      inputs: [
+        { name: 'trigger', type: 'trigger', label: 'Trigger' },
+        { name: 'prompts', type: 'prompts', label: 'Prompts' }
+      ],
       outputs: [{ name: 'image_url', type: 'image', label: 'Image' }],
       config: [
         {

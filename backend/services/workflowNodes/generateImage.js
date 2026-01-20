@@ -721,6 +721,7 @@ async function executeGenerateImage(config, userId, context) {
     model = 'seedream',
     character_id,
     prompt,
+    prompts, // Array of prompts from Generate Prompts node
     facelock_enabled = false,
     facelock_source = 'same',
     facelock_character_id,
@@ -728,24 +729,29 @@ async function executeGenerateImage(config, userId, context) {
     num_outputs = 1
   } = config;
 
-  logger.info('Executing Generate Image node', {
-    model,
-    character_id,
-    facelock_enabled,
-    num_outputs
-  });
-
-  if (!prompt) {
-    throw new Error('Prompt is required');
+  // Determine prompts to process - either array from connected node or single prompt
+  let promptsToProcess = [];
+  if (prompts && Array.isArray(prompts) && prompts.length > 0) {
+    promptsToProcess = prompts;
+    logger.info('Executing Generate Image node with prompts array', {
+      model,
+      character_id,
+      facelock_enabled,
+      promptCount: prompts.length
+    });
+  } else if (prompt) {
+    promptsToProcess = [prompt];
+    logger.info('Executing Generate Image node with single prompt', {
+      model,
+      character_id,
+      facelock_enabled,
+      num_outputs
+    });
+  } else {
+    throw new Error('Prompt is required (either single prompt or prompts array)');
   }
 
-  // Enhance prompt with character prefix/suffix
-  const enhancedConfig = {
-    ...config,
-    prompt: await enhancePromptWithCharacter(prompt, character_id)
-  };
-
-  // Get facelock images if enabled (for seedream and nano-banana only)
+  // Get facelock images once (used for all generations)
   let referenceImages = [];
   if (facelock_enabled && (model === 'seedream' || model === 'nano-banana')) {
     const facelockCharId = facelock_source === 'different' ? facelock_character_id : character_id;
@@ -754,31 +760,69 @@ async function executeGenerateImage(config, userId, context) {
     }
   }
 
-  // Generate based on model
-  let images = [];
+  // Generate images for each prompt
+  let allImages = [];
+  let generationCount = 0;
 
-  switch (model) {
-    case 'seedream':
-      images = await generateWithSeedream(enhancedConfig, userId, referenceImages);
-      break;
-    case 'nano-banana':
-      images = await generateWithNanoBanana(enhancedConfig, userId, referenceImages);
-      break;
-    case 'qwen':
-      images = await generateWithQwen(enhancedConfig, userId);
-      break;
-    default:
-      throw new Error(`Unsupported model: ${model}`);
+  for (const currentPrompt of promptsToProcess) {
+    // Enhance prompt with character prefix/suffix
+    const enhancedPrompt = await enhancePromptWithCharacter(currentPrompt, character_id);
+
+    const enhancedConfig = {
+      ...config,
+      prompt: enhancedPrompt,
+      num_outputs: 1 // Generate one image per prompt when using array
+    };
+
+    logger.info('Generating image', {
+      promptIndex: generationCount + 1,
+      totalPrompts: promptsToProcess.length,
+      model
+    });
+
+    try {
+      let images = [];
+
+      switch (model) {
+        case 'seedream':
+          images = await generateWithSeedream(enhancedConfig, userId, referenceImages);
+          break;
+        case 'nano-banana':
+          images = await generateWithNanoBanana(enhancedConfig, userId, referenceImages);
+          break;
+        case 'qwen':
+          images = await generateWithQwen(enhancedConfig, userId);
+          break;
+        default:
+          throw new Error(`Unsupported model: ${model}`);
+      }
+
+      if (images.length > 0) {
+        allImages.push(...images);
+        generationCount++;
+      }
+    } catch (error) {
+      logger.error('Failed to generate image for prompt', {
+        promptIndex: generationCount + 1,
+        error: error.message
+      });
+      // Continue with other prompts even if one fails
+    }
   }
 
-  if (images.length === 0) {
+  if (allImages.length === 0) {
     throw new Error('No images were generated');
   }
 
-  logger.info('Image generation successful', { model, imageCount: images.length });
+  logger.info('Image generation successful', {
+    model,
+    imageCount: allImages.length,
+    promptsProcessed: generationCount,
+    totalPrompts: promptsToProcess.length
+  });
 
-  // Deduct credits
-  const creditsUsed = CREDIT_COSTS[model] * num_outputs;
+  // Deduct credits based on actual generations
+  const creditsUsed = CREDIT_COSTS[model] * generationCount;
 
   const { error: creditError } = await supabase.rpc('deduct_credits', {
     p_user_id: userId,
@@ -792,14 +836,14 @@ async function executeGenerateImage(config, userId, context) {
 
   logger.info('Generate Image node completed', {
     model,
-    imagesGenerated: images.length,
+    imagesGenerated: allImages.length,
     creditsUsed
   });
 
   return {
     output: {
-      image_url: images[0],
-      image_urls: images
+      image_url: allImages[0],
+      image_urls: allImages
     },
     creditsUsed
   };
