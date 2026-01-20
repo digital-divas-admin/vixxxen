@@ -375,13 +375,13 @@
     svg.id = 'workflowsConnectionsSvg';
     canvas.appendChild(svg);
 
-    // Render connections
-    renderConnections(svg);
-
-    // Render nodes
+    // Render nodes FIRST so handles exist in DOM
     nodes.forEach(node => {
       renderNode(canvas, node);
     });
+
+    // Render connections AFTER nodes exist
+    renderConnections(svg);
   }
 
   function renderNode(canvas, node) {
@@ -708,6 +708,53 @@
       const svg = document.getElementById('workflowsConnectionsSvg');
       if (svg) renderConnections(svg);
     }
+
+    // Draw preview wire while connecting
+    if (isConnecting && connectionStart) {
+      const canvas = document.getElementById('workflowsCanvas');
+      const svg = document.getElementById('workflowsConnectionsSvg');
+      if (!canvas || !svg) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Get source handle position
+      const sourceHandle = document.querySelector(`#node-${connectionStart.nodeId} .workflow-node-handle.output[data-handle="${connectionStart.handle}"]`);
+      let sourceX, sourceY;
+
+      if (sourceHandle) {
+        const handleRect = sourceHandle.getBoundingClientRect();
+        sourceX = handleRect.left - rect.left + handleRect.width / 2;
+        sourceY = handleRect.top - rect.top + handleRect.height / 2;
+      } else {
+        // Fallback
+        const sourceNode = nodes.find(n => n.id === connectionStart.nodeId);
+        if (!sourceNode) return;
+        sourceX = sourceNode.position.x + 180;
+        sourceY = sourceNode.position.y + 40;
+      }
+
+      // Remove old preview line
+      const oldPreview = svg.querySelector('.connection-preview');
+      if (oldPreview) oldPreview.remove();
+
+      // Draw preview line
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const dx = Math.abs(mouseX - sourceX);
+      const controlOffset = Math.max(50, dx * 0.4);
+      const d = `M ${sourceX} ${sourceY} C ${sourceX + controlOffset} ${sourceY}, ${mouseX - controlOffset} ${mouseY}, ${mouseX} ${mouseY}`;
+
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'workflow-connection connection-preview');
+      path.setAttribute('stroke', 'var(--accent-color)');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('stroke-dasharray', '5,5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.6');
+
+      svg.appendChild(path);
+    }
   }
 
   function handleMouseUp(e) {
@@ -717,6 +764,11 @@
     }
 
     if (isConnecting) {
+      // Remove preview line
+      const svg = document.getElementById('workflowsConnectionsSvg');
+      const preview = svg?.querySelector('.connection-preview');
+      if (preview) preview.remove();
+
       // Check if we dropped on a handle
       const target = e.target;
       if (target.classList.contains('workflow-node-handle')) {
