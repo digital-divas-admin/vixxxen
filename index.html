@@ -8302,75 +8302,317 @@
       color: #666;
     }
 
-    .credits-balance-display {
+    /* ===========================================
+       BILLING PAGE STYLES - Redesigned
+       =========================================== */
+
+    /* Hero Balance Section */
+    .billing-hero {
       text-align: center;
-      padding: 20px;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      border-radius: 12px;
-      margin-bottom: 20px;
+      padding: 32px 24px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+      border-radius: 16px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .billing-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 46, 187, 0.1) 0%, transparent 50%);
+      animation: billing-glow 8s ease-in-out infinite;
+    }
+
+    @keyframes billing-glow {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(10%, 10%); }
+    }
+
+    .billing-hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .billing-hero-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .credits-balance-number {
       display: block;
-      font-size: 2.5rem;
-      font-weight: 700;
+      font-size: 3.5rem;
+      font-weight: 800;
       background: linear-gradient(135deg, #ff2ebb, #00b2ff);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      line-height: 1.1;
+      margin-bottom: 8px;
     }
 
-    .credits-balance-label {
+    .credits-balance-context {
+      color: #666;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    .credits-balance-context span {
       color: #888;
+    }
+
+    .billing-low-balance {
+      display: none;
+      background: rgba(248, 113, 113, 0.15);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-top: 16px;
+      color: #f87171;
       font-size: 0.85rem;
     }
 
+    .billing-low-balance.visible {
+      display: block;
+    }
+
+    /* Credit Packages Grid */
     .credits-packages {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 16px;
+      margin-bottom: 24px;
     }
 
     .credits-package {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      padding: 16px;
-      border-radius: 12px;
-      border: 1px solid #333;
-      background: #111;
+      padding: 20px 16px;
+      border-radius: 16px;
+      border: 2px solid #2a2a3a;
+      background: linear-gradient(180deg, #151520 0%, #111118 100%);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
 
     .credits-package:hover {
       border-color: #ff2ebb;
-      transform: translateY(-2px);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(255, 46, 187, 0.2);
     }
 
     .credits-package.featured {
       border-color: #ff2ebb;
-      background: linear-gradient(135deg, rgba(255, 46, 187, 0.1), rgba(0, 178, 255, 0.1));
+      background: linear-gradient(180deg, #1a1525 0%, #151118 100%);
+      transform: scale(1.02);
+    }
+
+    .credits-package.featured:hover {
+      transform: scale(1.02) translateY(-4px);
+    }
+
+    .package-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: linear-gradient(135deg, #ff2ebb, #ff6b35);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 0 14px 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .package-header {
+      margin-bottom: 12px;
+    }
+
+    .package-name {
+      font-size: 0.75rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
     }
 
     .package-credits {
-      font-size: 1.1rem;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .package-credits-label {
+      font-size: 0.8rem;
+      color: #888;
+      font-weight: 400;
+    }
+
+    .package-pricing {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid #222;
+    }
+
+    .package-price {
+      font-size: 1.4rem;
       font-weight: 700;
       color: #fff;
       margin-bottom: 4px;
     }
 
-    .package-price {
-      font-size: 0.9rem;
-      color: #ff2ebb;
-      font-weight: 600;
+    .package-unit-price {
+      font-size: 0.75rem;
+      color: #666;
     }
 
-    /* Transaction Table Styles */
+    .package-savings {
+      display: inline-block;
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    .package-buy-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ff2ebb, #00b2ff);
+      color: white;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .package-buy-btn:hover {
+      filter: brightness(1.1);
+      transform: scale(1.02);
+    }
+
+    /* What Credits Get You Section */
+    .credits-reference {
+      background: #111118;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .credits-reference-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .credits-reference-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .credits-reference-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #0a0a0f;
+      border-radius: 8px;
+    }
+
+    .credits-reference-item-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+
+    .credits-reference-item-cost {
+      color: #ff2ebb;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    /* Transaction History - Redesigned */
+    .transaction-section {
+      background: #111118;
+      border: 1px solid #222;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .transaction-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #222;
+    }
+
+    .transaction-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .transaction-view-toggle {
+      display: flex;
+      gap: 4px;
+      background: #0a0a0f;
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .transaction-view-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #666;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .transaction-view-btn.active {
+      background: #222;
+      color: #fff;
+    }
+
+    /* Table View (Desktop) */
     .transaction-table-container {
       overflow-x: auto;
       overflow-y: auto;
-      max-height: 400px;
+      max-height: 350px;
     }
 
     .transaction-table {
@@ -8380,35 +8622,40 @@
 
     .transaction-table th,
     .transaction-table td {
-      padding: 12px;
+      padding: 14px 20px;
       text-align: left;
-      border-bottom: 1px solid #222;
+      border-bottom: 1px solid #1a1a1f;
     }
 
     .transaction-table th {
-      color: #888;
+      color: #666;
       font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #0a0a0f;
+      position: sticky;
+      top: 0;
     }
 
     .transaction-table td {
-      color: #fff;
-      font-size: 0.9rem;
+      color: #ccc;
+      font-size: 0.85rem;
     }
 
-    .transaction-table tr:hover {
-      background: #111;
+    .transaction-table tr:hover td {
+      background: #151520;
     }
 
     .transaction-loading td {
       text-align: center;
       color: #666;
-      padding: 30px;
+      padding: 40px;
     }
 
     .transaction-amount {
       font-weight: 600;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
     }
 
     .transaction-amount.positive {
@@ -8423,30 +8670,266 @@
       display: inline-block;
       padding: 4px 10px;
       border-radius: 12px;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .transaction-type.credit {
-      background: rgba(74, 222, 128, 0.2);
+      background: rgba(74, 222, 128, 0.15);
       color: #4ade80;
     }
 
     .transaction-type.debit {
-      background: rgba(248, 113, 113, 0.2);
+      background: rgba(248, 113, 113, 0.15);
       color: #f87171;
     }
 
     .transaction-type.purchase {
-      background: rgba(255, 46, 187, 0.2);
+      background: rgba(255, 46, 187, 0.15);
       color: #ff2ebb;
+    }
+
+    .transaction-type.refund {
+      background: rgba(0, 178, 255, 0.15);
+      color: #00b2ff;
+    }
+
+    .transaction-description {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .no-transactions {
       text-align: center;
       color: #666;
-      padding: 30px;
+      padding: 40px 20px;
+    }
+
+    .no-transactions-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+
+    /* Card View (Mobile) */
+    .transaction-cards {
+      display: none;
+      flex-direction: column;
+      gap: 1px;
+      background: #1a1a1f;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .transaction-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 14px 16px;
+      background: #111118;
+    }
+
+    .transaction-card-left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .transaction-card-amount {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    }
+
+    .transaction-card-amount.positive {
+      color: #4ade80;
+    }
+
+    .transaction-card-amount.negative {
+      color: #f87171;
+    }
+
+    .transaction-card-desc {
+      color: #888;
+      font-size: 0.8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .transaction-card-right {
+      text-align: right;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    .transaction-card-date {
+      color: #666;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+    }
+
+    /* Trust Section */
+    .billing-trust {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 20px;
+      margin-top: 24px;
+      background: #0a0a0f;
+      border-radius: 12px;
+      border: 1px solid #1a1a1f;
+    }
+
+    .billing-trust-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #666;
+      font-size: 0.8rem;
+    }
+
+    .billing-trust-item svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+
+    .billing-trust-divider {
+      width: 1px;
+      height: 20px;
+      background: #222;
+    }
+
+    /* Animated counter */
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .credits-balance-number.animating {
+      animation: countUp 0.3s ease-out;
+    }
+
+    /* Billing Page Layout Override */
+    #billingSection .account-grid {
+      display: block;
+    }
+
+    #billingSection .account-card {
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+
+    #billingSection .account-card-header {
+      display: none;
+    }
+
+    #billingSection .account-card-body {
+      padding: 0;
+    }
+
+    /* Responsive Styles for Billing */
+    @media (max-width: 768px) {
+      .credits-packages {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .credits-package {
+        flex-direction: row;
+        align-items: center;
+        padding: 16px;
+      }
+
+      .credits-package.featured {
+        transform: none;
+        order: -1;
+      }
+
+      .credits-package.featured:hover {
+        transform: translateY(-2px);
+      }
+
+      .package-header {
+        flex: 1;
+        margin-bottom: 0;
+        margin-right: 16px;
+      }
+
+      .package-credits {
+        font-size: 1.4rem;
+      }
+
+      .package-pricing {
+        padding-top: 0;
+        border-top: none;
+        text-align: right;
+        min-width: 80px;
+      }
+
+      .package-price {
+        font-size: 1.2rem;
+      }
+
+      .package-buy-btn {
+        display: none;
+      }
+
+      .package-savings {
+        margin-top: 4px;
+      }
+
+      .credits-reference-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .transaction-table-container {
+        display: none;
+      }
+
+      .transaction-cards {
+        display: flex;
+      }
+
+      .transaction-view-toggle {
+        display: none;
+      }
+
+      .billing-trust {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .billing-trust-divider {
+        display: none;
+      }
+
+      .billing-hero {
+        padding: 24px 16px;
+      }
+
+      .credits-balance-number {
+        font-size: 2.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .credits-balance-number {
+        font-size: 2.4rem;
+      }
+
+      .package-badge {
+        font-size: 0.6rem;
+        padding: 3px 8px;
+      }
     }
 
     /* Light theme overrides and cold-start banner now in external css/main.css */
@@ -11954,57 +12437,148 @@
         </div>
 
         <div class="account-grid">
-          <!-- Buy Credits Card -->
           <div class="account-card">
-            <div class="account-card-header">
-              <h2 class="account-card-title">🪙 Buy Credits</h2>
-            </div>
             <div class="account-card-body">
-              <div class="credits-balance-display">
-                <span class="credits-balance-number" id="billingCredits">0</span>
-                <span class="credits-balance-label">Current Balance</span>
+              <!-- Hero Balance Section -->
+              <div class="billing-hero">
+                <div class="billing-hero-content">
+                  <div class="billing-hero-label">
+                    <span>Your Credits</span>
+                  </div>
+                  <span class="credits-balance-number" id="billingCredits">0</span>
+                  <div class="credits-balance-context" id="billingContext">
+                    Enough for <span id="billingGenerations">0</span> image generations
+                  </div>
+                  <div class="billing-low-balance" id="billingLowBalance">
+                    Running low on credits? Top up to keep creating!
+                  </div>
+                </div>
               </div>
 
-              <!-- TEST PRICES - CHANGE BACK FOR PRODUCTION -->
+              <!-- Credit Packages -->
               <div class="credits-packages">
+                <!-- Basic Package -->
                 <button class="credits-package" onclick="purchaseCredits(500, 1.00)">
-                  <span class="package-credits">500</span>
-                  <span class="package-price">$1</span>
+                  <div class="package-header">
+                    <div class="package-name">Starter</div>
+                    <div class="package-credits">500 <span class="package-credits-label">credits</span></div>
+                  </div>
+                  <div class="package-pricing">
+                    <div class="package-price">$1.00</div>
+                    <div class="package-unit-price">$0.20 per 100 credits</div>
+                  </div>
+                  <button class="package-buy-btn">Buy Now</button>
                 </button>
+
+                <!-- Popular Package -->
                 <button class="credits-package" onclick="purchaseCredits(1000, 1.50)">
-                  <span class="package-credits">1,000</span>
-                  <span class="package-price">$1.50</span>
+                  <span class="package-badge">Popular</span>
+                  <div class="package-header">
+                    <div class="package-name">Creator</div>
+                    <div class="package-credits">1,000 <span class="package-credits-label">credits</span></div>
+                  </div>
+                  <div class="package-pricing">
+                    <div class="package-price">$1.50</div>
+                    <div class="package-unit-price">$0.15 per 100 credits</div>
+                    <span class="package-savings">Save 25%</span>
+                  </div>
+                  <button class="package-buy-btn">Buy Now</button>
                 </button>
+
+                <!-- Best Value Package -->
                 <button class="credits-package featured" onclick="purchaseCredits(2500, 2.00)">
-                  <span class="package-credits">2,500</span>
-                  <span class="package-price">$2</span>
+                  <span class="package-badge">Best Value</span>
+                  <div class="package-header">
+                    <div class="package-name">Pro</div>
+                    <div class="package-credits">2,500 <span class="package-credits-label">credits</span></div>
+                  </div>
+                  <div class="package-pricing">
+                    <div class="package-price">$2.00</div>
+                    <div class="package-unit-price">$0.08 per 100 credits</div>
+                    <span class="package-savings">Save 60%</span>
+                  </div>
+                  <button class="package-buy-btn">Buy Now</button>
                 </button>
               </div>
-            </div>
-          </div>
 
-          <!-- Transaction History Card -->
-          <div class="account-card wide">
-            <div class="account-card-header">
-              <h2 class="account-card-title">📜 Transaction History</h2>
-            </div>
-            <div class="account-card-body">
-              <div class="transaction-table-container">
-                <table class="transaction-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Type</th>
-                      <th>Amount</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody id="transactionTableBody">
-                    <tr class="transaction-loading">
-                      <td colspan="4">Loading transactions...</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <!-- What Credits Get You -->
+              <div class="credits-reference">
+                <div class="credits-reference-title">
+                  <span>What can you create?</span>
+                </div>
+                <div class="credits-reference-grid">
+                  <div class="credits-reference-item">
+                    <span class="credits-reference-item-name">Standard Image</span>
+                    <span class="credits-reference-item-cost">13 credits</span>
+                  </div>
+                  <div class="credits-reference-item">
+                    <span class="credits-reference-item-name">HD Image (Flux)</span>
+                    <span class="credits-reference-item-cost">20 credits</span>
+                  </div>
+                  <div class="credits-reference-item">
+                    <span class="credits-reference-item-name">Quick Image</span>
+                    <span class="credits-reference-item-cost">6 credits</span>
+                  </div>
+                  <div class="credits-reference-item">
+                    <span class="credits-reference-item-name">Face Lock</span>
+                    <span class="credits-reference-item-cost">+5 credits</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Transaction History -->
+              <div class="transaction-section">
+                <div class="transaction-header">
+                  <div class="transaction-header-title">
+                    <span>Transaction History</span>
+                  </div>
+                  <div class="transaction-view-toggle">
+                    <button class="transaction-view-btn active" onclick="setTransactionView('table')">Table</button>
+                    <button class="transaction-view-btn" onclick="setTransactionView('cards')">Cards</button>
+                  </div>
+                </div>
+
+                <!-- Table View (Desktop) -->
+                <div class="transaction-table-container" id="transactionTableView">
+                  <table class="transaction-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody id="transactionTableBody">
+                      <tr class="transaction-loading">
+                        <td colspan="4">Loading transactions...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Card View (Mobile) -->
+                <div class="transaction-cards" id="transactionCardsView">
+                  <!-- Cards populated by JS -->
+                </div>
+              </div>
+
+              <!-- Trust Section -->
+              <div class="billing-trust">
+                <div class="billing-trust-item">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                  <span>Secure Payment</span>
+                </div>
+                <div class="billing-trust-divider"></div>
+                <div class="billing-trust-item">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                  <span>Instant Credits</span>
+                </div>
+                <div class="billing-trust-divider"></div>
+                <div class="billing-trust-item">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                  <span>Crypto Accepted</span>
+                </div>
               </div>
             </div>
           </div>
