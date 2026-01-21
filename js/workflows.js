@@ -54,41 +54,98 @@
       outputs: [{ name: 'trigger', type: 'trigger', label: 'Trigger' }],
       config: [
         {
-          name: 'schedule_preset',
+          name: 'frequency',
           type: 'select',
-          label: 'Schedule',
+          label: 'How often?',
           options: [
-            { value: 'every-hour', label: 'Every hour' },
-            { value: 'every-6-hours', label: 'Every 6 hours' },
-            { value: 'daily-9am', label: 'Daily at 9:00 AM' },
-            { value: 'daily-noon', label: 'Daily at 12:00 PM' },
-            { value: 'daily-6pm', label: 'Daily at 6:00 PM' },
-            { value: 'weekly-monday', label: 'Weekly on Monday' },
-            { value: 'weekly-friday', label: 'Weekly on Friday' },
-            { value: 'custom', label: 'Custom cron...' }
+            { value: 'hourly', label: 'Every hour' },
+            { value: 'every-few-hours', label: 'Every few hours' },
+            { value: 'daily', label: 'Once a day' },
+            { value: 'weekly', label: 'Once a week' },
+            { value: 'monthly', label: 'Once a month' }
           ],
-          default: 'daily-9am'
+          default: 'daily'
         },
         {
-          name: 'cron_expression',
-          type: 'text',
-          label: 'Cron Expression',
-          placeholder: '0 9 * * *',
-          showWhen: { schedule_preset: 'custom' }
+          name: 'hours_interval',
+          type: 'select',
+          label: 'Run every...',
+          options: [
+            { value: '2', label: '2 hours' },
+            { value: '3', label: '3 hours' },
+            { value: '4', label: '4 hours' },
+            { value: '6', label: '6 hours' },
+            { value: '8', label: '8 hours' },
+            { value: '12', label: '12 hours' }
+          ],
+          default: '6',
+          showWhen: { frequency: 'every-few-hours' }
+        },
+        {
+          name: 'time_of_day',
+          type: 'select',
+          label: 'What time?',
+          options: [
+            { value: '6', label: '6:00 AM' },
+            { value: '7', label: '7:00 AM' },
+            { value: '8', label: '8:00 AM' },
+            { value: '9', label: '9:00 AM' },
+            { value: '10', label: '10:00 AM' },
+            { value: '11', label: '11:00 AM' },
+            { value: '12', label: '12:00 PM (Noon)' },
+            { value: '13', label: '1:00 PM' },
+            { value: '14', label: '2:00 PM' },
+            { value: '15', label: '3:00 PM' },
+            { value: '16', label: '4:00 PM' },
+            { value: '17', label: '5:00 PM' },
+            { value: '18', label: '6:00 PM' },
+            { value: '19', label: '7:00 PM' },
+            { value: '20', label: '8:00 PM' },
+            { value: '21', label: '9:00 PM' }
+          ],
+          default: '9',
+          showWhen: { frequency: ['daily', 'weekly', 'monthly'] }
+        },
+        {
+          name: 'day_of_week',
+          type: 'select',
+          label: 'Which day?',
+          options: [
+            { value: '1', label: 'Monday' },
+            { value: '2', label: 'Tuesday' },
+            { value: '3', label: 'Wednesday' },
+            { value: '4', label: 'Thursday' },
+            { value: '5', label: 'Friday' },
+            { value: '6', label: 'Saturday' },
+            { value: '0', label: 'Sunday' }
+          ],
+          default: '1',
+          showWhen: { frequency: 'weekly' }
+        },
+        {
+          name: 'day_of_month',
+          type: 'select',
+          label: 'Which day?',
+          options: [
+            { value: '1', label: '1st of the month' },
+            { value: '15', label: '15th of the month' }
+          ],
+          default: '1',
+          showWhen: { frequency: 'monthly' }
         },
         {
           name: 'timezone',
           type: 'select',
           label: 'Timezone',
           options: [
-            { value: 'UTC', label: 'UTC' },
             { value: 'America/New_York', label: 'Eastern (US)' },
             { value: 'America/Chicago', label: 'Central (US)' },
             { value: 'America/Denver', label: 'Mountain (US)' },
             { value: 'America/Los_Angeles', label: 'Pacific (US)' },
             { value: 'Europe/London', label: 'London (UK)' },
             { value: 'Europe/Paris', label: 'Paris (EU)' },
-            { value: 'Asia/Tokyo', label: 'Tokyo (Japan)' }
+            { value: 'Asia/Tokyo', label: 'Tokyo (Japan)' },
+            { value: 'UTC', label: 'UTC' }
           ],
           default: 'America/New_York'
         },
@@ -390,16 +447,30 @@
     }
   }
 
-  // Cron expression presets
-  const CRON_PRESETS = {
-    'every-hour': '0 * * * *',
-    'every-6-hours': '0 */6 * * *',
-    'daily-9am': '0 9 * * *',
-    'daily-noon': '0 12 * * *',
-    'daily-6pm': '0 18 * * *',
-    'weekly-monday': '0 9 * * 1',
-    'weekly-friday': '0 9 * * 5'
-  };
+  // Generate cron expression from friendly schedule options
+  function generateCronExpression(config) {
+    const frequency = config?.frequency || 'daily';
+    const timeOfDay = config?.time_of_day || '9';
+    const dayOfWeek = config?.day_of_week || '1';
+    const dayOfMonth = config?.day_of_month || '1';
+    const hoursInterval = config?.hours_interval || '6';
+
+    // Cron format: minute hour day-of-month month day-of-week
+    switch (frequency) {
+      case 'hourly':
+        return '0 * * * *';  // Every hour at minute 0
+      case 'every-few-hours':
+        return `0 */${hoursInterval} * * *`;  // Every X hours
+      case 'daily':
+        return `0 ${timeOfDay} * * *`;  // Daily at specified hour
+      case 'weekly':
+        return `0 ${timeOfDay} * * ${dayOfWeek}`;  // Weekly on specified day
+      case 'monthly':
+        return `0 ${timeOfDay} ${dayOfMonth} * *`;  // Monthly on specified day
+      default:
+        return '0 9 * * *';  // Default: daily at 9am
+    }
+  }
 
   async function syncWorkflowSchedule() {
     if (!currentWorkflowId) return;
@@ -414,12 +485,8 @@
       const existingSchedule = checkData.schedule;
 
       if (scheduleNode) {
-        // Get cron expression from preset or custom
-        const preset = scheduleNode.config?.schedule_preset || 'daily-9am';
-        let cronExpression = CRON_PRESETS[preset];
-        if (preset === 'custom' && scheduleNode.config?.cron_expression) {
-          cronExpression = scheduleNode.config.cron_expression;
-        }
+        // Generate cron expression from friendly options
+        const cronExpression = generateCronExpression(scheduleNode.config);
 
         const timezone = scheduleNode.config?.timezone || 'America/New_York';
         const isEnabled = scheduleNode.config?.is_enabled !== false;
