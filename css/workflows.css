@@ -637,13 +637,16 @@
   width: 44px;
   height: 24px;
   background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .workflows-config-toggle-switch.active {
-  background: var(--accent-color);
+  background: #22c55e;
+  border-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
 }
 
 .workflows-config-toggle-switch::after {
@@ -651,15 +654,16 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 20px;
-  height: 20px;
-  background: white;
+  width: 18px;
+  height: 18px;
+  background: #666;
   border-radius: 50%;
   transition: all 0.2s ease;
 }
 
 .workflows-config-toggle-switch.active::after {
   left: 22px;
+  background: white;
 }
 
 /* Facelock Preview */
@@ -796,13 +800,15 @@
 
 /* Connection Lines */
 .workflow-connection {
-  stroke: var(--border-color);
-  stroke-width: 2;
+  stroke: #22c55e;
+  stroke-width: 2.5;
   fill: none;
+  filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
 }
 
 .workflow-connection.active {
-  stroke: var(--accent-color);
+  stroke: #4ade80;
+  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.7));
 }
 
 /* =============================================

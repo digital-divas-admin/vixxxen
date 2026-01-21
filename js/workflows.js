@@ -553,37 +553,22 @@
 
       if (!sourceNode || !targetNode) return;
 
-      // Try to get actual handle positions from DOM
-      const sourceHandle = document.querySelector(`#node-${edge.source} .workflow-node-handle.output[data-handle="${edge.sourceHandle}"]`);
-      const targetHandle = document.querySelector(`#node-${edge.target} .workflow-node-handle.input[data-handle="${edge.targetHandle}"]`);
+      // Use node positions directly (stored in canvas coordinates)
+      // This is more reliable with zoom/pan than getBoundingClientRect
+      const sourceNodeEl = document.getElementById(`node-${edge.source}`);
+      const targetNodeEl = document.getElementById(`node-${edge.target}`);
 
-      let sourceX, sourceY, targetX, targetY;
+      const sourceWidth = sourceNodeEl ? sourceNodeEl.offsetWidth : 180;
+      const sourceHeight = sourceNodeEl ? sourceNodeEl.offsetHeight : 80;
+      const targetHeight = targetNodeEl ? targetNodeEl.offsetHeight : 80;
 
-      if (sourceHandle && targetHandle) {
-        // Get positions relative to canvas
-        const canvas = document.getElementById('workflowsCanvas');
-        const canvasRect = canvas.getBoundingClientRect();
-        const sourceRect = sourceHandle.getBoundingClientRect();
-        const targetRect = targetHandle.getBoundingClientRect();
+      // Output handle is on the right side of the node
+      const sourceX = sourceNode.position.x + sourceWidth;
+      const sourceY = sourceNode.position.y + sourceHeight / 2;
 
-        sourceX = sourceRect.left - canvasRect.left + sourceRect.width / 2;
-        sourceY = sourceRect.top - canvasRect.top + sourceRect.height / 2;
-        targetX = targetRect.left - canvasRect.left + targetRect.width / 2;
-        targetY = targetRect.top - canvasRect.top + targetRect.height / 2;
-      } else {
-        // Fallback to calculated positions
-        const sourceNodeEl = document.getElementById(`node-${edge.source}`);
-        const targetNodeEl = document.getElementById(`node-${edge.target}`);
-
-        const sourceWidth = sourceNodeEl ? sourceNodeEl.offsetWidth : 180;
-        const sourceHeight = sourceNodeEl ? sourceNodeEl.offsetHeight : 80;
-        const targetHeight = targetNodeEl ? targetNodeEl.offsetHeight : 80;
-
-        sourceX = sourceNode.position.x + sourceWidth;
-        sourceY = sourceNode.position.y + sourceHeight / 2;
-        targetX = targetNode.position.x;
-        targetY = targetNode.position.y + targetHeight / 2;
-      }
+      // Input handle is on the left side of the node
+      const targetX = targetNode.position.x;
+      const targetY = targetNode.position.y + targetHeight / 2;
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
@@ -594,9 +579,6 @@
 
       path.setAttribute('d', d);
       path.setAttribute('class', 'workflow-connection');
-      path.setAttribute('stroke', 'var(--accent-color)');
-      path.setAttribute('stroke-width', '2');
-      path.setAttribute('fill', 'none');
 
       svg.appendChild(path);
     });
