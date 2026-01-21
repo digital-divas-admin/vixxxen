@@ -58,6 +58,7 @@
           type: 'select',
           label: 'How often?',
           options: [
+            { value: 'every-few-minutes', label: 'Every few minutes' },
             { value: 'hourly', label: 'Every hour' },
             { value: 'every-few-hours', label: 'Every few hours' },
             { value: 'daily', label: 'Once a day' },
@@ -65,6 +66,18 @@
             { value: 'monthly', label: 'Once a month' }
           ],
           default: 'daily'
+        },
+        {
+          name: 'minutes_interval',
+          type: 'select',
+          label: 'Run every...',
+          options: [
+            { value: '5', label: '5 minutes' },
+            { value: '15', label: '15 minutes' },
+            { value: '30', label: '30 minutes' }
+          ],
+          default: '15',
+          showWhen: { frequency: 'every-few-minutes' }
         },
         {
           name: 'hours_interval',
@@ -438,9 +451,15 @@
       if (!response.ok) throw new Error('Failed to save workflow');
 
       // Sync schedule if there's a schedule-trigger node
-      await syncWorkflowSchedule();
+      const scheduleInfo = await syncWorkflowSchedule();
 
-      showToast('Workflow saved', 'success');
+      // Show appropriate success message
+      if (scheduleInfo && scheduleInfo.hasSchedule) {
+        const status = scheduleInfo.isEnabled ? 'enabled' : 'paused';
+        showToast(`Workflow saved! Schedule ${status}: runs ${scheduleInfo.description}`, 'success');
+      } else {
+        showToast('Workflow saved', 'success');
+      }
     } catch (error) {
       console.error('Error saving workflow:', error);
       showToast('Failed to save workflow', 'error');
@@ -454,9 +473,12 @@
     const dayOfWeek = config?.day_of_week || '1';
     const dayOfMonth = config?.day_of_month || '1';
     const hoursInterval = config?.hours_interval || '6';
+    const minutesInterval = config?.minutes_interval || '15';
 
     // Cron format: minute hour day-of-month month day-of-week
     switch (frequency) {
+      case 'every-few-minutes':
+        return `*/${minutesInterval} * * * *`;  // Every X minutes
       case 'hourly':
         return '0 * * * *';  // Every hour at minute 0
       case 'every-few-hours':
@@ -472,8 +494,46 @@
     }
   }
 
+  // Get human-readable schedule description
+  function getScheduleDescription(config) {
+    const frequency = config?.frequency || 'daily';
+    const timeOfDay = config?.time_of_day || '9';
+    const dayOfWeek = config?.day_of_week || '1';
+    const dayOfMonth = config?.day_of_month || '1';
+    const hoursInterval = config?.hours_interval || '6';
+    const minutesInterval = config?.minutes_interval || '15';
+
+    const timeLabels = {
+      '6': '6:00 AM', '7': '7:00 AM', '8': '8:00 AM', '9': '9:00 AM',
+      '10': '10:00 AM', '11': '11:00 AM', '12': '12:00 PM', '13': '1:00 PM',
+      '14': '2:00 PM', '15': '3:00 PM', '16': '4:00 PM', '17': '5:00 PM',
+      '18': '6:00 PM', '19': '7:00 PM', '20': '8:00 PM', '21': '9:00 PM'
+    };
+    const dayLabels = {
+      '0': 'Sunday', '1': 'Monday', '2': 'Tuesday', '3': 'Wednesday',
+      '4': 'Thursday', '5': 'Friday', '6': 'Saturday'
+    };
+
+    switch (frequency) {
+      case 'every-few-minutes':
+        return `every ${minutesInterval} minutes`;
+      case 'hourly':
+        return 'every hour';
+      case 'every-few-hours':
+        return `every ${hoursInterval} hours`;
+      case 'daily':
+        return `daily at ${timeLabels[timeOfDay] || timeOfDay}`;
+      case 'weekly':
+        return `every ${dayLabels[dayOfWeek]} at ${timeLabels[timeOfDay] || timeOfDay}`;
+      case 'monthly':
+        return `monthly on the ${dayOfMonth}${dayOfMonth === '1' ? 'st' : 'th'} at ${timeLabels[timeOfDay] || timeOfDay}`;
+      default:
+        return 'daily at 9:00 AM';
+    }
+  }
+
   async function syncWorkflowSchedule() {
-    if (!currentWorkflowId) return;
+    if (!currentWorkflowId) return null;
 
     // Find schedule-trigger node
     const scheduleNode = nodes.find(n => n.type === 'schedule-trigger');
@@ -513,15 +573,25 @@
             })
           });
         }
+
+        // Return schedule info for confirmation message
+        return {
+          hasSchedule: true,
+          isEnabled,
+          description: getScheduleDescription(scheduleNode.config)
+        };
       } else if (existingSchedule) {
         // No schedule node but schedule exists - delete it
         await authFetch(`${API_BASE_URL}/api/workflow-schedules/${existingSchedule.id}`, {
           method: 'DELETE'
         });
       }
+
+      return { hasSchedule: false };
     } catch (error) {
       console.error('Error syncing schedule:', error);
       // Don't throw - schedule sync failure shouldn't fail the whole save
+      return null;
     }
   }
 
