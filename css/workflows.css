@@ -656,14 +656,16 @@
   left: 2px;
   width: 18px;
   height: 18px;
-  background: #666;
+  background: var(--text-tertiary);
   border-radius: 50%;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .workflows-config-toggle-switch.active::after {
   left: 22px;
   background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Facelock Preview */
