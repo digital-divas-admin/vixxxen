@@ -1304,7 +1304,7 @@
           <div class="workflow-results-grid">
             ${images.map(url => `
               <div class="workflow-result-image">
-                <img src="${url}" alt="Generated image" onclick="window.open('${url}', '_blank')">
+                <img src="${escapeHtml(url)}" alt="Generated image" onclick="showImageModal('${escapeHtml(url).replace(/'/g, "\\'")}')">
               </div>
             `).join('')}
           </div>

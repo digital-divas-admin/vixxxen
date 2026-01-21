@@ -673,6 +673,17 @@ function resolveEdgeInputs(nodeId, edges, config, context) {
         // Set it on the config using the target handle name as the key
         resolvedConfig[edge.targetHandle] = value;
       }
+
+      // Special handling: when connecting image_url, also pass image_urls array if available
+      // This allows save-gallery to receive all images from generate-image node
+      if (edge.sourceHandle === 'image_url' && sourceOutput.image_urls && Array.isArray(sourceOutput.image_urls)) {
+        resolvedConfig.image_urls = sourceOutput.image_urls;
+      }
+
+      // Special handling: when connecting prompts, ensure the array is passed correctly
+      if (edge.sourceHandle === 'prompts' && sourceOutput.prompts && Array.isArray(sourceOutput.prompts)) {
+        resolvedConfig.prompts = sourceOutput.prompts;
+      }
     }
   }
 
