@@ -37,10 +37,13 @@ const trialRouter = require('./trial');
 const analyticsEventsRouter = require('./analytics-events');
 const userImagesRouter = require('./user-images');
 const facelockRouter = require('./facelock');
+const workflowsRouter = require('./workflows');
+const workflowSchedulesRouter = require('./workflowSchedules');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
 const { getGpuConfig } = require('./services/settingsService');
+const { startScheduler } = require('./services/workflowScheduler');
 
 const app = express();
 const server = http.createServer(app);
@@ -252,6 +255,8 @@ app.use('/api/landing', landingRouter);
 app.use('/api/analytics', analyticsEventsRouter);
 app.use('/api/user-images', userImagesRouter);
 app.use('/api/facelock', requireAuth, facelockRouter);
+app.use('/api/workflows', requireAuth, workflowsRouter);
+app.use('/api/workflow-schedules', workflowSchedulesRouter);
 
 // Trial endpoint - public (no auth) but rate limited for image generation
 // Uses generationLimiterPostOnly to rate limit POST /generate but allow GET /status freely
@@ -290,6 +295,9 @@ app.use((req, res) => {
 server.listen(PORT, () => {
   logger.info(`Vixxxen Backend started on port ${PORT}`);
 
+  // Start the workflow scheduler (runs every minute to check for due schedules)
+  startScheduler();
+
   // Log API configuration status
   const apiStatus = {
     replicate: !!process.env.REPLICATE_API_KEY,
@@ -322,6 +330,11 @@ server.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
+
+  // Stop the workflow scheduler
+  const { stopScheduler } = require('./services/workflowScheduler');
+  stopScheduler();
+
   server.close(() => {
     logger.info('HTTP server closed');
   });

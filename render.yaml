@@ -1,37 +1,25 @@
+# Render Blueprint for vixxxen
+# https://render.com/docs/blueprint-spec
+
 services:
-  - type: web
-    name: vixxxen
-    runtime: node
-    region: oregon
-    plan: free
+  # Main backend API service (reference only - may already exist)
+  # - type: web
+  #   name: vixxxen-api
+  #   env: node
+  #   rootDir: backend
+  #   buildCommand: npm install
+  #   startCommand: node server.js
+
+  # Cron job for processing scheduled workflows
+  - type: cron
+    name: workflow-scheduler
+    env: node
     rootDir: backend
     buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /health
+    schedule: "* * * * *"  # Every minute
+    startCommand: node cron/processSchedules.js
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 10000
-      - key: REPLICATE_API_KEY
-        sync: false
-      - key: GOOGLE_API_KEY
-        sync: false
-      - key: XAI_API_KEY
-        sync: false
-      - key: ELEVENLABS_API_KEY
-        sync: false
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: NOWPAYMENTS_API_KEY
-        sync: false
-      - key: NOWPAYMENTS_IPN_SECRET
-        sync: false
-      - key: BACKEND_URL
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
+      - key: API_URL
+        sync: false  # Set manually in Render dashboard
+      - key: CRON_SECRET
+        sync: false  # Set manually in Render dashboard (must match API service)

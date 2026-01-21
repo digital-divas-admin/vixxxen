@@ -143,7 +143,7 @@ router.post('/', requireAdmin, async (req, res) => {
     const {
       name, category, description, price, tags,
       image_url, gallery_images, lora_url, trigger_word,
-      is_active, is_listed, sort_order
+      is_active, is_listed, sort_order, appearance_description
     } = req.body;
 
     if (!name || !category) {
@@ -164,7 +164,8 @@ router.post('/', requireAdmin, async (req, res) => {
         trigger_word,
         is_active: is_active !== false,
         is_listed: is_listed !== false,
-        sort_order: sort_order || 0
+        sort_order: sort_order || 0,
+        appearance_description
       })
       .select()
       .single();
@@ -198,7 +199,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const {
       name, category, description, price, rating, purchases, tags,
       image_url, gallery_images, lora_url, trigger_word,
-      is_active, is_listed, sort_order
+      is_active, is_listed, sort_order, appearance_description
     } = req.body;
 
     const updateData = {};
@@ -216,6 +217,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     if (is_active !== undefined) updateData.is_active = is_active;
     if (is_listed !== undefined) updateData.is_listed = is_listed;
     if (sort_order !== undefined) updateData.sort_order = sort_order;
+    if (appearance_description !== undefined) updateData.appearance_description = appearance_description;
     updateData.updated_at = new Date().toISOString();
 
     const { data: character, error } = await supabase
