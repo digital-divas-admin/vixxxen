@@ -41,7 +41,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
-    // Get execution counts for each workflow
+    // Get execution counts and schedule info for each workflow
     const workflowsWithStats = await Promise.all(
       (data || []).map(async (workflow) => {
         const { count: totalRuns } = await supabase
@@ -55,12 +55,20 @@ router.get('/', requireAuth, async (req, res) => {
           .eq('workflow_id', workflow.id)
           .eq('status', 'completed');
 
+        // Get schedule info if exists
+        const { data: schedule } = await supabase
+          .from('workflow_schedules')
+          .select('id, is_enabled, cron_expression, next_run_at')
+          .eq('workflow_id', workflow.id)
+          .single();
+
         return {
           ...workflow,
           stats: {
             total_runs: totalRuns || 0,
             successful_runs: successfulRuns || 0
-          }
+          },
+          schedule: schedule || null
         };
       })
     );

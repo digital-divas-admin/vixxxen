@@ -685,16 +685,35 @@
     workflows.forEach(workflow => {
       const card = document.createElement('div');
       card.className = 'workflow-card';
+
+      const hasSchedule = workflow.schedule !== null;
+      const scheduleEnabled = workflow.schedule?.is_enabled ?? false;
+
+      // Format next run time if available
+      let nextRunText = '';
+      if (hasSchedule && workflow.schedule.next_run_at) {
+        const nextRun = new Date(workflow.schedule.next_run_at);
+        nextRunText = `Next: ${nextRun.toLocaleDateString()} ${nextRun.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      }
+
       card.innerHTML = `
         <div class="workflow-card-header">
           <h3 class="workflow-card-name">${escapeHtml(workflow.name)}</h3>
-          <div class="workflow-card-status ${workflow.is_enabled ? 'enabled' : ''}">
-            <span class="workflow-card-status-dot"></span>
-            ${workflow.is_enabled ? 'Enabled' : 'Disabled'}
-          </div>
+          ${hasSchedule ? `
+            <label class="workflow-schedule-toggle" title="${scheduleEnabled ? 'Schedule active' : 'Schedule paused'}">
+              <input type="checkbox" ${scheduleEnabled ? 'checked' : ''}
+                     onchange="window.workflowsModule.toggleSchedule('${workflow.id}', '${workflow.schedule.id}', this.checked)">
+              <span class="workflow-schedule-slider"></span>
+            </label>
+          ` : ''}
         </div>
         <div class="workflow-card-meta">
-          ${workflow.trigger_type === 'manual' ? 'Manual trigger' : workflow.trigger_type}
+          ${hasSchedule ? `
+            <span class="workflow-schedule-badge ${scheduleEnabled ? 'active' : 'paused'}">
+              ⏰ ${scheduleEnabled ? 'Scheduled' : 'Paused'}
+            </span>
+            ${scheduleEnabled && nextRunText ? `<span class="workflow-next-run">${nextRunText}</span>` : ''}
+          ` : 'Manual trigger'}
         </div>
         <div class="workflow-card-stats">
           <span>${workflow.stats?.total_runs || 0} runs</span>
@@ -1589,12 +1608,63 @@
   }
 
   function showToast(message, type = 'info') {
-    // Use existing toast system if available
-    if (typeof window.showNotification === 'function') {
-      window.showNotification(message, type);
-    } else {
-      console.log(`[${type}] ${message}`);
+    // Create toast container if it doesn't exist
+    let container = document.getElementById('workflows-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'workflows-toast-container';
+      container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      `;
+      document.body.appendChild(container);
     }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
+    toast.style.cssText = `
+      background: ${bgColor};
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease;
+      max-width: 400px;
+    `;
+    toast.textContent = message;
+
+    // Add animation styles if not already added
+    if (!document.getElementById('toast-styles')) {
+      const style = document.createElement('style');
+      style.id = 'toast-styles';
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    container.appendChild(toast);
+
+    // Remove after 4 seconds
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
   }
 
   // =============================================
@@ -1639,6 +1709,34 @@
       canvasPan = { x: 0, y: 0 };
       applyCanvasTransform();
       updateZoomDisplay();
+    },
+
+    toggleSchedule: async function(workflowId, scheduleId, enabled) {
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/workflow-schedules/${scheduleId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ is_enabled: enabled })
+        });
+
+        if (!response.ok) throw new Error('Failed to update schedule');
+
+        // Update local state
+        const workflow = workflows.find(w => w.id === workflowId);
+        if (workflow && workflow.schedule) {
+          workflow.schedule.is_enabled = enabled;
+        }
+
+        // Show confirmation
+        showToast(enabled ? 'Schedule activated' : 'Schedule paused', 'success');
+
+        // Re-render list to update UI
+        renderWorkflowsList();
+      } catch (error) {
+        console.error('Error toggling schedule:', error);
+        showToast('Failed to update schedule', 'error');
+        // Re-render to reset toggle state
+        renderWorkflowsList();
+      }
     }
   };
 
