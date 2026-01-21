@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const cronParser = require('cron-parser');
+const { CronExpressionParser } = require('cron-parser');
 const { supabase } = require('./services/supabase');
 const { requireAuth } = require('./middleware/auth');
 const { logger } = require('./services/logger');
@@ -31,8 +31,8 @@ function calculateNextRun(cronExpression, timezone = 'UTC') {
       currentDate: new Date(),
       tz: timezone
     };
-    const interval = cronParser.parseExpression(cronExpression, options);
-    return interval.next().toDate();
+    const expression = CronExpressionParser.parse(cronExpression, options);
+    return expression.next().toDate();
   } catch (error) {
     logger.error('Failed to parse cron expression', { cronExpression, error: error.message });
     return null;
@@ -44,7 +44,7 @@ function calculateNextRun(cronExpression, timezone = 'UTC') {
  */
 function validateCronExpression(cronExpression) {
   try {
-    cronParser.parseExpression(cronExpression);
+    CronExpressionParser.parse(cronExpression);
     return { valid: true };
   } catch (error) {
     return { valid: false, error: error.message };
