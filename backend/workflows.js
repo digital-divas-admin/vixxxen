@@ -220,7 +220,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
 // =============================================
 // DELETE /api/workflows/:id
-// Delete a workflow
+// Delete a workflow and its associated schedule
 // =============================================
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
@@ -231,6 +231,19 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const userId = req.userId;
     const { id } = req.params;
 
+    // First, delete any associated schedule
+    const { error: scheduleError } = await supabase
+      .from('workflow_schedules')
+      .delete()
+      .eq('workflow_id', id)
+      .eq('user_id', userId);
+
+    if (scheduleError) {
+      logger.warn('Error deleting workflow schedule', { workflowId: id, error: scheduleError.message });
+      // Continue with workflow deletion even if schedule deletion fails
+    }
+
+    // Then delete the workflow
     const { data, error } = await supabase
       .from('workflows')
       .delete()

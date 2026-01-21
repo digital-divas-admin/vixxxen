@@ -370,6 +370,13 @@
     setupPaletteHandlers();
     setupCanvasHandlers();
 
+    // Close dropdown menus when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.workflow-card-menu')) {
+        document.querySelectorAll('.workflow-card-menu-dropdown.show').forEach(d => d.classList.remove('show'));
+      }
+    });
+
     // Load characters for the character select
     loadCharacters();
 
@@ -743,13 +750,25 @@
       card.innerHTML = `
         <div class="workflow-card-header">
           <h3 class="workflow-card-name">${escapeHtml(workflow.name)}</h3>
-          ${hasSchedule ? `
-            <label class="workflow-schedule-toggle" title="${scheduleEnabled ? 'Schedule active' : 'Schedule paused'}">
-              <input type="checkbox" ${scheduleEnabled ? 'checked' : ''}
-                     onchange="window.workflowsModule.toggleSchedule('${workflow.id}', '${workflow.schedule.id}', this.checked)">
-              <span class="workflow-schedule-slider"></span>
-            </label>
-          ` : ''}
+          <div class="workflow-card-header-actions">
+            ${hasSchedule ? `
+              <label class="workflow-schedule-toggle" title="${scheduleEnabled ? 'Schedule active' : 'Schedule paused'}">
+                <input type="checkbox" ${scheduleEnabled ? 'checked' : ''}
+                       onchange="window.workflowsModule.toggleSchedule('${workflow.id}', '${workflow.schedule.id}', this.checked)">
+                <span class="workflow-schedule-slider"></span>
+              </label>
+            ` : ''}
+            <div class="workflow-card-menu">
+              <button class="workflow-card-menu-btn" onclick="window.workflowsModule.toggleCardMenu(this)" title="More options">
+                ⋮
+              </button>
+              <div class="workflow-card-menu-dropdown">
+                <button class="workflow-card-menu-item delete" onclick="window.workflowsModule.confirmDeleteWorkflow('${workflow.id}', '${escapeHtml(workflow.name).replace(/'/g, "\\'")}')">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="workflow-card-meta">
           ${hasSchedule ? `
@@ -1780,6 +1799,85 @@
         showToast('Failed to update schedule', 'error');
         // Re-render to reset toggle state
         renderWorkflowsList();
+      }
+    },
+
+    toggleCardMenu: function(button) {
+      // Close any other open menus first
+      document.querySelectorAll('.workflow-card-menu-dropdown.show').forEach(dropdown => {
+        if (dropdown !== button.nextElementSibling) {
+          dropdown.classList.remove('show');
+        }
+      });
+
+      // Toggle this menu
+      const dropdown = button.nextElementSibling;
+      dropdown.classList.toggle('show');
+
+      // Stop propagation to prevent immediate close
+      event.stopPropagation();
+    },
+
+    confirmDeleteWorkflow: function(workflowId, workflowName) {
+      // Close any open menu
+      document.querySelectorAll('.workflow-card-menu-dropdown.show').forEach(d => d.classList.remove('show'));
+
+      // Create confirmation modal
+      const modal = document.createElement('div');
+      modal.className = 'workflow-delete-modal-overlay';
+      modal.innerHTML = `
+        <div class="workflow-delete-modal">
+          <h3>Delete Workflow?</h3>
+          <p>Are you sure you want to delete <strong>"${workflowName}"</strong>?</p>
+          <p class="workflow-delete-warning">This will also delete any scheduled triggers and execution history. This action cannot be undone.</p>
+          <div class="workflow-delete-modal-actions">
+            <button class="workflow-delete-modal-btn cancel" onclick="this.closest('.workflow-delete-modal-overlay').remove()">Cancel</button>
+            <button class="workflow-delete-modal-btn delete" onclick="window.workflowsModule.deleteWorkflow('${workflowId}')">Delete</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // Close on overlay click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+
+      // Close on Escape key
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          modal.remove();
+          document.removeEventListener('keydown', handleEscape);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+    },
+
+    deleteWorkflow: async function(workflowId) {
+      // Remove modal first
+      const modal = document.querySelector('.workflow-delete-modal-overlay');
+      if (modal) modal.remove();
+
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/workflows/${workflowId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete workflow');
+        }
+
+        // Remove from local state
+        workflows = workflows.filter(w => w.id !== workflowId);
+
+        // Re-render list
+        renderWorkflowsList();
+
+        showToast('Workflow deleted', 'success');
+      } catch (error) {
+        console.error('Error deleting workflow:', error);
+        showToast('Failed to delete workflow: ' + error.message, 'error');
       }
     }
   };
