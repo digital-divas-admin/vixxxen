@@ -171,7 +171,7 @@ router.post('/', requireAuth, async (req, res) => {
       .select('id')
       .eq('id', workflow_id)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
@@ -182,7 +182,7 @@ router.post('/', requireAuth, async (req, res) => {
       .from('workflow_schedules')
       .select('id')
       .eq('workflow_id', workflow_id)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return res.status(400).json({ error: 'Schedule already exists for this workflow. Use PUT to update.' });
