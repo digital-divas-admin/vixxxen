@@ -450,8 +450,11 @@
 
       if (!response.ok) throw new Error('Failed to save workflow');
 
+      console.log('Workflow saved, now syncing schedule...');
+
       // Sync schedule if there's a schedule-trigger node
       const scheduleInfo = await syncWorkflowSchedule();
+      console.log('scheduleInfo result:', scheduleInfo);
 
       // Show appropriate success message
       if (scheduleInfo && scheduleInfo.hasSchedule) {
@@ -533,27 +536,33 @@
   }
 
   async function syncWorkflowSchedule() {
-    if (!currentWorkflowId) return null;
+    if (!currentWorkflowId) {
+      console.log('syncWorkflowSchedule: No currentWorkflowId');
+      return null;
+    }
 
     // Find schedule-trigger node
     const scheduleNode = nodes.find(n => n.type === 'schedule-trigger');
+    console.log('syncWorkflowSchedule: scheduleNode found?', !!scheduleNode, scheduleNode?.type);
 
     try {
       // Check if schedule exists for this workflow
       const checkResponse = await authFetch(`${API_BASE_URL}/api/workflow-schedules/workflow/${currentWorkflowId}`);
       const checkData = await checkResponse.json();
       const existingSchedule = checkData.schedule;
+      console.log('syncWorkflowSchedule: existingSchedule?', !!existingSchedule);
 
       if (scheduleNode) {
         // Generate cron expression from friendly options
         const cronExpression = generateCronExpression(scheduleNode.config);
+        console.log('syncWorkflowSchedule: cronExpression', cronExpression);
 
         const timezone = scheduleNode.config?.timezone || 'America/New_York';
         const isEnabled = scheduleNode.config?.is_enabled !== false;
 
         if (existingSchedule) {
           // Update existing schedule
-          await authFetch(`${API_BASE_URL}/api/workflow-schedules/${existingSchedule.id}`, {
+          const updateResponse = await authFetch(`${API_BASE_URL}/api/workflow-schedules/${existingSchedule.id}`, {
             method: 'PUT',
             body: JSON.stringify({
               cron_expression: cronExpression,
@@ -561,9 +570,15 @@
               is_enabled: isEnabled
             })
           });
+          console.log('syncWorkflowSchedule: update response', updateResponse.status);
+          if (!updateResponse.ok) {
+            const errData = await updateResponse.json();
+            console.error('syncWorkflowSchedule: update failed', errData);
+          }
         } else {
           // Create new schedule
-          await authFetch(`${API_BASE_URL}/api/workflow-schedules`, {
+          console.log('syncWorkflowSchedule: creating new schedule for workflow', currentWorkflowId);
+          const createResponse = await authFetch(`${API_BASE_URL}/api/workflow-schedules`, {
             method: 'POST',
             body: JSON.stringify({
               workflow_id: currentWorkflowId,
@@ -572,6 +587,11 @@
               is_enabled: isEnabled
             })
           });
+          console.log('syncWorkflowSchedule: create response', createResponse.status);
+          if (!createResponse.ok) {
+            const errData = await createResponse.json();
+            console.error('syncWorkflowSchedule: create failed', errData);
+          }
         }
 
         // Return schedule info for confirmation message
