@@ -43,6 +43,7 @@ const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
 const { getGpuConfig } = require('./services/settingsService');
+const { startScheduler } = require('./services/workflowScheduler');
 
 const app = express();
 const server = http.createServer(app);
@@ -294,6 +295,9 @@ app.use((req, res) => {
 server.listen(PORT, () => {
   logger.info(`Vixxxen Backend started on port ${PORT}`);
 
+  // Start the workflow scheduler (runs every minute to check for due schedules)
+  startScheduler();
+
   // Log API configuration status
   const apiStatus = {
     replicate: !!process.env.REPLICATE_API_KEY,
@@ -326,6 +330,11 @@ server.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
+
+  // Stop the workflow scheduler
+  const { stopScheduler } = require('./services/workflowScheduler');
+  stopScheduler();
+
   server.close(() => {
     logger.info('HTTP server closed');
   });
