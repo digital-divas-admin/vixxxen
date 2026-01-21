@@ -153,9 +153,12 @@ router.get('/workflow/:workflowId', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
+    logger.info('Schedule POST request', { userId, body: req.body });
+
     const { workflow_id, cron_expression, timezone = 'UTC', is_enabled = true } = req.body;
 
     if (!workflow_id || !cron_expression) {
+      logger.warn('Schedule POST missing fields', { workflow_id: !!workflow_id, cron_expression: !!cron_expression });
       return res.status(400).json({ error: 'workflow_id and cron_expression are required' });
     }
 
@@ -166,30 +169,44 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     // Verify workflow belongs to user
-    const { data: workflow } = await supabase
+    logger.info('Verifying workflow ownership', { workflow_id, userId });
+    const { data: workflow, error: workflowError } = await supabase
       .from('workflows')
       .select('id')
       .eq('id', workflow_id)
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (!workflow) {
-      return res.status(404).json({ error: 'Workflow not found' });
+    if (workflowError) {
+      logger.error('Workflow lookup error', { error: workflowError.message });
     }
 
+    if (!workflow) {
+      logger.warn('Workflow not found or not owned by user', { workflow_id, userId });
+      return res.status(404).json({ error: 'Workflow not found' });
+    }
+    logger.info('Workflow verified', { workflow_id });
+
     // Check if schedule already exists for this workflow
-    const { data: existing } = await supabase
+    logger.info('Checking for existing schedule', { workflow_id });
+    const { data: existing, error: existingError } = await supabase
       .from('workflow_schedules')
       .select('id')
       .eq('workflow_id', workflow_id)
       .maybeSingle();
 
+    if (existingError) {
+      logger.error('Existing schedule check error', { error: existingError.message });
+    }
+
     if (existing) {
+      logger.warn('Schedule already exists', { workflow_id, existingId: existing.id });
       return res.status(400).json({ error: 'Schedule already exists for this workflow. Use PUT to update.' });
     }
 
     // Calculate next run time
     const next_run_at = is_enabled ? calculateNextRun(cron_expression, timezone) : null;
+    logger.info('Inserting schedule', { workflow_id, cron_expression, timezone, is_enabled, next_run_at });
 
     const { data, error } = await supabase
       .from('workflow_schedules')
@@ -204,9 +221,12 @@ router.post('/', requireAuth, async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      logger.error('Schedule insert error', { error: error.message, code: error.code, details: error.details });
+      throw error;
+    }
 
-    logger.info('Schedule created', { scheduleId: data.id, workflowId: workflow_id, userId });
+    logger.info('Schedule created successfully', { scheduleId: data.id, workflowId: workflow_id, userId });
 
     res.status(201).json({ schedule: data });
 

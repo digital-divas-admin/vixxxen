@@ -457,9 +457,11 @@
       console.log('scheduleInfo result:', scheduleInfo);
 
       // Show appropriate success message
-      if (scheduleInfo && scheduleInfo.hasSchedule) {
+      if (scheduleInfo && scheduleInfo.hasSchedule && scheduleInfo.success) {
         const status = scheduleInfo.isEnabled ? 'enabled' : 'paused';
         showToast(`Workflow saved! Schedule ${status}: runs ${scheduleInfo.description}`, 'success');
+      } else if (scheduleInfo && scheduleInfo.hasSchedule && !scheduleInfo.success) {
+        showToast('Workflow saved, but schedule failed to sync', 'error');
       } else {
         showToast('Workflow saved', 'success');
       }
@@ -544,10 +546,17 @@
     // Find schedule-trigger node
     const scheduleNode = nodes.find(n => n.type === 'schedule-trigger');
     console.log('syncWorkflowSchedule: scheduleNode found?', !!scheduleNode, scheduleNode?.type);
+    console.log('syncWorkflowSchedule: all node types:', nodes.map(n => n.type));
 
     try {
       // Check if schedule exists for this workflow
       const checkResponse = await authFetch(`${API_BASE_URL}/api/workflow-schedules/workflow/${currentWorkflowId}`);
+      if (!checkResponse.ok) {
+        console.error('syncWorkflowSchedule: check endpoint failed', checkResponse.status);
+        const errText = await checkResponse.text();
+        console.error('syncWorkflowSchedule: check error', errText);
+        return null;
+      }
       const checkData = await checkResponse.json();
       const existingSchedule = checkData.schedule;
       console.log('syncWorkflowSchedule: existingSchedule?', !!existingSchedule);
@@ -556,9 +565,12 @@
         // Generate cron expression from friendly options
         const cronExpression = generateCronExpression(scheduleNode.config);
         console.log('syncWorkflowSchedule: cronExpression', cronExpression);
+        console.log('syncWorkflowSchedule: scheduleNode.config', scheduleNode.config);
 
         const timezone = scheduleNode.config?.timezone || 'America/New_York';
         const isEnabled = scheduleNode.config?.is_enabled !== false;
+
+        let success = false;
 
         if (existingSchedule) {
           // Update existing schedule
@@ -574,23 +586,34 @@
           if (!updateResponse.ok) {
             const errData = await updateResponse.json();
             console.error('syncWorkflowSchedule: update failed', errData);
+            showToast(`Schedule update failed: ${errData.error || 'Unknown error'}`, 'error');
+          } else {
+            success = true;
           }
         } else {
           // Create new schedule
           console.log('syncWorkflowSchedule: creating new schedule for workflow', currentWorkflowId);
+          const requestBody = {
+            workflow_id: currentWorkflowId,
+            cron_expression: cronExpression,
+            timezone,
+            is_enabled: isEnabled
+          };
+          console.log('syncWorkflowSchedule: POST body', JSON.stringify(requestBody));
+
           const createResponse = await authFetch(`${API_BASE_URL}/api/workflow-schedules`, {
             method: 'POST',
-            body: JSON.stringify({
-              workflow_id: currentWorkflowId,
-              cron_expression: cronExpression,
-              timezone,
-              is_enabled: isEnabled
-            })
+            body: JSON.stringify(requestBody)
           });
           console.log('syncWorkflowSchedule: create response', createResponse.status);
           if (!createResponse.ok) {
             const errData = await createResponse.json();
             console.error('syncWorkflowSchedule: create failed', errData);
+            showToast(`Schedule creation failed: ${errData.error || 'Unknown error'}`, 'error');
+          } else {
+            success = true;
+            const resultData = await createResponse.json();
+            console.log('syncWorkflowSchedule: schedule created', resultData);
           }
         }
 
@@ -598,6 +621,7 @@
         return {
           hasSchedule: true,
           isEnabled,
+          success,
           description: getScheduleDescription(scheduleNode.config)
         };
       } else if (existingSchedule) {
@@ -610,7 +634,7 @@
       return { hasSchedule: false };
     } catch (error) {
       console.error('Error syncing schedule:', error);
-      // Don't throw - schedule sync failure shouldn't fail the whole save
+      showToast(`Schedule sync error: ${error.message}`, 'error');
       return null;
     }
   }
