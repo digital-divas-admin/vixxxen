@@ -38,6 +38,7 @@ const analyticsEventsRouter = require('./analytics-events');
 const userImagesRouter = require('./user-images');
 const facelockRouter = require('./facelock');
 const workflowsRouter = require('./workflows');
+const workflowSchedulesRouter = require('./workflowSchedules');
 const { initializeChat } = require('./chat');
 const { requireAuth } = require('./middleware/auth');
 const { checkDedicatedHealth } = require('./services/gpuRouter');
@@ -254,6 +255,7 @@ app.use('/api/analytics', analyticsEventsRouter);
 app.use('/api/user-images', userImagesRouter);
 app.use('/api/facelock', requireAuth, facelockRouter);
 app.use('/api/workflows', requireAuth, workflowsRouter);
+app.use('/api/workflow-schedules', workflowSchedulesRouter);
 
 // Trial endpoint - public (no auth) but rate limited for image generation
 // Uses generationLimiterPostOnly to rate limit POST /generate but allow GET /status freely

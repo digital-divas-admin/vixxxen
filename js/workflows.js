@@ -45,6 +45,61 @@
       outputs: [{ name: 'trigger', type: 'trigger', label: 'Trigger' }],
       config: []
     },
+    'schedule-trigger': {
+      type: 'schedule-trigger',
+      label: 'Schedule Trigger',
+      icon: '⏰',
+      category: 'triggers',
+      inputs: [],
+      outputs: [{ name: 'trigger', type: 'trigger', label: 'Trigger' }],
+      config: [
+        {
+          name: 'schedule_preset',
+          type: 'select',
+          label: 'Schedule',
+          options: [
+            { value: 'every-hour', label: 'Every hour' },
+            { value: 'every-6-hours', label: 'Every 6 hours' },
+            { value: 'daily-9am', label: 'Daily at 9:00 AM' },
+            { value: 'daily-noon', label: 'Daily at 12:00 PM' },
+            { value: 'daily-6pm', label: 'Daily at 6:00 PM' },
+            { value: 'weekly-monday', label: 'Weekly on Monday' },
+            { value: 'weekly-friday', label: 'Weekly on Friday' },
+            { value: 'custom', label: 'Custom cron...' }
+          ],
+          default: 'daily-9am'
+        },
+        {
+          name: 'cron_expression',
+          type: 'text',
+          label: 'Cron Expression',
+          placeholder: '0 9 * * *',
+          showWhen: { schedule_preset: 'custom' }
+        },
+        {
+          name: 'timezone',
+          type: 'select',
+          label: 'Timezone',
+          options: [
+            { value: 'UTC', label: 'UTC' },
+            { value: 'America/New_York', label: 'Eastern (US)' },
+            { value: 'America/Chicago', label: 'Central (US)' },
+            { value: 'America/Denver', label: 'Mountain (US)' },
+            { value: 'America/Los_Angeles', label: 'Pacific (US)' },
+            { value: 'Europe/London', label: 'London (UK)' },
+            { value: 'Europe/Paris', label: 'Paris (EU)' },
+            { value: 'Asia/Tokyo', label: 'Tokyo (Japan)' }
+          ],
+          default: 'America/New_York'
+        },
+        {
+          name: 'is_enabled',
+          type: 'toggle',
+          label: 'Enable Schedule',
+          default: true
+        }
+      ]
+    },
     'generate-prompts': {
       type: 'generate-prompts',
       label: 'Generate Prompts',
@@ -324,10 +379,82 @@
       });
 
       if (!response.ok) throw new Error('Failed to save workflow');
+
+      // Sync schedule if there's a schedule-trigger node
+      await syncWorkflowSchedule();
+
       showToast('Workflow saved', 'success');
     } catch (error) {
       console.error('Error saving workflow:', error);
       showToast('Failed to save workflow', 'error');
+    }
+  }
+
+  // Cron expression presets
+  const CRON_PRESETS = {
+    'every-hour': '0 * * * *',
+    'every-6-hours': '0 */6 * * *',
+    'daily-9am': '0 9 * * *',
+    'daily-noon': '0 12 * * *',
+    'daily-6pm': '0 18 * * *',
+    'weekly-monday': '0 9 * * 1',
+    'weekly-friday': '0 9 * * 5'
+  };
+
+  async function syncWorkflowSchedule() {
+    if (!currentWorkflowId) return;
+
+    // Find schedule-trigger node
+    const scheduleNode = nodes.find(n => n.type === 'schedule-trigger');
+
+    try {
+      // Check if schedule exists for this workflow
+      const checkResponse = await authFetch(`${API_BASE_URL}/api/workflow-schedules/workflow/${currentWorkflowId}`);
+      const checkData = await checkResponse.json();
+      const existingSchedule = checkData.schedule;
+
+      if (scheduleNode) {
+        // Get cron expression from preset or custom
+        const preset = scheduleNode.config?.schedule_preset || 'daily-9am';
+        let cronExpression = CRON_PRESETS[preset];
+        if (preset === 'custom' && scheduleNode.config?.cron_expression) {
+          cronExpression = scheduleNode.config.cron_expression;
+        }
+
+        const timezone = scheduleNode.config?.timezone || 'America/New_York';
+        const isEnabled = scheduleNode.config?.is_enabled !== false;
+
+        if (existingSchedule) {
+          // Update existing schedule
+          await authFetch(`${API_BASE_URL}/api/workflow-schedules/${existingSchedule.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              cron_expression: cronExpression,
+              timezone,
+              is_enabled: isEnabled
+            })
+          });
+        } else {
+          // Create new schedule
+          await authFetch(`${API_BASE_URL}/api/workflow-schedules`, {
+            method: 'POST',
+            body: JSON.stringify({
+              workflow_id: currentWorkflowId,
+              cron_expression: cronExpression,
+              timezone,
+              is_enabled: isEnabled
+            })
+          });
+        }
+      } else if (existingSchedule) {
+        // No schedule node but schedule exists - delete it
+        await authFetch(`${API_BASE_URL}/api/workflow-schedules/${existingSchedule.id}`, {
+          method: 'DELETE'
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing schedule:', error);
+      // Don't throw - schedule sync failure shouldn't fail the whole save
     }
   }
 
